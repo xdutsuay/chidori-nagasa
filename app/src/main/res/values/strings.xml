@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name" translatable="false">LM Playground</string>
+    <string name="app_name" translatable="false">chidori-nagasa</string>
 
     <string name="navigation_drawer_open">Open navigation drawer</string>
     <string name="navigation_drawer_close">Close navigation drawer</string>
@@ -73,29 +73,32 @@
     <string name="models_subtitle">Download and manage models</string>
     <string name="privacy_policy">Privacy Policy</string>
     <string name="privacy_policy_effective_date">Effective Date: June 2, 2026</string>
-    <string name="privacy_policy_intro">Welcome to LM Playground! I am committed to maintaining the trust and confidence of everyone who uses my app. This Privacy Policy explains what the app does and does not collect, how your conversations stay on your device, and the few cases — such as the optional web tools — where information leaves your device, so you always know what to expect.</string>
+    <string name="privacy_policy_intro">Welcome to chidori-nagasa! We are committed to maintaining the trust and confidence of everyone who uses this app. This Privacy Policy explains what the app does and does not collect, how your conversations stay on your device, and the few cases — such as the optional web tools or a connected chidori desktop instance — where information leaves your device, so you always know what to expect.</string>
     <string name="privacy_policy_s1_title">1. No Personal Information Collection</string>
-    <string name="privacy_policy_s1_body">I, Andriy Druk, the developer of LM Playground, do not collect, store, use, or share any personal information from the users of my app. There are no accounts, no advertising, and no usage analytics or tracking. The app is designed with your privacy as a priority, so you can use it without compromising your personal data.</string>
+    <string name="privacy_policy_s1_body">We do not collect, store, use, or share any personal information from the users of this app. There are no accounts, no advertising, and no usage analytics or tracking. The app is designed with your privacy as a priority, so you can use it without compromising your personal data.</string>
     <string name="privacy_policy_s2_title">2. On-Device Processing</string>
-    <string name="privacy_policy_s2_body">Your conversations, system prompts, and the model\'s responses are processed locally on your device by the on-device model. This content is never sent to me or to any server for inference. It stays on your device unless you choose to use a feature that reaches the internet, as described below.</string>
+    <string name="privacy_policy_s2_body">Your conversations, system prompts, and the model\'s responses are processed locally on your device by the on-device model. This content is never sent to us or to any server for inference. It stays on your device unless you choose to use a feature that reaches the internet or a chidori desktop instance you\'ve paired with, as described below.</string>
     <string name="privacy_policy_s3_title">3. Internet Access</string>
-    <string name="privacy_policy_s3_body">LM Playground requests Internet permission for two purposes: to download the model files you choose, and — only if you turn them on — to power the optional web tools. The app contains no advertising, telemetry, or usage analytics, and it does not report your activity back to me.</string>
+    <string name="privacy_policy_s3_body">chidori-nagasa requests Internet permission to download the model files you choose, to power the optional web tools if you turn them on, and to talk to a chidori desktop instance on your local network if you pair one. The app contains no advertising, telemetry, or usage analytics, and it does not report your activity back to us.</string>
     <string name="privacy_policy_s4_title">4. Tools and Web Access</string>
-    <string name="privacy_policy_s4_body">Capable models can use optional tools, which are turned off by default. When you enable the web tools, some information leaves your device: the Web search tool sends the model\'s search query to DuckDuckGo, and the Fetch web page tool downloads the pages the model decides to open from those websites. Those requests are handled by the third-party sites under their own privacy policies — I neither receive nor store them. The Run JavaScript tool runs entirely on your device in a sandbox with no internet access. To keep everything offline, simply leave the tools off.</string>
+    <string name="privacy_policy_s4_body">Capable models can use optional tools, which are turned off by default. When you enable the web tools, some information leaves your device: the Web search tool sends the model\'s search query to DuckDuckGo, and the Fetch web page tool downloads the pages the model decides to open from those websites. Those requests are handled by the third-party sites under their own privacy policies — we neither receive nor store them. The Run JavaScript tool runs entirely on your device in a sandbox with no internet access. To keep everything offline, simply leave the tools off.</string>
+    <string name="privacy_policy_s4b_title">4b. Chidori Desktop Pairing (companion features)</string>
+    <string name="privacy_policy_s4b_body">If you pair with a chidori desktop instance on your local network, chat messages and coordinator status you view are exchanged only with that paired instance over your local network — never with a third-party server. This connection is off until you explicitly pair a device, and you can unpair at any time from Settings.</string>
     <string name="privacy_policy_s5_title">5. Privacy Policy Updates</string>
-    <string name="privacy_policy_s5_body">As the developer of LM Playground, I reserve the right to update this Privacy Policy at any time. Any changes will be effective immediately upon posting the updated policy. Users are encouraged to review this page periodically and stay informed about how their privacy is protected.</string>
+    <string name="privacy_policy_s5_body">We reserve the right to update this Privacy Policy at any time. Any changes will be effective immediately upon posting the updated policy. Users are encouraged to review this page periodically and stay informed about how their privacy is protected.</string>
     <string name="privacy_policy_s6_title">6. Acceptance of This Policy</string>
-    <string name="privacy_policy_s6_body">By using LM Playground, you acknowledge and agree to this Privacy Policy. If you do not agree with the policy, please refrain from using the app. Your continued use of the app following the posting of any updates or changes to this policy will be deemed your acceptance of those changes.</string>
-    <string name="privacy_policy_s7_title">7. Contact Me</string>
-    <string name="privacy_policy_s7_body">If you have any questions or suggestions about my Privacy Policy, do not hesitate to contact me.</string>
-    <string name="privacy_policy_contact_email" translatable="false">me@andriydruk.com</string>
+    <string name="privacy_policy_s6_body">By using chidori-nagasa, you acknowledge and agree to this Privacy Policy. If you do not agree with the policy, please refrain from using the app. Your continued use of the app following the posting of any updates or changes to this policy will be deemed your acceptance of those changes.</string>
+    <string name="privacy_policy_s7_title">7. Contact Us</string>
+    <string name="privacy_policy_s7_body">If you have any questions or suggestions about this Privacy Policy, do not hesitate to contact us.</string>
+    <!-- TODO(chidori-nagasa): replace with a real support contact before this ships to a store listing. -->
+    <string name="privacy_policy_contact_email" translatable="false">TODO@chidori.app</string>
     <string name="send_feedback">Send Feedback</string>
     <string name="faq">FAQ</string>
     <string name="faq_subtitle">Frequently asked questions</string>
 
     <!-- FAQ -->
-    <string name="faq_q1">What is LM Playground?</string>
-    <string name="faq_a1">LM Playground lets you run large language models directly on your Android device. All processing happens locally \u2013 no cloud servers needed.</string>
+    <string name="faq_q1">What is chidori-nagasa?</string>
+    <string name="faq_a1">chidori-nagasa lets you run large language models directly on your Android device, and optionally pair with a chidori desktop instance on your network to monitor it and chat through its models. On-device processing happens locally \u2013 no cloud servers needed.</string>
     <string name="faq_q2">What models are supported?</string>
     <string name="faq_a2">The app supports models in GGUF format with Q4_K_M quantization, including Qwen 3, Gemma 3, Llama 3.2, Phi\u20114 mini, and DeepSeek R1 Distill in various sizes.</string>
     <string name="faq_q3">How much storage space do I need?</string>
@@ -345,7 +348,7 @@
          model is loaded so the OS does not evict the :llama process). -->
     <string name="inference_notification_channel_name">Inference engine</string>
     <string name="inference_notification_channel_description">Keeps the AI model loaded and ready to respond.</string>
-    <string name="inference_notification_title">LM Playground</string>
+    <string name="inference_notification_title">chidori-nagasa</string>
     <string name="inference_notification_text">Model loaded — ready to chat.</string>
     <!-- Title shown on the FGS notification while a model is loaded. The
          description below is built from the user-facing model name and

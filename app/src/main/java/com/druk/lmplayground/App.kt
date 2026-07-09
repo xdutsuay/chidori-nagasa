@@ -6,6 +6,7 @@ import android.content.ComponentName
 import android.os.Bundle
 import com.druk.llamacpp.InferenceClient
 import com.druk.llamacpp.LlamaCpp
+import com.druk.lmplayground.coordinator.CoordinatorRepository
 import com.druk.lmplayground.data.AppDatabase
 import com.druk.lmplayground.data.ChatRepository
 import com.druk.lmplayground.data.SystemPromptRepository
@@ -24,6 +25,13 @@ class App : Application() {
     lateinit var chatRepository: ChatRepository
         private set
     lateinit var systemPromptRepository: SystemPromptRepository
+        private set
+
+    // chidori desktop companion features (net/coordinator, see CHIDORI_PROTOCOL.md §2/§3.4).
+    // Construction is cheap (no I/O in the stub implementations) so it's safe to eagerly
+    // create here like the other repositories; discovery/pairing/transport are unimplemented
+    // stubs as of this first draft — see coordinator/README.md.
+    lateinit var coordinatorRepository: CoordinatorRepository
         private set
 
     /**
@@ -83,5 +91,7 @@ class App : Application() {
         val database = AppDatabase.getInstance(this)
         chatRepository = ChatRepository(database.chatDao())
         systemPromptRepository = SystemPromptRepository(database.systemPromptDao())
+
+        coordinatorRepository = CoordinatorRepository()
     }
 }

@@ -1,15 +1,32 @@
 
-<h1 align="center">LM Playground</h1>
+<h1 align="center">chidori-nagasa</h1>
 
 <p align="center">
 <img src="logo.png"/>
 </p>
 
-LM Playground is an Android application for running Large Language Models locally on-device. Download models, load them in one tap, and chat - all offline, all private. Powered by [llama.cpp](https://github.com/ggml-org/llama.cpp) with GGUF-format models from [Hugging Face](https://huggingface.co/).
+chidori-nagasa is the Android companion to [chidori](https://kaustubhtripathi.com/public/lab/lclreason/),
+the AI-powered desktop IDE ([lclreason](https://github.com/xdutsuay/lclreason)). It runs LLMs
+locally on-device — download models, load them in one tap, and chat, all offline, all private —
+and pairs with a running chidori desktop instance over your local network to check on its
+coordinator, watch Ask/Agent/Plan/Debug runs, and chat through its local/remote models from your
+phone.
+
+This project is a fork of [LM Playground](https://github.com/andriydruk/LMPlayground) by
+Andriy Druk, used as the base for on-device inference. See `NOTICE.md` for full attribution.
+Powered by [llama.cpp](https://github.com/ggml-org/llama.cpp) with GGUF-format models from
+[Hugging Face](https://huggingface.co/).
+
+Governance for this repo — including how it stays in sync with `lclreason` and the engineering
+rules that apply to changes here — lives in [`CHIDORI_PROTOCOL.md`](CHIDORI_PROTOCOL.md). Product
+scope for the first release is in [`PRD.md`](PRD.md), phased plan in [`ROADMAP.md`](ROADMAP.md),
+and the test/release gate in [`TEST_PLAN.md`](TEST_PLAN.md).
 
 ![preview](docs/banner.png)
 
 ## Features
+
+On-device (inherited from LM Playground, rebranded, kept working — see `TEST_PLAN.md` §2.1):
 
 - **On-device inference** - no cloud, no API keys, fully offline
 - **Vision/image input** - attach a photo from your gallery or camera and ask vision-capable models about it (Gemma 4, Gemma 3, Qwen 3.5, Ministral 3)
@@ -23,6 +40,15 @@ LM Playground is an Android application for running Large Language Models locall
 - **Storage management** - choose where to keep multi-GB model files with Android's Storage Access Framework
 - **ARM optimized** - KleidiAI kernels and OpenMP for faster generation on arm64 devices
 - **Large-screen ready** - tablets, foldables, and Chromebooks get a permanent sessions sidebar, list-detail Settings, and freeform window resize support
+
+chidori companion (new, in progress — see `ROADMAP.md`):
+
+- **Pair with chidori desktop** over LAN via mDNS (manual host:port fallback)
+- **Coordinator monitor** - live status and Ask/Agent/Plan/Debug run activity, read-only in v1
+- **Remote chat** - chat through the desktop's attached local/remote LLM from your phone
+- **Node mode (planned, post-v1)** - offer this phone's on-device model as a worker the desktop
+  coordinator can route to, the same way it treats a local Ollama instance today. See
+  `CHIDORI_PROTOCOL.md` §2.5.
 
 ## Supported Models
 
@@ -58,10 +84,6 @@ LM Playground is an Android application for running Large Language Models locall
 
 Most models use Q4_K_M quantization; Qwen 3.5 uses Q3_K_M, and GPT-OSS ships in its native MXFP4 format. See [`ModelInfoProvider.kt`](app/src/main/java/com/druk/lmplayground/models/ModelInfoProvider.kt) for the full list.
 
-## Install
-
-If you're just looking to install LM Playground, you can find it on [Google Play](https://play.google.com/store/apps/details?id=com.druk.lmplayground). If you're a developer wanting to contribute, read on.
-
 ## Build Instructions
 
 Prerequisites:
@@ -71,20 +93,31 @@ Prerequisites:
 
 1. Clone the repository with submodules:
 ```
-git clone --recurse-submodules https://github.com/andriydruk/LMPlayground.git
+git clone --recurse-submodules <this-repo-url>.git
 ```
 2. Open the project in Android Studio: `File` > `Open` > Select the cloned repository.
 3. Connect an Android device or start an emulator.
 4. Run the application using `Run` > `Run 'app'` or the play button in Android Studio.
 
+Before merging any change, read [`CHIDORI_PROTOCOL.md`](CHIDORI_PROTOCOL.md) §3 — it covers
+branch/merge gates, native-layer testing requirements, and module boundaries specific to this
+repo.
+
+## Contributing
+
+This repo runs under [`CHIDORI_PROTOCOL.md`](CHIDORI_PROTOCOL.md), a binding set of rules for
+how this app is engineered and how it stays compatible with the `lclreason` desktop app. Read it
+before opening a PR, especially if your change touches `net/coordinator`, `inference/`, or the
+native/JNI layer.
+
 ## License
 
-This project is licensed under the [MIT License](LICENSE).
+This project is licensed under the [MIT License](LICENSE). It is a derivative of LM Playground
+(also MIT) — see [`NOTICE.md`](NOTICE.md) for attribution.
 
 ## Acknowledgments
 
-This project is built on [llama.cpp](https://github.com/ggml-org/llama.cpp). Models are GGUF-format with Q4_K_M quantization sourced from [Hugging Face](https://huggingface.co/).
-
-## Contact
-
-If you have any questions, suggestions, or issues, feel free to open an issue or contact me directly at [me@andriydruk.com](mailto:me@andriydruk.com).
+Built on [LM Playground](https://github.com/andriydruk/LMPlayground) by Andriy Druk, which is
+itself built on [llama.cpp](https://github.com/ggml-org/llama.cpp). Models are GGUF-format,
+sourced from [Hugging Face](https://huggingface.co/). Companion to
+[chidori](https://kaustubhtripathi.com/public/lab/lclreason/) / [lclreason](https://github.com/xdutsuay/lclreason).
