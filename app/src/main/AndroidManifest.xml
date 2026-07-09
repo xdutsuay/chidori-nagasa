@@ -9,6 +9,16 @@
     <!-- Per-token typewriter haptic while streaming a response. -->
     <uses-permission android:name="android.permission.VIBRATE" />
 
+    <!-- chidori desktop companion (net/coordinator, CHIDORI_PROTOCOL.md §2.1):
+         mDNS/NSD discovery of a paired lclreason instance on the LAN, plus the
+         HTTP/WebSocket connection to it once paired. CHANGE_WIFI_MULTICAST_STATE
+         is not strictly required by NsdManager on modern Android (it manages the
+         multicast lock internally) but is requested for reliability on older
+         OEM NSD stacks per the inconsistency TEST_PLAN.md §2.2/§4 calls out. -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
+
     <!-- Large-screen / Chromebook posture: app works without touch input and
          supports freeform window management. Keeping these as required="false"
          ensures Play Store still surfaces the app to phones. -->

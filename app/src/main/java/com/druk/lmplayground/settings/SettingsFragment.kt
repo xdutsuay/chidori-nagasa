@@ -228,6 +228,9 @@ class SettingsFragment : Fragment() {
                     onToolsClick = {
                         findNavController().navigateFromSettings(R.id.action_settings_to_tools)
                     },
+                    onChidoriClick = {
+                        findNavController().navigateFromSettings(R.id.action_settings_to_chidori)
+                    },
                     onSoundHapticClick = {
                         findNavController().navigateFromSettings(R.id.action_settings_to_sound_haptic)
                     },

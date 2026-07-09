@@ -54,6 +54,9 @@
         <action
             android:id="@+id/action_settings_to_language"
             app:destination="@id/nav_language" />
+        <action
+            android:id="@+id/action_settings_to_chidori"
+            app:destination="@id/nav_chidori" />
     </fragment>
 
     <fragment
@@ -95,5 +98,10 @@
         android:id="@+id/nav_language"
         android:name="com.druk.lmplayground.settings.LanguageFragment"
         android:label="@string/language" />
+
+    <fragment
+        android:id="@+id/nav_chidori"
+        android:name="com.druk.lmplayground.coordinator.ui.ChidoriFragment"
+        android:label="@string/chidori_desktop" />
 
 </navigation>

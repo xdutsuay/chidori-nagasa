@@ -24,6 +24,7 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.outlined.Article
 import androidx.compose.material.icons.outlined.BugReport
 import androidx.compose.material.icons.outlined.Build
+import androidx.compose.material.icons.outlined.Computer
 import androidx.compose.material.icons.outlined.HelpOutline
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Language
@@ -62,7 +63,7 @@ import java.util.Locale
  * [promptsDetailContent] slots — the caller owns the ViewModels and passes
  * the appropriate Composable when on tablet.
  */
-private enum class SettingsDetail { Models, Prompts, Language, Tools, SoundHaptic, Advanced, PrivacyPolicy, Faq }
+private enum class SettingsDetail { Models, Prompts, Language, Tools, SoundHaptic, Advanced, PrivacyPolicy, Faq, Chidori }
 
 @Composable
 fun SettingsScreen(
@@ -76,6 +77,7 @@ fun SettingsScreen(
     onSoundHapticClick: () -> Unit,
     onAdvancedClick: () -> Unit,
     onSendFeedbackClick: () -> Unit,
+    onChidoriClick: () -> Unit = {},
     appVersion: String,
     /**
      * Tablet-only: when non-null, tapping Models in the master pane opens
@@ -234,6 +236,7 @@ fun SettingsScreen(
                         },
                         onPrivacyPolicyClick = { detail = SettingsDetail.PrivacyPolicy },
                         onFaqClick = { detail = SettingsDetail.Faq },
+                        onChidoriClick = { detail = SettingsDetail.Chidori },
                         onCrashEngineClick = onCrashEngineClick
                     )
                 }
@@ -251,6 +254,7 @@ fun SettingsScreen(
                 SettingsDetail.Advanced -> stringResource(R.string.advanced)
                 SettingsDetail.PrivacyPolicy -> stringResource(R.string.privacy_policy)
                 SettingsDetail.Faq -> stringResource(R.string.faq)
+                SettingsDetail.Chidori -> stringResource(R.string.chidori_desktop)
                 null -> ""
             }
             Scaffold(
@@ -274,6 +278,7 @@ fun SettingsScreen(
                         SettingsDetail.PrivacyPolicy ->
                             PrivacyPolicyContent(onSendFeedbackClick = onSendFeedbackClick)
                         SettingsDetail.Faq -> FaqContent()
+                        SettingsDetail.Chidori -> com.druk.lmplayground.coordinator.ui.ChidoriDetailContent()
                         // detail defaults to Models on tablet, so null only
                         // happens transiently / on degenerate configs — render
                         // nothing instead of a placeholder hint.
@@ -311,6 +316,7 @@ fun SettingsScreen(
                 onAdvancedClick = onAdvancedClick,
                 onPrivacyPolicyClick = onPrivacyPolicyClick,
                 onFaqClick = onFaqClick,
+                onChidoriClick = onChidoriClick,
                 onCrashEngineClick = onCrashEngineClick,
                 modifier = Modifier
                     .fillMaxSize()
@@ -338,6 +344,7 @@ private fun SettingsList(
     onAdvancedClick: () -> Unit,
     onPrivacyPolicyClick: () -> Unit,
     onFaqClick: () -> Unit,
+    onChidoriClick: () -> Unit = {},
     onCrashEngineClick: (() -> Unit)?,
     modifier: Modifier = Modifier
 ) {
@@ -388,6 +395,15 @@ private fun SettingsList(
             subtitle = stringResource(R.string.advanced_subtitle),
             selected = selectedDetail == SettingsDetail.Advanced,
             onClick = onAdvancedClick
+        )
+
+        // Chidori Desktop row (net/coordinator companion pairing — v1 client-mode)
+        SettingsRow(
+            icon = Icons.Outlined.Computer,
+            title = stringResource(R.string.chidori_desktop),
+            subtitle = stringResource(R.string.chidori_desktop_subtitle),
+            selected = selectedDetail == SettingsDetail.Chidori,
+            onClick = onChidoriClick
         )
 
         // Language row

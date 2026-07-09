@@ -92,6 +92,6 @@ class App : Application() {
         chatRepository = ChatRepository(database.chatDao())
         systemPromptRepository = SystemPromptRepository(database.systemPromptDao())
 
-        coordinatorRepository = CoordinatorRepository()
+        coordinatorRepository = CoordinatorRepository(this)
     }
 }
