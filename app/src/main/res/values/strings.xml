@@ -388,7 +388,7 @@
          model is loaded so the OS does not evict the :llama process). -->
     <string name="inference_notification_channel_name">Inference engine</string>
     <string name="inference_notification_channel_description">Keeps the AI model loaded and ready to respond.</string>
-    <string name="inference_notification_title">chidori-nagasa</string>
+    <string name="inference_notification_title" translatable="false">chidori-nagasa</string>
     <string name="inference_notification_text">Model loaded — ready to chat.</string>
     <!-- Title shown on the FGS notification while a model is loaded. The
          description below is built from the user-facing model name and

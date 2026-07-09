@@ -252,7 +252,6 @@
          să nu oprească procesul :llama). -->
     <string name="inference_notification_channel_name">Motor de inferență</string>
     <string name="inference_notification_channel_description">Menține modelul de IA încărcat și pregătit să răspundă.</string>
-    <string name="inference_notification_title">LM Playground</string>
     <string name="inference_notification_text">Model încărcat — gata pentru chat.</string>
     <string name="inference_notification_loaded_title">Model încărcat</string>
     <string name="inference_engine_crashed">Hopa, ceva nu a mers bine.\nReîncarcă modelul.</string>
