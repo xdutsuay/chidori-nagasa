@@ -3,7 +3,11 @@ package com.druk.lmplayground.coordinator
 import android.content.Context
 import com.druk.lmplayground.coordinator.discovery.InstanceDiscovery
 import com.druk.lmplayground.coordinator.discovery.NsdInstanceDiscovery
+import com.druk.lmplayground.coordinator.model.AgentRunDetail
+import com.druk.lmplayground.coordinator.model.AgentRunSummary
+import com.druk.lmplayground.coordinator.model.CoordinatorStatus
 import com.druk.lmplayground.coordinator.model.DiscoveredInstance
+import com.druk.lmplayground.coordinator.model.InstanceId
 import com.druk.lmplayground.coordinator.model.ManualEndpoint
 import com.druk.lmplayground.coordinator.model.PairedInstance
 import com.druk.lmplayground.coordinator.node.NodeRegistrationCapability
@@ -71,9 +75,16 @@ class CoordinatorRepository(context: Context) {
      */
     fun manualEndpoint(host: String, port: Int): ManualEndpoint = ManualEndpoint(host, port)
 
-    // Coordinator status/run/chat access (protocol §2.4) is exposed via
-    // CoordinatorApi directly today rather than re-wrapped here, since it's
-    // still a Phase 2/3 concern with no UI consumer yet — see ROADMAP.md.
-    // Once a ViewModel needs it, add typed pass-throughs here rather than
-    // having that ViewModel reach into `transport` directly (protocol §3.4).
+    // Coordinator status/run monitor (protocol §2.4, PRD.md §6.3). Plain
+    // suspend pass-throughs to CoordinatorApi rather than Flows — the
+    // monitor ViewModel polls these on an interval (no server push/WS for
+    // status/runs in WIRE_CONTRACT.md's v1 draft; only remote chat uses a
+    // live socket, and that's still Phase 3). Exposed here, not from
+    // `transport` directly, per protocol §3.4.
+    suspend fun getStatus(instanceId: InstanceId): CoordinatorStatus = api.getStatus(instanceId)
+
+    suspend fun listRuns(instanceId: InstanceId): List<AgentRunSummary> = api.listRuns(instanceId)
+
+    suspend fun getRunDetail(instanceId: InstanceId, runId: String): AgentRunDetail =
+        api.getRunDetail(instanceId, runId)
 }

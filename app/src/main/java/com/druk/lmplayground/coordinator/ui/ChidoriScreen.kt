@@ -2,6 +2,7 @@
 
 package com.druk.lmplayground.coordinator.ui
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -42,6 +43,9 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.druk.lmplayground.R
+import com.druk.lmplayground.coordinator.model.AgentRunDetail
+import com.druk.lmplayground.coordinator.model.AgentRunSummary
+import com.druk.lmplayground.coordinator.model.CoordinatorStatus
 import com.druk.lmplayground.coordinator.model.DiscoveredInstance
 import com.druk.lmplayground.coordinator.model.InstanceId
 import com.druk.lmplayground.coordinator.model.PairedInstance
@@ -63,20 +67,31 @@ fun ChidoriScreen(
     lastPairingError: String?,
     manualHost: String,
     manualPort: String,
+    monitoredInstance: PairedInstance?,
+    monitorStatus: CoordinatorStatus?,
+    monitorRuns: List<AgentRunSummary>,
+    monitorRunDetail: AgentRunDetail?,
     onManualHostChanged: (String) -> Unit,
     onManualPortChanged: (String) -> Unit,
     onBeginPairing: (DiscoveredInstance) -> Unit,
     onConfirmPairingCode: (InstanceId, String) -> Unit,
     onUnpair: (InstanceId) -> Unit,
+    onPairedInstanceClick: (PairedInstance) -> Unit,
+    onCloseMonitor: () -> Unit,
+    onRunClick: (AgentRunSummary) -> Unit,
+    onDismissRunDetail: () -> Unit,
     onDismissError: () -> Unit,
     onBackClick: () -> Unit,
 ) {
+    // Hardware/gesture back closes the monitor first, returning to the list,
+    // rather than leaving the Chidori screen entirely.
+    BackHandler(enabled = monitoredInstance != null, onBack = onCloseMonitor)
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.chidori_desktop)) },
+                title = { Text(monitoredInstance?.displayName ?: stringResource(R.string.chidori_desktop)) },
                 navigationIcon = {
-                    IconButton(onClick = onBackClick) {
+                    IconButton(onClick = { if (monitoredInstance != null) onCloseMonitor() else onBackClick() }) {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = stringResource(R.string.back)
@@ -86,23 +101,42 @@ fun ChidoriScreen(
             )
         }
     ) { padding ->
-        ChidoriBody(
-            discoveredInstances = discoveredInstances,
-            pairedInstances = pairedInstances,
-            pairingInProgressFor = pairingInProgressFor,
-            lastPairingError = lastPairingError,
-            manualHost = manualHost,
-            manualPort = manualPort,
-            onManualHostChanged = onManualHostChanged,
-            onManualPortChanged = onManualPortChanged,
-            onBeginPairing = onBeginPairing,
-            onConfirmPairingCode = onConfirmPairingCode,
-            onUnpair = onUnpair,
-            onDismissError = onDismissError,
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding),
-        )
+        if (monitoredInstance != null) {
+            // Phone drives back through its own TopAppBar above, so no in-content
+            // back header here.
+            ChidoriMonitorContent(
+                displayName = monitoredInstance.displayName,
+                status = monitorStatus,
+                runs = monitorRuns,
+                selectedRunDetail = monitorRunDetail,
+                showBackHeader = false,
+                onRunClick = onRunClick,
+                onDismissRunDetail = onDismissRunDetail,
+                onClose = onCloseMonitor,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding),
+            )
+        } else {
+            ChidoriBody(
+                discoveredInstances = discoveredInstances,
+                pairedInstances = pairedInstances,
+                pairingInProgressFor = pairingInProgressFor,
+                lastPairingError = lastPairingError,
+                manualHost = manualHost,
+                manualPort = manualPort,
+                onManualHostChanged = onManualHostChanged,
+                onManualPortChanged = onManualPortChanged,
+                onBeginPairing = onBeginPairing,
+                onConfirmPairingCode = onConfirmPairingCode,
+                onUnpair = onUnpair,
+                onPairedInstanceClick = onPairedInstanceClick,
+                onDismissError = onDismissError,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding),
+            )
+        }
     }
 }
 
@@ -121,22 +155,46 @@ fun ChidoriDetailContent(modifier: Modifier = Modifier) {
     val manualPort by viewModel.manualPort.collectAsStateWithLifecycle()
     val pairingInProgressFor by viewModel.pairingInProgressFor.collectAsStateWithLifecycle()
     val lastPairingError by viewModel.lastPairingError.collectAsStateWithLifecycle()
+    val monitoredInstance by viewModel.monitoredInstance.collectAsStateWithLifecycle()
+    val monitorStatus by viewModel.monitorStatus.collectAsStateWithLifecycle()
+    val monitorRuns by viewModel.monitorRuns.collectAsStateWithLifecycle()
+    val monitorRunDetail by viewModel.monitorRunDetail.collectAsStateWithLifecycle()
 
-    ChidoriBody(
-        discoveredInstances = discovered,
-        pairedInstances = paired,
-        pairingInProgressFor = pairingInProgressFor,
-        lastPairingError = lastPairingError,
-        manualHost = manualHost,
-        manualPort = manualPort,
-        onManualHostChanged = viewModel::onManualHostChanged,
-        onManualPortChanged = viewModel::onManualPortChanged,
-        onBeginPairing = viewModel::beginPairing,
-        onConfirmPairingCode = viewModel::confirmPairingCode,
-        onUnpair = viewModel::unpair,
-        onDismissError = viewModel::dismissError,
-        modifier = modifier.fillMaxSize(),
-    )
+    BackHandler(enabled = monitoredInstance != null, onBack = viewModel::closeMonitor)
+
+    val monitored = monitoredInstance
+    if (monitored != null) {
+        // The detail pane's TopAppBar title is owned by SettingsScreen and stays
+        // "Chidori Desktop", so the monitor carries its own back header here.
+        ChidoriMonitorContent(
+            displayName = monitored.displayName,
+            status = monitorStatus,
+            runs = monitorRuns,
+            selectedRunDetail = monitorRunDetail,
+            showBackHeader = true,
+            onRunClick = { viewModel.openRunDetail(it.runId) },
+            onDismissRunDetail = viewModel::dismissRunDetail,
+            onClose = viewModel::closeMonitor,
+            modifier = modifier.fillMaxSize(),
+        )
+    } else {
+        ChidoriBody(
+            discoveredInstances = discovered,
+            pairedInstances = paired,
+            pairingInProgressFor = pairingInProgressFor,
+            lastPairingError = lastPairingError,
+            manualHost = manualHost,
+            manualPort = manualPort,
+            onManualHostChanged = viewModel::onManualHostChanged,
+            onManualPortChanged = viewModel::onManualPortChanged,
+            onBeginPairing = viewModel::beginPairing,
+            onConfirmPairingCode = viewModel::confirmPairingCode,
+            onUnpair = viewModel::unpair,
+            onPairedInstanceClick = viewModel::openMonitor,
+            onDismissError = viewModel::dismissError,
+            modifier = modifier.fillMaxSize(),
+        )
+    }
 }
 
 @Composable
@@ -152,6 +210,7 @@ private fun ChidoriBody(
     onBeginPairing: (DiscoveredInstance) -> Unit,
     onConfirmPairingCode: (InstanceId, String) -> Unit,
     onUnpair: (InstanceId) -> Unit,
+    onPairedInstanceClick: (PairedInstance) -> Unit,
     onDismissError: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -176,7 +235,11 @@ private fun ChidoriBody(
                 )
                 Spacer(Modifier.height(8.dp))
                 pairedInstances.forEach { paired ->
-                    PairedInstanceRow(paired = paired, onUnpair = { onUnpair(paired.instanceId) })
+                    PairedInstanceRow(
+                        paired = paired,
+                        onClick = { onPairedInstanceClick(paired) },
+                        onUnpair = { onUnpair(paired.instanceId) },
+                    )
                     Spacer(Modifier.height(8.dp))
                 }
                 Spacer(Modifier.height(16.dp))
@@ -263,8 +326,10 @@ private fun ChidoriBody(
 }
 
 @Composable
-private fun PairedInstanceRow(paired: PairedInstance, onUnpair: () -> Unit) {
-    Card(modifier = Modifier.fillMaxWidth()) {
+private fun PairedInstanceRow(paired: PairedInstance, onClick: () -> Unit, onUnpair: () -> Unit) {
+    // Tapping the row opens the coordinator monitor (PRD.md §6.3); the Unpair
+    // button inside consumes its own clicks, so it still works independently.
+    Card(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()

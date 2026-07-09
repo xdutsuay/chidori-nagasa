@@ -227,7 +227,7 @@ class OkHttpCoordinatorApi(
             val logTail = logTailArray?.let { arr -> (0 until arr.length()).map { arr.getString(it) } } ?: emptyList()
             AgentRunDetail(
                 summary = summary,
-                currentStep = json.optString("current_step", null),
+                currentStep = if (json.has("current_step")) json.getString("current_step") else null,
                 logTail = logTail,
             )
         }

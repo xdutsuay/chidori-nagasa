@@ -2,6 +2,28 @@
 <issues format="6" by="lint 8.13.2" type="baseline" client="gradle" dependencies="false" name="AGP (8.13.2)" variant="all" version="8.13.2">
 
     <issue
+        id="Instantiatable"
+        message="`MainActivity` must extend android.app.Activity"
+        errorLine1="            android:name=&quot;com.druk.lmplayground.MainActivity&quot;"
+        errorLine2="                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/AndroidManifest.xml"
+            line="47"
+            column="27"/>
+    </issue>
+
+    <issue
+        id="Instantiatable"
+        message="`ComposeView` must extend android.view.View"
+        errorLine1="        &lt;androidx.compose.ui.platform.ComposeView"
+        errorLine2="        ^">
+        <location
+            file="src/main/res/layout/fragment_profile.xml"
+            line="27"
+            column="9"/>
+    </issue>
+
+    <issue
         id="OldTargetApi"
         message="Not targeting the latest versions of Android; compatibility modes apply. Consider testing and updating this version. Consult the `android.os.Build.VERSION_CODES` javadoc for details."
         errorLine1="        targetSdk = libs.versions.targetSdk.get().toInt()"
@@ -18,20 +40,9 @@
         errorLine1="targetSdk = &quot;35&quot;"
         errorLine2="            ~~~~">
         <location
-            file="$HOME/Projects/LMPlayground/gradle/libs.versions.toml"
-            line="61"
+            file="$HOME/localcode/chidori-nagasa/gradle/libs.versions.toml"
+            line="62"
             column="13"/>
-    </issue>
-
-    <issue
-        id="UnusedAttribute"
-        message="Attribute `localeConfig` is only used in API level 33 and higher (current min is 30)"
-        errorLine1="        android:localeConfig=&quot;@xml/locales_config&quot;"
-        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/AndroidManifest.xml"
-            line="31"
-            column="9"/>
     </issue>
 
     <issue
@@ -40,7 +51,7 @@
         errorLine1="distributionUrl=https\://services.gradle.org/distributions/gradle-8.13-bin.zip"
         errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="$HOME/Projects/LMPlayground/gradle/wrapper/gradle-wrapper.properties"
+            file="$HOME/localcode/chidori-nagasa/gradle/wrapper/gradle-wrapper.properties"
             line="3"
             column="17"/>
     </issue>
@@ -51,7 +62,7 @@
         errorLine1="androidGradlePlugin = &quot;8.13.2&quot;"
         errorLine2="                      ~~~~~~~~">
         <location
-            file="$HOME/Projects/LMPlayground/gradle/libs.versions.toml"
+            file="$HOME/localcode/chidori-nagasa/gradle/libs.versions.toml"
             line="7"
             column="23"/>
     </issue>
@@ -62,20 +73,9 @@
         errorLine1="androidGradlePlugin = &quot;8.13.2&quot;"
         errorLine2="                      ~~~~~~~~">
         <location
-            file="$HOME/Projects/LMPlayground/gradle/libs.versions.toml"
+            file="$HOME/localcode/chidori-nagasa/gradle/libs.versions.toml"
             line="7"
             column="23"/>
-    </issue>
-
-    <issue
-        id="GradleDependency"
-        message="A newer version of `compileSdkVersion` than 35 is available: 36"
-        errorLine1="    compileSdk = libs.versions.compileSdk.get().toInt()"
-        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="build.gradle.kts"
-            line="84"
-            column="5"/>
     </issue>
 
     <issue
@@ -85,30 +85,8 @@
         errorLine2="                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="build.gradle.kts"
-            line="384"
+            line="391"
             column="20"/>
-    </issue>
-
-    <issue
-        id="GradleDependency"
-        message="A newer version of androidx.activity:activity-compose than 1.10.1 is available: 1.13.0"
-        errorLine1="androidx-activity-compose = &quot;1.10.1&quot;"
-        errorLine2="                            ~~~~~~~~">
-        <location
-            file="$HOME/Projects/LMPlayground/gradle/libs.versions.toml"
-            line="8"
-            column="29"/>
-    </issue>
-
-    <issue
-        id="GradleDependency"
-        message="A newer version of androidx.activity:activity-ktx than 1.10.1 is available: 1.13.0"
-        errorLine1="androidx-activity-compose = &quot;1.10.1&quot;"
-        errorLine2="                            ~~~~~~~~">
-        <location
-            file="$HOME/Projects/LMPlayground/gradle/libs.versions.toml"
-            line="8"
-            column="29"/>
     </issue>
 
     <issue
@@ -117,8 +95,8 @@
         errorLine1="androidx-benchmark = &quot;1.2.0&quot;"
         errorLine2="                     ~~~~~~~">
         <location
-            file="$HOME/Projects/LMPlayground/gradle/libs.versions.toml"
-            line="10"
+            file="$HOME/localcode/chidori-nagasa/gradle/libs.versions.toml"
+            line="13"
             column="22"/>
     </issue>
 
@@ -128,8 +106,8 @@
         errorLine1="androidx-benchmark-junit4 = &quot;1.2.1&quot;"
         errorLine2="                            ~~~~~~~">
         <location
-            file="$HOME/Projects/LMPlayground/gradle/libs.versions.toml"
-            line="11"
+            file="$HOME/localcode/chidori-nagasa/gradle/libs.versions.toml"
+            line="14"
             column="29"/>
     </issue>
 
@@ -139,8 +117,8 @@
         errorLine1="androidx-compose-bom = &quot;2025.12.00&quot;"
         errorLine2="                       ~~~~~~~~~~~~">
         <location
-            file="$HOME/Projects/LMPlayground/gradle/libs.versions.toml"
-            line="12"
+            file="$HOME/localcode/chidori-nagasa/gradle/libs.versions.toml"
+            line="15"
             column="24"/>
     </issue>
 
@@ -150,8 +128,8 @@
         errorLine1="androidx-constraintlayout = &quot;1.0.1&quot;"
         errorLine2="                            ~~~~~~~">
         <location
-            file="$HOME/Projects/LMPlayground/gradle/libs.versions.toml"
-            line="13"
+            file="$HOME/localcode/chidori-nagasa/gradle/libs.versions.toml"
+            line="16"
             column="29"/>
     </issue>
 
@@ -161,8 +139,8 @@
         errorLine1="androidx-corektx = &quot;1.15.0&quot;"
         errorLine2="                   ~~~~~~~~">
         <location
-            file="$HOME/Projects/LMPlayground/gradle/libs.versions.toml"
-            line="14"
+            file="$HOME/localcode/chidori-nagasa/gradle/libs.versions.toml"
+            line="17"
             column="20"/>
     </issue>
 
@@ -172,8 +150,8 @@
         errorLine1="androidx-glance = &quot;1.0.0&quot;"
         errorLine2="                  ~~~~~~~">
         <location
-            file="$HOME/Projects/LMPlayground/gradle/libs.versions.toml"
-            line="15"
+            file="$HOME/localcode/chidori-nagasa/gradle/libs.versions.toml"
+            line="19"
             column="19"/>
     </issue>
 
@@ -183,8 +161,8 @@
         errorLine1="androidx-glance = &quot;1.0.0&quot;"
         errorLine2="                  ~~~~~~~">
         <location
-            file="$HOME/Projects/LMPlayground/gradle/libs.versions.toml"
-            line="15"
+            file="$HOME/localcode/chidori-nagasa/gradle/libs.versions.toml"
+            line="19"
             column="19"/>
     </issue>
 
@@ -194,8 +172,8 @@
         errorLine1="androidx-glance = &quot;1.0.0&quot;"
         errorLine2="                  ~~~~~~~">
         <location
-            file="$HOME/Projects/LMPlayground/gradle/libs.versions.toml"
-            line="15"
+            file="$HOME/localcode/chidori-nagasa/gradle/libs.versions.toml"
+            line="19"
             column="19"/>
     </issue>
 
@@ -205,8 +183,8 @@
         errorLine1="androidx-lifecycle-compose = &quot;2.8.7&quot;"
         errorLine2="                             ~~~~~~~">
         <location
-            file="$HOME/Projects/LMPlayground/gradle/libs.versions.toml"
-            line="16"
+            file="$HOME/localcode/chidori-nagasa/gradle/libs.versions.toml"
+            line="20"
             column="30"/>
     </issue>
 
@@ -216,8 +194,8 @@
         errorLine1="androidx-lifecycle-compose = &quot;2.8.7&quot;"
         errorLine2="                             ~~~~~~~">
         <location
-            file="$HOME/Projects/LMPlayground/gradle/libs.versions.toml"
-            line="16"
+            file="$HOME/localcode/chidori-nagasa/gradle/libs.versions.toml"
+            line="20"
             column="30"/>
     </issue>
 
@@ -227,8 +205,8 @@
         errorLine1="androidx-lifecycle-compose = &quot;2.8.7&quot;"
         errorLine2="                             ~~~~~~~">
         <location
-            file="$HOME/Projects/LMPlayground/gradle/libs.versions.toml"
-            line="16"
+            file="$HOME/localcode/chidori-nagasa/gradle/libs.versions.toml"
+            line="20"
             column="30"/>
     </issue>
 
@@ -238,8 +216,8 @@
         errorLine1="androidx-lifecycle-runtime-compose = &quot;2.8.7&quot;"
         errorLine2="                                     ~~~~~~~">
         <location
-            file="$HOME/Projects/LMPlayground/gradle/libs.versions.toml"
-            line="17"
+            file="$HOME/localcode/chidori-nagasa/gradle/libs.versions.toml"
+            line="21"
             column="38"/>
     </issue>
 
@@ -249,8 +227,8 @@
         errorLine1="androidx-navigation = &quot;2.7.7&quot;"
         errorLine2="                      ~~~~~~~">
         <location
-            file="$HOME/Projects/LMPlayground/gradle/libs.versions.toml"
-            line="18"
+            file="$HOME/localcode/chidori-nagasa/gradle/libs.versions.toml"
+            line="22"
             column="23"/>
     </issue>
 
@@ -260,8 +238,8 @@
         errorLine1="androidx-navigation = &quot;2.7.7&quot;"
         errorLine2="                      ~~~~~~~">
         <location
-            file="$HOME/Projects/LMPlayground/gradle/libs.versions.toml"
-            line="18"
+            file="$HOME/localcode/chidori-nagasa/gradle/libs.versions.toml"
+            line="22"
             column="23"/>
     </issue>
 
@@ -271,8 +249,8 @@
         errorLine1="androidx-navigation = &quot;2.7.7&quot;"
         errorLine2="                      ~~~~~~~">
         <location
-            file="$HOME/Projects/LMPlayground/gradle/libs.versions.toml"
-            line="18"
+            file="$HOME/localcode/chidori-nagasa/gradle/libs.versions.toml"
+            line="22"
             column="23"/>
     </issue>
 
@@ -282,8 +260,8 @@
         errorLine1="androidx-compose-material3-adaptive = &quot;1.1.0&quot;"
         errorLine2="                                      ~~~~~~~">
         <location
-            file="$HOME/Projects/LMPlayground/gradle/libs.versions.toml"
-            line="24"
+            file="$HOME/localcode/chidori-nagasa/gradle/libs.versions.toml"
+            line="28"
             column="39"/>
     </issue>
 
@@ -293,8 +271,8 @@
         errorLine1="androidx-compose-material3-adaptive = &quot;1.1.0&quot;"
         errorLine2="                                      ~~~~~~~">
         <location
-            file="$HOME/Projects/LMPlayground/gradle/libs.versions.toml"
-            line="24"
+            file="$HOME/localcode/chidori-nagasa/gradle/libs.versions.toml"
+            line="28"
             column="39"/>
     </issue>
 
@@ -304,8 +282,8 @@
         errorLine1="androidx-window = &quot;1.3.0-alpha01&quot;"
         errorLine2="                  ~~~~~~~~~~~~~~~">
         <location
-            file="$HOME/Projects/LMPlayground/gradle/libs.versions.toml"
-            line="25"
+            file="$HOME/localcode/chidori-nagasa/gradle/libs.versions.toml"
+            line="29"
             column="19"/>
     </issue>
 
@@ -315,8 +293,19 @@
         errorLine1="androidx-work = &quot;2.10.5&quot;"
         errorLine2="                ~~~~~~~~">
         <location
-            file="$HOME/Projects/LMPlayground/gradle/libs.versions.toml"
-            line="26"
+            file="$HOME/localcode/chidori-nagasa/gradle/libs.versions.toml"
+            line="30"
+            column="17"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of androidx.work:work-testing than 2.10.5 is available: 2.11.2"
+        errorLine1="androidx-work = &quot;2.10.5&quot;"
+        errorLine2="                ~~~~~~~~">
+        <location
+            file="$HOME/localcode/chidori-nagasa/gradle/libs.versions.toml"
+            line="30"
             column="17"/>
     </issue>
 
@@ -326,8 +315,8 @@
         errorLine1="androidxHiltNavigationCompose = &quot;1.1.0&quot;"
         errorLine2="                                ~~~~~~~">
         <location
-            file="$HOME/Projects/LMPlayground/gradle/libs.versions.toml"
-            line="27"
+            file="$HOME/localcode/chidori-nagasa/gradle/libs.versions.toml"
+            line="31"
             column="33"/>
     </issue>
 
@@ -337,19 +326,19 @@
         errorLine1="androix-test-uiautomator = &quot;2.2.0&quot;"
         errorLine2="                           ~~~~~~~">
         <location
-            file="$HOME/Projects/LMPlayground/gradle/libs.versions.toml"
-            line="28"
+            file="$HOME/localcode/chidori-nagasa/gradle/libs.versions.toml"
+            line="32"
             column="28"/>
     </issue>
 
     <issue
         id="GradleDependency"
-        message="A newer version of `compileSdkVersion` than 35 is available: 36"
-        errorLine1="compileSdk = &quot;35&quot;"
-        errorLine2="             ~~~~">
+        message="A newer version of org.jetbrains.kotlinx:kotlinx-coroutines-test than 1.7.3 is available: 1.9.0"
+        errorLine1="coroutines = &quot;1.7.3&quot;"
+        errorLine2="             ~~~~~~~">
         <location
-            file="$HOME/Projects/LMPlayground/gradle/libs.versions.toml"
-            line="32"
+            file="$HOME/localcode/chidori-nagasa/gradle/libs.versions.toml"
+            line="38"
             column="14"/>
     </issue>
 
@@ -359,8 +348,8 @@
         errorLine1="google-maps = &quot;18.2.0&quot;"
         errorLine2="              ~~~~~~~~">
         <location
-            file="$HOME/Projects/LMPlayground/gradle/libs.versions.toml"
-            line="35"
+            file="$HOME/localcode/chidori-nagasa/gradle/libs.versions.toml"
+            line="39"
             column="15"/>
     </issue>
 
@@ -370,20 +359,9 @@
         errorLine1="hiltExt = &quot;1.1.0&quot;"
         errorLine2="          ~~~~~~~">
         <location
-            file="$HOME/Projects/LMPlayground/gradle/libs.versions.toml"
-            line="42"
+            file="$HOME/localcode/chidori-nagasa/gradle/libs.versions.toml"
+            line="43"
             column="11"/>
-    </issue>
-
-    <issue
-        id="GradleDependency"
-        message="A newer version of com.google.android.material:material than 1.12.0 is available: 1.14.0"
-        errorLine1="material = &quot;1.12.0&quot;"
-        errorLine2="           ~~~~~~~~">
-        <location
-            file="$HOME/Projects/LMPlayground/gradle/libs.versions.toml"
-            line="51"
-            column="12"/>
     </issue>
 
     <issue
@@ -392,8 +370,8 @@
         errorLine1="room = &quot;2.7.1&quot;"
         errorLine2="       ~~~~~~~">
         <location
-            file="$HOME/Projects/LMPlayground/gradle/libs.versions.toml"
-            line="58"
+            file="$HOME/localcode/chidori-nagasa/gradle/libs.versions.toml"
+            line="59"
             column="8"/>
     </issue>
 
@@ -403,8 +381,8 @@
         errorLine1="room = &quot;2.7.1&quot;"
         errorLine2="       ~~~~~~~">
         <location
-            file="$HOME/Projects/LMPlayground/gradle/libs.versions.toml"
-            line="58"
+            file="$HOME/localcode/chidori-nagasa/gradle/libs.versions.toml"
+            line="59"
             column="8"/>
     </issue>
 
@@ -414,8 +392,8 @@
         errorLine1="room = &quot;2.7.1&quot;"
         errorLine2="       ~~~~~~~">
         <location
-            file="$HOME/Projects/LMPlayground/gradle/libs.versions.toml"
-            line="58"
+            file="$HOME/localcode/chidori-nagasa/gradle/libs.versions.toml"
+            line="59"
             column="8"/>
     </issue>
 
@@ -425,8 +403,8 @@
         errorLine1="androidx-lifecycle-runtime = &quot;androidx.lifecycle:lifecycle-runtime-ktx:2.6.0-alpha04&quot;"
         errorLine2="                             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="$HOME/Projects/LMPlayground/gradle/libs.versions.toml"
-            line="104"
+            file="$HOME/localcode/chidori-nagasa/gradle/libs.versions.toml"
+            line="106"
             column="30"/>
     </issue>
 
@@ -436,7 +414,7 @@
         errorLine1="accompanist = &quot;0.32.0&quot;"
         errorLine2="              ~~~~~~~~">
         <location
-            file="$HOME/Projects/LMPlayground/gradle/libs.versions.toml"
+            file="$HOME/localcode/chidori-nagasa/gradle/libs.versions.toml"
             line="6"
             column="15"/>
     </issue>
@@ -447,7 +425,7 @@
         errorLine1="accompanist = &quot;0.32.0&quot;"
         errorLine2="              ~~~~~~~~">
         <location
-            file="$HOME/Projects/LMPlayground/gradle/libs.versions.toml"
+            file="$HOME/localcode/chidori-nagasa/gradle/libs.versions.toml"
             line="6"
             column="15"/>
     </issue>
@@ -458,7 +436,7 @@
         errorLine1="accompanist = &quot;0.32.0&quot;"
         errorLine2="              ~~~~~~~~">
         <location
-            file="$HOME/Projects/LMPlayground/gradle/libs.versions.toml"
+            file="$HOME/localcode/chidori-nagasa/gradle/libs.versions.toml"
             line="6"
             column="15"/>
     </issue>
@@ -469,7 +447,7 @@
         errorLine1="accompanist = &quot;0.32.0&quot;"
         errorLine2="              ~~~~~~~~">
         <location
-            file="$HOME/Projects/LMPlayground/gradle/libs.versions.toml"
+            file="$HOME/localcode/chidori-nagasa/gradle/libs.versions.toml"
             line="6"
             column="15"/>
     </issue>
@@ -480,7 +458,7 @@
         errorLine1="accompanist = &quot;0.32.0&quot;"
         errorLine2="              ~~~~~~~~">
         <location
-            file="$HOME/Projects/LMPlayground/gradle/libs.versions.toml"
+            file="$HOME/localcode/chidori-nagasa/gradle/libs.versions.toml"
             line="6"
             column="15"/>
     </issue>
@@ -491,7 +469,7 @@
         errorLine1="accompanist = &quot;0.32.0&quot;"
         errorLine2="              ~~~~~~~~">
         <location
-            file="$HOME/Projects/LMPlayground/gradle/libs.versions.toml"
+            file="$HOME/localcode/chidori-nagasa/gradle/libs.versions.toml"
             line="6"
             column="15"/>
     </issue>
@@ -502,8 +480,8 @@
         errorLine1="coil = &quot;2.4.0&quot;"
         errorLine2="       ~~~~~~~">
         <location
-            file="$HOME/Projects/LMPlayground/gradle/libs.versions.toml"
-            line="29"
+            file="$HOME/localcode/chidori-nagasa/gradle/libs.versions.toml"
+            line="33"
             column="8"/>
     </issue>
 
@@ -513,8 +491,8 @@
         errorLine1="commonmark = &quot;0.24.0&quot;"
         errorLine2="             ~~~~~~~~">
         <location
-            file="$HOME/Projects/LMPlayground/gradle/libs.versions.toml"
-            line="30"
+            file="$HOME/localcode/chidori-nagasa/gradle/libs.versions.toml"
+            line="34"
             column="14"/>
     </issue>
 
@@ -524,8 +502,8 @@
         errorLine1="commonmark = &quot;0.24.0&quot;"
         errorLine2="             ~~~~~~~~">
         <location
-            file="$HOME/Projects/LMPlayground/gradle/libs.versions.toml"
-            line="30"
+            file="$HOME/localcode/chidori-nagasa/gradle/libs.versions.toml"
+            line="34"
             column="14"/>
     </issue>
 
@@ -535,19 +513,8 @@
         errorLine1="coroutines = &quot;1.7.3&quot;"
         errorLine2="             ~~~~~~~">
         <location
-            file="$HOME/Projects/LMPlayground/gradle/libs.versions.toml"
-            line="34"
-            column="14"/>
-    </issue>
-
-    <issue
-        id="NewerVersionAvailable"
-        message="A newer version of org.jetbrains.kotlinx:kotlinx-coroutines-test than 1.7.3 is available: 1.11.0"
-        errorLine1="coroutines = &quot;1.7.3&quot;"
-        errorLine2="             ~~~~~~~">
-        <location
-            file="$HOME/Projects/LMPlayground/gradle/libs.versions.toml"
-            line="34"
+            file="$HOME/localcode/chidori-nagasa/gradle/libs.versions.toml"
+            line="38"
             column="14"/>
     </issue>
 
@@ -557,63 +524,52 @@
         errorLine1="gradle-versions = &quot;0.50.0&quot;"
         errorLine2="                  ~~~~~~~~">
         <location
-            file="$HOME/Projects/LMPlayground/gradle/libs.versions.toml"
-            line="36"
+            file="$HOME/localcode/chidori-nagasa/gradle/libs.versions.toml"
+            line="40"
             column="19"/>
     </issue>
 
     <issue
         id="NewerVersionAvailable"
-        message="A newer version of dev.chrisbanes.haze:haze than 1.6.10 is available: 1.7.2"
-        errorLine1="haze = &quot;1.6.10&quot;"
+        message="A newer version of com.google.dagger.hilt.android than 2.48.1 is available: 2.60.1"
+        errorLine1="hilt = &quot;2.48.1&quot;"
         errorLine2="       ~~~~~~~~">
         <location
-            file="$HOME/Projects/LMPlayground/gradle/libs.versions.toml"
-            line="40"
+            file="$HOME/localcode/chidori-nagasa/gradle/libs.versions.toml"
+            line="42"
             column="8"/>
     </issue>
 
     <issue
         id="NewerVersionAvailable"
-        message="A newer version of com.google.dagger.hilt.android than 2.48.1 is available: 2.60"
+        message="A newer version of com.google.dagger:hilt-android than 2.48.1 is available: 2.60.1"
         errorLine1="hilt = &quot;2.48.1&quot;"
         errorLine2="       ~~~~~~~~">
         <location
-            file="$HOME/Projects/LMPlayground/gradle/libs.versions.toml"
-            line="41"
+            file="$HOME/localcode/chidori-nagasa/gradle/libs.versions.toml"
+            line="42"
             column="8"/>
     </issue>
 
     <issue
         id="NewerVersionAvailable"
-        message="A newer version of com.google.dagger:hilt-android than 2.48.1 is available: 2.60"
+        message="A newer version of com.google.dagger:hilt-android-compiler than 2.48.1 is available: 2.60.1"
         errorLine1="hilt = &quot;2.48.1&quot;"
         errorLine2="       ~~~~~~~~">
         <location
-            file="$HOME/Projects/LMPlayground/gradle/libs.versions.toml"
-            line="41"
+            file="$HOME/localcode/chidori-nagasa/gradle/libs.versions.toml"
+            line="42"
             column="8"/>
     </issue>
 
     <issue
         id="NewerVersionAvailable"
-        message="A newer version of com.google.dagger:hilt-android-compiler than 2.48.1 is available: 2.60"
+        message="A newer version of com.google.dagger:hilt-android-testing than 2.48.1 is available: 2.60.1"
         errorLine1="hilt = &quot;2.48.1&quot;"
         errorLine2="       ~~~~~~~~">
         <location
-            file="$HOME/Projects/LMPlayground/gradle/libs.versions.toml"
-            line="41"
-            column="8"/>
-    </issue>
-
-    <issue
-        id="NewerVersionAvailable"
-        message="A newer version of com.google.dagger:hilt-android-testing than 2.48.1 is available: 2.60"
-        errorLine1="hilt = &quot;2.48.1&quot;"
-        errorLine2="       ~~~~~~~~">
-        <location
-            file="$HOME/Projects/LMPlayground/gradle/libs.versions.toml"
-            line="41"
+            file="$HOME/localcode/chidori-nagasa/gradle/libs.versions.toml"
+            line="42"
             column="8"/>
     </issue>
 
@@ -623,8 +579,8 @@
         errorLine1="jsoup = &quot;1.18.3&quot;"
         errorLine2="        ~~~~~~~~">
         <location
-            file="$HOME/Projects/LMPlayground/gradle/libs.versions.toml"
-            line="45"
+            file="$HOME/localcode/chidori-nagasa/gradle/libs.versions.toml"
+            line="46"
             column="9"/>
     </issue>
 
@@ -634,8 +590,8 @@
         errorLine1="kotlin = &quot;2.3.0&quot;"
         errorLine2="         ~~~~~~~">
         <location
-            file="$HOME/Projects/LMPlayground/gradle/libs.versions.toml"
-            line="47"
+            file="$HOME/localcode/chidori-nagasa/gradle/libs.versions.toml"
+            line="48"
             column="10"/>
     </issue>
 
@@ -645,8 +601,8 @@
         errorLine1="kotlin = &quot;2.3.0&quot;"
         errorLine2="         ~~~~~~~">
         <location
-            file="$HOME/Projects/LMPlayground/gradle/libs.versions.toml"
-            line="47"
+            file="$HOME/localcode/chidori-nagasa/gradle/libs.versions.toml"
+            line="48"
             column="10"/>
     </issue>
 
@@ -656,8 +612,8 @@
         errorLine1="kotlin = &quot;2.3.0&quot;"
         errorLine2="         ~~~~~~~">
         <location
-            file="$HOME/Projects/LMPlayground/gradle/libs.versions.toml"
-            line="47"
+            file="$HOME/localcode/chidori-nagasa/gradle/libs.versions.toml"
+            line="48"
             column="10"/>
     </issue>
 
@@ -667,19 +623,19 @@
         errorLine1="kotlin = &quot;2.3.0&quot;"
         errorLine2="         ~~~~~~~">
         <location
-            file="$HOME/Projects/LMPlayground/gradle/libs.versions.toml"
-            line="47"
+            file="$HOME/localcode/chidori-nagasa/gradle/libs.versions.toml"
+            line="48"
             column="10"/>
     </issue>
 
     <issue
         id="NewerVersionAvailable"
-        message="A newer version of org.jetbrains.kotlinx:kotlinx-collections-immutable than 0.3.5 is available: 0.5.0"
+        message="A newer version of org.jetbrains.kotlinx:kotlinx-collections-immutable than 0.3.5 is available: 0.5.1"
         errorLine1="kotlinx_immutable = &quot;0.3.5&quot;"
         errorLine2="                    ~~~~~~~">
         <location
-            file="$HOME/Projects/LMPlayground/gradle/libs.versions.toml"
-            line="48"
+            file="$HOME/localcode/chidori-nagasa/gradle/libs.versions.toml"
+            line="49"
             column="21"/>
     </issue>
 
@@ -689,8 +645,8 @@
         errorLine1="maps-compose = &quot;3.1.1&quot;"
         errorLine2="               ~~~~~~~">
         <location
-            file="$HOME/Projects/LMPlayground/gradle/libs.versions.toml"
-            line="50"
+            file="$HOME/localcode/chidori-nagasa/gradle/libs.versions.toml"
+            line="51"
             column="16"/>
     </issue>
 
@@ -700,8 +656,8 @@
         errorLine1="okhttp = &quot;4.11.0&quot;"
         errorLine2="         ~~~~~~~~">
         <location
-            file="$HOME/Projects/LMPlayground/gradle/libs.versions.toml"
-            line="54"
+            file="$HOME/localcode/chidori-nagasa/gradle/libs.versions.toml"
+            line="55"
             column="10"/>
     </issue>
 
@@ -711,8 +667,8 @@
         errorLine1="okhttp = &quot;4.11.0&quot;"
         errorLine2="         ~~~~~~~~">
         <location
-            file="$HOME/Projects/LMPlayground/gradle/libs.versions.toml"
-            line="54"
+            file="$HOME/localcode/chidori-nagasa/gradle/libs.versions.toml"
+            line="55"
             column="10"/>
     </issue>
 
@@ -722,20 +678,9 @@
         errorLine1="paparazzi = &quot;2.0.0-alpha04&quot;"
         errorLine2="            ~~~~~~~~~~~~~~~">
         <location
-            file="$HOME/Projects/LMPlayground/gradle/libs.versions.toml"
-            line="55"
-            column="13"/>
-    </issue>
-
-    <issue
-        id="NewerVersionAvailable"
-        message="A newer version of org.robolectric:robolectric than 4.14.1 is available: 4.16.1"
-        errorLine1="robolectric = &quot;4.14.1&quot;"
-        errorLine2="              ~~~~~~~~">
-        <location
-            file="$HOME/Projects/LMPlayground/gradle/libs.versions.toml"
+            file="$HOME/localcode/chidori-nagasa/gradle/libs.versions.toml"
             line="56"
-            column="15"/>
+            column="13"/>
     </issue>
 
     <issue
@@ -744,8 +689,8 @@
         errorLine1="rome = &quot;1.18.0&quot;"
         errorLine2="       ~~~~~~~~">
         <location
-            file="$HOME/Projects/LMPlayground/gradle/libs.versions.toml"
-            line="57"
+            file="$HOME/localcode/chidori-nagasa/gradle/libs.versions.toml"
+            line="58"
             column="8"/>
     </issue>
 
@@ -755,8 +700,8 @@
         errorLine1="rome = &quot;1.18.0&quot;"
         errorLine2="       ~~~~~~~~">
         <location
-            file="$HOME/Projects/LMPlayground/gradle/libs.versions.toml"
-            line="57"
+            file="$HOME/localcode/chidori-nagasa/gradle/libs.versions.toml"
+            line="58"
             column="8"/>
     </issue>
 
@@ -766,8 +711,8 @@
         errorLine1="version-catalog-update = &quot;0.8.3&quot;"
         errorLine2="                         ~~~~~~~">
         <location
-            file="$HOME/Projects/LMPlayground/gradle/libs.versions.toml"
-            line="62"
+            file="$HOME/localcode/chidori-nagasa/gradle/libs.versions.toml"
+            line="63"
             column="26"/>
     </issue>
 
@@ -777,8 +722,8 @@
         errorLine1="androidx-lifecycle-livedata-ktx = { module = &quot;androidx.lifecycle:lifecycle-viewmodel-ktx&quot;, version.ref = &quot;androidx-lifecycle-compose&quot; }"
         errorLine2="                                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="$HOME/Projects/LMPlayground/gradle/libs.versions.toml"
-            line="103"
+            file="$HOME/localcode/chidori-nagasa/gradle/libs.versions.toml"
+            line="105"
             column="36"/>
     </issue>
 
@@ -788,53 +733,9 @@
         errorLine1="androidx-lifecycle-viewmodel-ktx = { module = &quot;androidx.lifecycle:lifecycle-viewmodel-ktx&quot;, version.ref = &quot;androidx-lifecycle-compose&quot; }"
         errorLine2="                                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="$HOME/Projects/LMPlayground/gradle/libs.versions.toml"
-            line="107"
+            file="$HOME/localcode/chidori-nagasa/gradle/libs.versions.toml"
+            line="109"
             column="37"/>
-    </issue>
-
-    <issue
-        id="ConfigurationScreenWidthHeight"
-        message="Using Configuration.screenHeightDp instead of LocalWindowInfo.current.containerSize"
-        errorLine1="    val screenHeightDp = LocalConfiguration.current.screenHeightDp"
-        errorLine2="                         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/druk/lmplayground/conversation/GenerationParamsSheet.kt"
-            line="106"
-            column="26"/>
-    </issue>
-
-    <issue
-        id="ConfigurationScreenWidthHeight"
-        message="Using Configuration.screenWidthDp instead of LocalWindowInfo.current.containerSize"
-        errorLine1="                val twoPane = configuration.screenWidthDp >= 840"
-        errorLine2="                              ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/druk/lmplayground/settings/SettingsFragment.kt"
-            line="181"
-            column="31"/>
-    </issue>
-
-    <issue
-        id="ConfigurationScreenWidthHeight"
-        message="Using Configuration.screenWidthDp instead of LocalWindowInfo.current.containerSize"
-        errorLine1="    val twoPane = configuration.screenWidthDp >= 840"
-        errorLine2="                  ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/druk/lmplayground/settings/SettingsScreen.kt"
-            line="134"
-            column="19"/>
-    </issue>
-
-    <issue
-        id="ConfigurationScreenWidthHeight"
-        message="Using Configuration.screenWidthDp instead of LocalWindowInfo.current.containerSize"
-        errorLine1="    val isWide = configuration.screenWidthDp >= 840"
-        errorLine2="                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/druk/lmplayground/settings/SystemPromptsScreen.kt"
-            line="129"
-            column="18"/>
     </issue>
 
     <issue
@@ -845,6 +746,17 @@
         <location
             file="src/main/java/com/druk/lmplayground/conversation/ConversationBar.kt"
             line="45"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="ModifierParameter"
+        message="Modifier parameter should be the first optional parameter"
+        errorLine1="    modifier: Modifier = Modifier"
+        errorLine2="    ~~~~~~~~">
+        <location
+            file="src/main/java/com/druk/lmplayground/settings/SettingsScreen.kt"
+            line="349"
             column="5"/>
     </issue>
 
@@ -949,12 +861,441 @@
 
     <issue
         id="MissingTranslation"
+        message="&quot;chidori_desktop&quot; is not translated in &quot;de&quot; (German), &quot;hi&quot; (Hindi), &quot;fi&quot; (Finnish), &quot;pt&quot; (Portuguese), &quot;fil&quot; (Filipino; Pilipino), &quot;bn&quot; (Bangla), &quot;fr&quot; (French), &quot;uk&quot; (Ukrainian), &quot;sv&quot; (Swedish), &quot;ko&quot; (Korean), &quot;in&quot; (Indonesian), &quot;ms&quot; (Malay), &quot;it&quot; (Italian), &quot;es&quot; (Spanish), &quot;iw&quot; (Hebrew), &quot;zh&quot; (Chinese), &quot;cs&quot; (Czech), &quot;ar&quot; (Arabic), &quot;vi&quot; (Vietnamese), &quot;nb&quot; (Norwegian Bokmål), &quot;th&quot; (Thai), &quot;ja&quot; (Japanese), &quot;pl&quot; (Polish), &quot;da&quot; (Danish), &quot;ro&quot; (Romanian), &quot;nl&quot; (Dutch), &quot;tr&quot; (Turkish)"
+        errorLine1="    &lt;string name=&quot;chidori_desktop&quot;>Chidori Desktop&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="77"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;chidori_desktop_subtitle&quot; is not translated in &quot;de&quot; (German), &quot;hi&quot; (Hindi), &quot;fi&quot; (Finnish), &quot;pt&quot; (Portuguese), &quot;fil&quot; (Filipino; Pilipino), &quot;bn&quot; (Bangla), &quot;fr&quot; (French), &quot;uk&quot; (Ukrainian), &quot;sv&quot; (Swedish), &quot;ko&quot; (Korean), &quot;in&quot; (Indonesian), &quot;ms&quot; (Malay), &quot;it&quot; (Italian), &quot;es&quot; (Spanish), &quot;iw&quot; (Hebrew), &quot;zh&quot; (Chinese), &quot;cs&quot; (Czech), &quot;ar&quot; (Arabic), &quot;vi&quot; (Vietnamese), &quot;nb&quot; (Norwegian Bokmål), &quot;th&quot; (Thai), &quot;ja&quot; (Japanese), &quot;pl&quot; (Polish), &quot;da&quot; (Danish), &quot;ro&quot; (Romanian), &quot;nl&quot; (Dutch), &quot;tr&quot; (Turkish)"
+        errorLine1="    &lt;string name=&quot;chidori_desktop_subtitle&quot;>Pair with a chidori desktop instance&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="78"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;chidori_desktop_intro&quot; is not translated in &quot;de&quot; (German), &quot;hi&quot; (Hindi), &quot;fi&quot; (Finnish), &quot;pt&quot; (Portuguese), &quot;fil&quot; (Filipino; Pilipino), &quot;bn&quot; (Bangla), &quot;fr&quot; (French), &quot;uk&quot; (Ukrainian), &quot;sv&quot; (Swedish), &quot;ko&quot; (Korean), &quot;in&quot; (Indonesian), &quot;ms&quot; (Malay), &quot;it&quot; (Italian), &quot;es&quot; (Spanish), &quot;iw&quot; (Hebrew), &quot;zh&quot; (Chinese), &quot;cs&quot; (Czech), &quot;ar&quot; (Arabic), &quot;vi&quot; (Vietnamese), &quot;nb&quot; (Norwegian Bokmål), &quot;th&quot; (Thai), &quot;ja&quot; (Japanese), &quot;pl&quot; (Polish), &quot;da&quot; (Danish), &quot;ro&quot; (Romanian), &quot;nl&quot; (Dutch), &quot;tr&quot; (Turkish)"
+        errorLine1="    &lt;string name=&quot;chidori_desktop_intro&quot;>Pair with a chidori desktop instance on your network to check on it and chat through its models. Everything here stays on your local network — see Privacy Policy §4b.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="79"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;chidori_paired_section&quot; is not translated in &quot;de&quot; (German), &quot;hi&quot; (Hindi), &quot;fi&quot; (Finnish), &quot;pt&quot; (Portuguese), &quot;fil&quot; (Filipino; Pilipino), &quot;bn&quot; (Bangla), &quot;fr&quot; (French), &quot;uk&quot; (Ukrainian), &quot;sv&quot; (Swedish), &quot;ko&quot; (Korean), &quot;in&quot; (Indonesian), &quot;ms&quot; (Malay), &quot;it&quot; (Italian), &quot;es&quot; (Spanish), &quot;iw&quot; (Hebrew), &quot;zh&quot; (Chinese), &quot;cs&quot; (Czech), &quot;ar&quot; (Arabic), &quot;vi&quot; (Vietnamese), &quot;nb&quot; (Norwegian Bokmål), &quot;th&quot; (Thai), &quot;ja&quot; (Japanese), &quot;pl&quot; (Polish), &quot;da&quot; (Danish), &quot;ro&quot; (Romanian), &quot;nl&quot; (Dutch), &quot;tr&quot; (Turkish)"
+        errorLine1="    &lt;string name=&quot;chidori_paired_section&quot;>Paired&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="80"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;chidori_discovered_section&quot; is not translated in &quot;de&quot; (German), &quot;hi&quot; (Hindi), &quot;fi&quot; (Finnish), &quot;pt&quot; (Portuguese), &quot;fil&quot; (Filipino; Pilipino), &quot;bn&quot; (Bangla), &quot;fr&quot; (French), &quot;uk&quot; (Ukrainian), &quot;sv&quot; (Swedish), &quot;ko&quot; (Korean), &quot;in&quot; (Indonesian), &quot;ms&quot; (Malay), &quot;it&quot; (Italian), &quot;es&quot; (Spanish), &quot;iw&quot; (Hebrew), &quot;zh&quot; (Chinese), &quot;cs&quot; (Czech), &quot;ar&quot; (Arabic), &quot;vi&quot; (Vietnamese), &quot;nb&quot; (Norwegian Bokmål), &quot;th&quot; (Thai), &quot;ja&quot; (Japanese), &quot;pl&quot; (Polish), &quot;da&quot; (Danish), &quot;ro&quot; (Romanian), &quot;nl&quot; (Dutch), &quot;tr&quot; (Turkish)"
+        errorLine1="    &lt;string name=&quot;chidori_discovered_section&quot;>Nearby on this network&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="81"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;chidori_discovering&quot; is not translated in &quot;de&quot; (German), &quot;hi&quot; (Hindi), &quot;fi&quot; (Finnish), &quot;pt&quot; (Portuguese), &quot;fil&quot; (Filipino; Pilipino), &quot;bn&quot; (Bangla), &quot;fr&quot; (French), &quot;uk&quot; (Ukrainian), &quot;sv&quot; (Swedish), &quot;ko&quot; (Korean), &quot;in&quot; (Indonesian), &quot;ms&quot; (Malay), &quot;it&quot; (Italian), &quot;es&quot; (Spanish), &quot;iw&quot; (Hebrew), &quot;zh&quot; (Chinese), &quot;cs&quot; (Czech), &quot;ar&quot; (Arabic), &quot;vi&quot; (Vietnamese), &quot;nb&quot; (Norwegian Bokmål), &quot;th&quot; (Thai), &quot;ja&quot; (Japanese), &quot;pl&quot; (Polish), &quot;da&quot; (Danish), &quot;ro&quot; (Romanian), &quot;nl&quot; (Dutch), &quot;tr&quot; (Turkish)"
+        errorLine1="    &lt;string name=&quot;chidori_discovering&quot;>Looking for chidori instances on this network…&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="82"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;chidori_manual_section&quot; is not translated in &quot;de&quot; (German), &quot;hi&quot; (Hindi), &quot;fi&quot; (Finnish), &quot;pt&quot; (Portuguese), &quot;fil&quot; (Filipino; Pilipino), &quot;bn&quot; (Bangla), &quot;fr&quot; (French), &quot;uk&quot; (Ukrainian), &quot;sv&quot; (Swedish), &quot;ko&quot; (Korean), &quot;in&quot; (Indonesian), &quot;ms&quot; (Malay), &quot;it&quot; (Italian), &quot;es&quot; (Spanish), &quot;iw&quot; (Hebrew), &quot;zh&quot; (Chinese), &quot;cs&quot; (Czech), &quot;ar&quot; (Arabic), &quot;vi&quot; (Vietnamese), &quot;nb&quot; (Norwegian Bokmål), &quot;th&quot; (Thai), &quot;ja&quot; (Japanese), &quot;pl&quot; (Polish), &quot;da&quot; (Danish), &quot;ro&quot; (Romanian), &quot;nl&quot; (Dutch), &quot;tr&quot; (Turkish)"
+        errorLine1="    &lt;string name=&quot;chidori_manual_section&quot;>Manual connection&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="83"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;chidori_manual_hint&quot; is not translated in &quot;de&quot; (German), &quot;hi&quot; (Hindi), &quot;fi&quot; (Finnish), &quot;pt&quot; (Portuguese), &quot;fil&quot; (Filipino; Pilipino), &quot;bn&quot; (Bangla), &quot;fr&quot; (French), &quot;uk&quot; (Ukrainian), &quot;sv&quot; (Swedish), &quot;ko&quot; (Korean), &quot;in&quot; (Indonesian), &quot;ms&quot; (Malay), &quot;it&quot; (Italian), &quot;es&quot; (Spanish), &quot;iw&quot; (Hebrew), &quot;zh&quot; (Chinese), &quot;cs&quot; (Czech), &quot;ar&quot; (Arabic), &quot;vi&quot; (Vietnamese), &quot;nb&quot; (Norwegian Bokmål), &quot;th&quot; (Thai), &quot;ja&quot; (Japanese), &quot;pl&quot; (Polish), &quot;da&quot; (Danish), &quot;ro&quot; (Romanian), &quot;nl&quot; (Dutch), &quot;tr&quot; (Turkish)"
+        errorLine1="    &lt;string name=&quot;chidori_manual_hint&quot;>If discovery doesn\&apos;t find your desktop (e.g. on a corporate or guest network), enter its address directly.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="84"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;chidori_manual_host&quot; is not translated in &quot;de&quot; (German), &quot;hi&quot; (Hindi), &quot;fi&quot; (Finnish), &quot;pt&quot; (Portuguese), &quot;fil&quot; (Filipino; Pilipino), &quot;bn&quot; (Bangla), &quot;fr&quot; (French), &quot;uk&quot; (Ukrainian), &quot;sv&quot; (Swedish), &quot;ko&quot; (Korean), &quot;in&quot; (Indonesian), &quot;ms&quot; (Malay), &quot;it&quot; (Italian), &quot;es&quot; (Spanish), &quot;iw&quot; (Hebrew), &quot;zh&quot; (Chinese), &quot;cs&quot; (Czech), &quot;ar&quot; (Arabic), &quot;vi&quot; (Vietnamese), &quot;nb&quot; (Norwegian Bokmål), &quot;th&quot; (Thai), &quot;ja&quot; (Japanese), &quot;pl&quot; (Polish), &quot;da&quot; (Danish), &quot;ro&quot; (Romanian), &quot;nl&quot; (Dutch), &quot;tr&quot; (Turkish)"
+        errorLine1="    &lt;string name=&quot;chidori_manual_host&quot;>Host or IP&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="85"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;chidori_manual_port&quot; is not translated in &quot;de&quot; (German), &quot;hi&quot; (Hindi), &quot;fi&quot; (Finnish), &quot;pt&quot; (Portuguese), &quot;fil&quot; (Filipino; Pilipino), &quot;bn&quot; (Bangla), &quot;fr&quot; (French), &quot;uk&quot; (Ukrainian), &quot;sv&quot; (Swedish), &quot;ko&quot; (Korean), &quot;in&quot; (Indonesian), &quot;ms&quot; (Malay), &quot;it&quot; (Italian), &quot;es&quot; (Spanish), &quot;iw&quot; (Hebrew), &quot;zh&quot; (Chinese), &quot;cs&quot; (Czech), &quot;ar&quot; (Arabic), &quot;vi&quot; (Vietnamese), &quot;nb&quot; (Norwegian Bokmål), &quot;th&quot; (Thai), &quot;ja&quot; (Japanese), &quot;pl&quot; (Polish), &quot;da&quot; (Danish), &quot;ro&quot; (Romanian), &quot;nl&quot; (Dutch), &quot;tr&quot; (Turkish)"
+        errorLine1="    &lt;string name=&quot;chidori_manual_port&quot;>Port&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="86"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;chidori_pair&quot; is not translated in &quot;de&quot; (German), &quot;hi&quot; (Hindi), &quot;fi&quot; (Finnish), &quot;pt&quot; (Portuguese), &quot;fil&quot; (Filipino; Pilipino), &quot;bn&quot; (Bangla), &quot;fr&quot; (French), &quot;uk&quot; (Ukrainian), &quot;sv&quot; (Swedish), &quot;ko&quot; (Korean), &quot;in&quot; (Indonesian), &quot;ms&quot; (Malay), &quot;it&quot; (Italian), &quot;es&quot; (Spanish), &quot;iw&quot; (Hebrew), &quot;zh&quot; (Chinese), &quot;cs&quot; (Czech), &quot;ar&quot; (Arabic), &quot;vi&quot; (Vietnamese), &quot;nb&quot; (Norwegian Bokmål), &quot;th&quot; (Thai), &quot;ja&quot; (Japanese), &quot;pl&quot; (Polish), &quot;da&quot; (Danish), &quot;ro&quot; (Romanian), &quot;nl&quot; (Dutch), &quot;tr&quot; (Turkish)"
+        errorLine1="    &lt;string name=&quot;chidori_pair&quot;>Pair&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="87"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;chidori_pairing_in_progress&quot; is not translated in &quot;de&quot; (German), &quot;hi&quot; (Hindi), &quot;fi&quot; (Finnish), &quot;pt&quot; (Portuguese), &quot;fil&quot; (Filipino; Pilipino), &quot;bn&quot; (Bangla), &quot;fr&quot; (French), &quot;uk&quot; (Ukrainian), &quot;sv&quot; (Swedish), &quot;ko&quot; (Korean), &quot;in&quot; (Indonesian), &quot;ms&quot; (Malay), &quot;it&quot; (Italian), &quot;es&quot; (Spanish), &quot;iw&quot; (Hebrew), &quot;zh&quot; (Chinese), &quot;cs&quot; (Czech), &quot;ar&quot; (Arabic), &quot;vi&quot; (Vietnamese), &quot;nb&quot; (Norwegian Bokmål), &quot;th&quot; (Thai), &quot;ja&quot; (Japanese), &quot;pl&quot; (Polish), &quot;da&quot; (Danish), &quot;ro&quot; (Romanian), &quot;nl&quot; (Dutch), &quot;tr&quot; (Turkish)"
+        errorLine1="    &lt;string name=&quot;chidori_pairing_in_progress&quot;>Pairing…&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="88"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;chidori_unpair&quot; is not translated in &quot;de&quot; (German), &quot;hi&quot; (Hindi), &quot;fi&quot; (Finnish), &quot;pt&quot; (Portuguese), &quot;fil&quot; (Filipino; Pilipino), &quot;bn&quot; (Bangla), &quot;fr&quot; (French), &quot;uk&quot; (Ukrainian), &quot;sv&quot; (Swedish), &quot;ko&quot; (Korean), &quot;in&quot; (Indonesian), &quot;ms&quot; (Malay), &quot;it&quot; (Italian), &quot;es&quot; (Spanish), &quot;iw&quot; (Hebrew), &quot;zh&quot; (Chinese), &quot;cs&quot; (Czech), &quot;ar&quot; (Arabic), &quot;vi&quot; (Vietnamese), &quot;nb&quot; (Norwegian Bokmål), &quot;th&quot; (Thai), &quot;ja&quot; (Japanese), &quot;pl&quot; (Polish), &quot;da&quot; (Danish), &quot;ro&quot; (Romanian), &quot;nl&quot; (Dutch), &quot;tr&quot; (Turkish)"
+        errorLine1="    &lt;string name=&quot;chidori_unpair&quot;>Unpair&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="89"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;chidori_status_paired&quot; is not translated in &quot;de&quot; (German), &quot;hi&quot; (Hindi), &quot;fi&quot; (Finnish), &quot;pt&quot; (Portuguese), &quot;fil&quot; (Filipino; Pilipino), &quot;bn&quot; (Bangla), &quot;fr&quot; (French), &quot;uk&quot; (Ukrainian), &quot;sv&quot; (Swedish), &quot;ko&quot; (Korean), &quot;in&quot; (Indonesian), &quot;ms&quot; (Malay), &quot;it&quot; (Italian), &quot;es&quot; (Spanish), &quot;iw&quot; (Hebrew), &quot;zh&quot; (Chinese), &quot;cs&quot; (Czech), &quot;ar&quot; (Arabic), &quot;vi&quot; (Vietnamese), &quot;nb&quot; (Norwegian Bokmål), &quot;th&quot; (Thai), &quot;ja&quot; (Japanese), &quot;pl&quot; (Polish), &quot;da&quot; (Danish), &quot;ro&quot; (Romanian), &quot;nl&quot; (Dutch), &quot;tr&quot; (Turkish)"
+        errorLine1="    &lt;string name=&quot;chidori_status_paired&quot;>Paired&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="90"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;chidori_status_not_paired&quot; is not translated in &quot;de&quot; (German), &quot;hi&quot; (Hindi), &quot;fi&quot; (Finnish), &quot;pt&quot; (Portuguese), &quot;fil&quot; (Filipino; Pilipino), &quot;bn&quot; (Bangla), &quot;fr&quot; (French), &quot;uk&quot; (Ukrainian), &quot;sv&quot; (Swedish), &quot;ko&quot; (Korean), &quot;in&quot; (Indonesian), &quot;ms&quot; (Malay), &quot;it&quot; (Italian), &quot;es&quot; (Spanish), &quot;iw&quot; (Hebrew), &quot;zh&quot; (Chinese), &quot;cs&quot; (Czech), &quot;ar&quot; (Arabic), &quot;vi&quot; (Vietnamese), &quot;nb&quot; (Norwegian Bokmål), &quot;th&quot; (Thai), &quot;ja&quot; (Japanese), &quot;pl&quot; (Polish), &quot;da&quot; (Danish), &quot;ro&quot; (Romanian), &quot;nl&quot; (Dutch), &quot;tr&quot; (Turkish)"
+        errorLine1="    &lt;string name=&quot;chidori_status_not_paired&quot;>Not paired&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="91"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;chidori_status_requires_repair&quot; is not translated in &quot;de&quot; (German), &quot;hi&quot; (Hindi), &quot;fi&quot; (Finnish), &quot;pt&quot; (Portuguese), &quot;fil&quot; (Filipino; Pilipino), &quot;bn&quot; (Bangla), &quot;fr&quot; (French), &quot;uk&quot; (Ukrainian), &quot;sv&quot; (Swedish), &quot;ko&quot; (Korean), &quot;in&quot; (Indonesian), &quot;ms&quot; (Malay), &quot;it&quot; (Italian), &quot;es&quot; (Spanish), &quot;iw&quot; (Hebrew), &quot;zh&quot; (Chinese), &quot;cs&quot; (Czech), &quot;ar&quot; (Arabic), &quot;vi&quot; (Vietnamese), &quot;nb&quot; (Norwegian Bokmål), &quot;th&quot; (Thai), &quot;ja&quot; (Japanese), &quot;pl&quot; (Polish), &quot;da&quot; (Danish), &quot;ro&quot; (Romanian), &quot;nl&quot; (Dutch), &quot;tr&quot; (Turkish)"
+        errorLine1="    &lt;string name=&quot;chidori_status_requires_repair&quot;>Desktop restarted — re-pair needed&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="92"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;chidori_pairing_failed_title&quot; is not translated in &quot;de&quot; (German), &quot;hi&quot; (Hindi), &quot;fi&quot; (Finnish), &quot;pt&quot; (Portuguese), &quot;fil&quot; (Filipino; Pilipino), &quot;bn&quot; (Bangla), &quot;fr&quot; (French), &quot;uk&quot; (Ukrainian), &quot;sv&quot; (Swedish), &quot;ko&quot; (Korean), &quot;in&quot; (Indonesian), &quot;ms&quot; (Malay), &quot;it&quot; (Italian), &quot;es&quot; (Spanish), &quot;iw&quot; (Hebrew), &quot;zh&quot; (Chinese), &quot;cs&quot; (Czech), &quot;ar&quot; (Arabic), &quot;vi&quot; (Vietnamese), &quot;nb&quot; (Norwegian Bokmål), &quot;th&quot; (Thai), &quot;ja&quot; (Japanese), &quot;pl&quot; (Polish), &quot;da&quot; (Danish), &quot;ro&quot; (Romanian), &quot;nl&quot; (Dutch), &quot;tr&quot; (Turkish)"
+        errorLine1="    &lt;string name=&quot;chidori_pairing_failed_title&quot;>Couldn\&apos;t pair&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="93"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;chidori_enter_code_title&quot; is not translated in &quot;de&quot; (German), &quot;hi&quot; (Hindi), &quot;fi&quot; (Finnish), &quot;pt&quot; (Portuguese), &quot;fil&quot; (Filipino; Pilipino), &quot;bn&quot; (Bangla), &quot;fr&quot; (French), &quot;uk&quot; (Ukrainian), &quot;sv&quot; (Swedish), &quot;ko&quot; (Korean), &quot;in&quot; (Indonesian), &quot;ms&quot; (Malay), &quot;it&quot; (Italian), &quot;es&quot; (Spanish), &quot;iw&quot; (Hebrew), &quot;zh&quot; (Chinese), &quot;cs&quot; (Czech), &quot;ar&quot; (Arabic), &quot;vi&quot; (Vietnamese), &quot;nb&quot; (Norwegian Bokmål), &quot;th&quot; (Thai), &quot;ja&quot; (Japanese), &quot;pl&quot; (Polish), &quot;da&quot; (Danish), &quot;ro&quot; (Romanian), &quot;nl&quot; (Dutch), &quot;tr&quot; (Turkish)"
+        errorLine1="    &lt;string name=&quot;chidori_enter_code_title&quot;>Enter pairing code&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="94"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;chidori_enter_code_body&quot; is not translated in &quot;de&quot; (German), &quot;hi&quot; (Hindi), &quot;fi&quot; (Finnish), &quot;pt&quot; (Portuguese), &quot;fil&quot; (Filipino; Pilipino), &quot;bn&quot; (Bangla), &quot;fr&quot; (French), &quot;uk&quot; (Ukrainian), &quot;sv&quot; (Swedish), &quot;ko&quot; (Korean), &quot;in&quot; (Indonesian), &quot;ms&quot; (Malay), &quot;it&quot; (Italian), &quot;es&quot; (Spanish), &quot;iw&quot; (Hebrew), &quot;zh&quot; (Chinese), &quot;cs&quot; (Czech), &quot;ar&quot; (Arabic), &quot;vi&quot; (Vietnamese), &quot;nb&quot; (Norwegian Bokmål), &quot;th&quot; (Thai), &quot;ja&quot; (Japanese), &quot;pl&quot; (Polish), &quot;da&quot; (Danish), &quot;ro&quot; (Romanian), &quot;nl&quot; (Dutch), &quot;tr&quot; (Turkish)"
+        errorLine1="    &lt;string name=&quot;chidori_enter_code_body&quot;>Enter the code shown on your chidori desktop app to finish pairing.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="95"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;chidori_pairing_code&quot; is not translated in &quot;de&quot; (German), &quot;hi&quot; (Hindi), &quot;fi&quot; (Finnish), &quot;pt&quot; (Portuguese), &quot;fil&quot; (Filipino; Pilipino), &quot;bn&quot; (Bangla), &quot;fr&quot; (French), &quot;uk&quot; (Ukrainian), &quot;sv&quot; (Swedish), &quot;ko&quot; (Korean), &quot;in&quot; (Indonesian), &quot;ms&quot; (Malay), &quot;it&quot; (Italian), &quot;es&quot; (Spanish), &quot;iw&quot; (Hebrew), &quot;zh&quot; (Chinese), &quot;cs&quot; (Czech), &quot;ar&quot; (Arabic), &quot;vi&quot; (Vietnamese), &quot;nb&quot; (Norwegian Bokmål), &quot;th&quot; (Thai), &quot;ja&quot; (Japanese), &quot;pl&quot; (Polish), &quot;da&quot; (Danish), &quot;ro&quot; (Romanian), &quot;nl&quot; (Dutch), &quot;tr&quot; (Turkish)"
+        errorLine1="    &lt;string name=&quot;chidori_pairing_code&quot;>Pairing code&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="96"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;chidori_confirm&quot; is not translated in &quot;de&quot; (German), &quot;hi&quot; (Hindi), &quot;fi&quot; (Finnish), &quot;pt&quot; (Portuguese), &quot;fil&quot; (Filipino; Pilipino), &quot;bn&quot; (Bangla), &quot;fr&quot; (French), &quot;uk&quot; (Ukrainian), &quot;sv&quot; (Swedish), &quot;ko&quot; (Korean), &quot;in&quot; (Indonesian), &quot;ms&quot; (Malay), &quot;it&quot; (Italian), &quot;es&quot; (Spanish), &quot;iw&quot; (Hebrew), &quot;zh&quot; (Chinese), &quot;cs&quot; (Czech), &quot;ar&quot; (Arabic), &quot;vi&quot; (Vietnamese), &quot;nb&quot; (Norwegian Bokmål), &quot;th&quot; (Thai), &quot;ja&quot; (Japanese), &quot;pl&quot; (Polish), &quot;da&quot; (Danish), &quot;ro&quot; (Romanian), &quot;nl&quot; (Dutch), &quot;tr&quot; (Turkish)"
+        errorLine1="    &lt;string name=&quot;chidori_confirm&quot;>Confirm&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="97"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;chidori_runs_section&quot; is not translated in &quot;de&quot; (German), &quot;hi&quot; (Hindi), &quot;fi&quot; (Finnish), &quot;pt&quot; (Portuguese), &quot;fil&quot; (Filipino; Pilipino), &quot;bn&quot; (Bangla), &quot;fr&quot; (French), &quot;uk&quot; (Ukrainian), &quot;sv&quot; (Swedish), &quot;ko&quot; (Korean), &quot;in&quot; (Indonesian), &quot;ms&quot; (Malay), &quot;it&quot; (Italian), &quot;es&quot; (Spanish), &quot;iw&quot; (Hebrew), &quot;zh&quot; (Chinese), &quot;cs&quot; (Czech), &quot;ar&quot; (Arabic), &quot;vi&quot; (Vietnamese), &quot;nb&quot; (Norwegian Bokmål), &quot;th&quot; (Thai), &quot;ja&quot; (Japanese), &quot;pl&quot; (Polish), &quot;da&quot; (Danish), &quot;ro&quot; (Romanian), &quot;nl&quot; (Dutch), &quot;tr&quot; (Turkish)"
+        errorLine1="    &lt;string name=&quot;chidori_runs_section&quot;>Recent runs&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="99"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;chidori_no_runs&quot; is not translated in &quot;de&quot; (German), &quot;hi&quot; (Hindi), &quot;fi&quot; (Finnish), &quot;pt&quot; (Portuguese), &quot;fil&quot; (Filipino; Pilipino), &quot;bn&quot; (Bangla), &quot;fr&quot; (French), &quot;uk&quot; (Ukrainian), &quot;sv&quot; (Swedish), &quot;ko&quot; (Korean), &quot;in&quot; (Indonesian), &quot;ms&quot; (Malay), &quot;it&quot; (Italian), &quot;es&quot; (Spanish), &quot;iw&quot; (Hebrew), &quot;zh&quot; (Chinese), &quot;cs&quot; (Czech), &quot;ar&quot; (Arabic), &quot;vi&quot; (Vietnamese), &quot;nb&quot; (Norwegian Bokmål), &quot;th&quot; (Thai), &quot;ja&quot; (Japanese), &quot;pl&quot; (Polish), &quot;da&quot; (Danish), &quot;ro&quot; (Romanian), &quot;nl&quot; (Dutch), &quot;tr&quot; (Turkish)"
+        errorLine1="    &lt;string name=&quot;chidori_no_runs&quot;>No runs yet.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="100"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;chidori_status_loading&quot; is not translated in &quot;de&quot; (German), &quot;hi&quot; (Hindi), &quot;fi&quot; (Finnish), &quot;pt&quot; (Portuguese), &quot;fil&quot; (Filipino; Pilipino), &quot;bn&quot; (Bangla), &quot;fr&quot; (French), &quot;uk&quot; (Ukrainian), &quot;sv&quot; (Swedish), &quot;ko&quot; (Korean), &quot;in&quot; (Indonesian), &quot;ms&quot; (Malay), &quot;it&quot; (Italian), &quot;es&quot; (Spanish), &quot;iw&quot; (Hebrew), &quot;zh&quot; (Chinese), &quot;cs&quot; (Czech), &quot;ar&quot; (Arabic), &quot;vi&quot; (Vietnamese), &quot;nb&quot; (Norwegian Bokmål), &quot;th&quot; (Thai), &quot;ja&quot; (Japanese), &quot;pl&quot; (Polish), &quot;da&quot; (Danish), &quot;ro&quot; (Romanian), &quot;nl&quot; (Dutch), &quot;tr&quot; (Turkish)"
+        errorLine1="    &lt;string name=&quot;chidori_status_loading&quot;>Checking status…&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="101"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;chidori_status_idle&quot; is not translated in &quot;de&quot; (German), &quot;hi&quot; (Hindi), &quot;fi&quot; (Finnish), &quot;pt&quot; (Portuguese), &quot;fil&quot; (Filipino; Pilipino), &quot;bn&quot; (Bangla), &quot;fr&quot; (French), &quot;uk&quot; (Ukrainian), &quot;sv&quot; (Swedish), &quot;ko&quot; (Korean), &quot;in&quot; (Indonesian), &quot;ms&quot; (Malay), &quot;it&quot; (Italian), &quot;es&quot; (Spanish), &quot;iw&quot; (Hebrew), &quot;zh&quot; (Chinese), &quot;cs&quot; (Czech), &quot;ar&quot; (Arabic), &quot;vi&quot; (Vietnamese), &quot;nb&quot; (Norwegian Bokmål), &quot;th&quot; (Thai), &quot;ja&quot; (Japanese), &quot;pl&quot; (Polish), &quot;da&quot; (Danish), &quot;ro&quot; (Romanian), &quot;nl&quot; (Dutch), &quot;tr&quot; (Turkish)"
+        errorLine1="    &lt;string name=&quot;chidori_status_idle&quot;>Idle&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="102"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;chidori_status_running&quot; is not translated in &quot;de&quot; (German), &quot;hi&quot; (Hindi), &quot;fi&quot; (Finnish), &quot;pt&quot; (Portuguese), &quot;fil&quot; (Filipino; Pilipino), &quot;bn&quot; (Bangla), &quot;fr&quot; (French), &quot;uk&quot; (Ukrainian), &quot;sv&quot; (Swedish), &quot;ko&quot; (Korean), &quot;in&quot; (Indonesian), &quot;ms&quot; (Malay), &quot;it&quot; (Italian), &quot;es&quot; (Spanish), &quot;iw&quot; (Hebrew), &quot;zh&quot; (Chinese), &quot;cs&quot; (Czech), &quot;ar&quot; (Arabic), &quot;vi&quot; (Vietnamese), &quot;nb&quot; (Norwegian Bokmål), &quot;th&quot; (Thai), &quot;ja&quot; (Japanese), &quot;pl&quot; (Polish), &quot;da&quot; (Danish), &quot;ro&quot; (Romanian), &quot;nl&quot; (Dutch), &quot;tr&quot; (Turkish)"
+        errorLine1="    &lt;string name=&quot;chidori_status_running&quot;>Running&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="103"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;chidori_status_error&quot; is not translated in &quot;de&quot; (German), &quot;hi&quot; (Hindi), &quot;fi&quot; (Finnish), &quot;pt&quot; (Portuguese), &quot;fil&quot; (Filipino; Pilipino), &quot;bn&quot; (Bangla), &quot;fr&quot; (French), &quot;uk&quot; (Ukrainian), &quot;sv&quot; (Swedish), &quot;ko&quot; (Korean), &quot;in&quot; (Indonesian), &quot;ms&quot; (Malay), &quot;it&quot; (Italian), &quot;es&quot; (Spanish), &quot;iw&quot; (Hebrew), &quot;zh&quot; (Chinese), &quot;cs&quot; (Czech), &quot;ar&quot; (Arabic), &quot;vi&quot; (Vietnamese), &quot;nb&quot; (Norwegian Bokmål), &quot;th&quot; (Thai), &quot;ja&quot; (Japanese), &quot;pl&quot; (Polish), &quot;da&quot; (Danish), &quot;ro&quot; (Romanian), &quot;nl&quot; (Dutch), &quot;tr&quot; (Turkish)"
+        errorLine1="    &lt;string name=&quot;chidori_status_error&quot;>Error&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="104"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;chidori_mode_ask&quot; is not translated in &quot;de&quot; (German), &quot;hi&quot; (Hindi), &quot;fi&quot; (Finnish), &quot;pt&quot; (Portuguese), &quot;fil&quot; (Filipino; Pilipino), &quot;bn&quot; (Bangla), &quot;fr&quot; (French), &quot;uk&quot; (Ukrainian), &quot;sv&quot; (Swedish), &quot;ko&quot; (Korean), &quot;in&quot; (Indonesian), &quot;ms&quot; (Malay), &quot;it&quot; (Italian), &quot;es&quot; (Spanish), &quot;iw&quot; (Hebrew), &quot;zh&quot; (Chinese), &quot;cs&quot; (Czech), &quot;ar&quot; (Arabic), &quot;vi&quot; (Vietnamese), &quot;nb&quot; (Norwegian Bokmål), &quot;th&quot; (Thai), &quot;ja&quot; (Japanese), &quot;pl&quot; (Polish), &quot;da&quot; (Danish), &quot;ro&quot; (Romanian), &quot;nl&quot; (Dutch), &quot;tr&quot; (Turkish)"
+        errorLine1="    &lt;string name=&quot;chidori_mode_ask&quot;>Ask&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="105"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;chidori_mode_agent&quot; is not translated in &quot;de&quot; (German), &quot;hi&quot; (Hindi), &quot;fi&quot; (Finnish), &quot;pt&quot; (Portuguese), &quot;fil&quot; (Filipino; Pilipino), &quot;bn&quot; (Bangla), &quot;fr&quot; (French), &quot;uk&quot; (Ukrainian), &quot;sv&quot; (Swedish), &quot;ko&quot; (Korean), &quot;in&quot; (Indonesian), &quot;ms&quot; (Malay), &quot;it&quot; (Italian), &quot;es&quot; (Spanish), &quot;iw&quot; (Hebrew), &quot;zh&quot; (Chinese), &quot;cs&quot; (Czech), &quot;ar&quot; (Arabic), &quot;vi&quot; (Vietnamese), &quot;nb&quot; (Norwegian Bokmål), &quot;th&quot; (Thai), &quot;ja&quot; (Japanese), &quot;pl&quot; (Polish), &quot;da&quot; (Danish), &quot;ro&quot; (Romanian), &quot;nl&quot; (Dutch), &quot;tr&quot; (Turkish)"
+        errorLine1="    &lt;string name=&quot;chidori_mode_agent&quot;>Agent&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="106"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;chidori_mode_plan&quot; is not translated in &quot;de&quot; (German), &quot;hi&quot; (Hindi), &quot;fi&quot; (Finnish), &quot;pt&quot; (Portuguese), &quot;fil&quot; (Filipino; Pilipino), &quot;bn&quot; (Bangla), &quot;fr&quot; (French), &quot;uk&quot; (Ukrainian), &quot;sv&quot; (Swedish), &quot;ko&quot; (Korean), &quot;in&quot; (Indonesian), &quot;ms&quot; (Malay), &quot;it&quot; (Italian), &quot;es&quot; (Spanish), &quot;iw&quot; (Hebrew), &quot;zh&quot; (Chinese), &quot;cs&quot; (Czech), &quot;ar&quot; (Arabic), &quot;vi&quot; (Vietnamese), &quot;nb&quot; (Norwegian Bokmål), &quot;th&quot; (Thai), &quot;ja&quot; (Japanese), &quot;pl&quot; (Polish), &quot;da&quot; (Danish), &quot;ro&quot; (Romanian), &quot;nl&quot; (Dutch), &quot;tr&quot; (Turkish)"
+        errorLine1="    &lt;string name=&quot;chidori_mode_plan&quot;>Plan&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="107"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;chidori_mode_debug&quot; is not translated in &quot;de&quot; (German), &quot;hi&quot; (Hindi), &quot;fi&quot; (Finnish), &quot;pt&quot; (Portuguese), &quot;fil&quot; (Filipino; Pilipino), &quot;bn&quot; (Bangla), &quot;fr&quot; (French), &quot;uk&quot; (Ukrainian), &quot;sv&quot; (Swedish), &quot;ko&quot; (Korean), &quot;in&quot; (Indonesian), &quot;ms&quot; (Malay), &quot;it&quot; (Italian), &quot;es&quot; (Spanish), &quot;iw&quot; (Hebrew), &quot;zh&quot; (Chinese), &quot;cs&quot; (Czech), &quot;ar&quot; (Arabic), &quot;vi&quot; (Vietnamese), &quot;nb&quot; (Norwegian Bokmål), &quot;th&quot; (Thai), &quot;ja&quot; (Japanese), &quot;pl&quot; (Polish), &quot;da&quot; (Danish), &quot;ro&quot; (Romanian), &quot;nl&quot; (Dutch), &quot;tr&quot; (Turkish)"
+        errorLine1="    &lt;string name=&quot;chidori_mode_debug&quot;>Debug&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="108"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;chidori_run_running&quot; is not translated in &quot;de&quot; (German), &quot;hi&quot; (Hindi), &quot;fi&quot; (Finnish), &quot;pt&quot; (Portuguese), &quot;fil&quot; (Filipino; Pilipino), &quot;bn&quot; (Bangla), &quot;fr&quot; (French), &quot;uk&quot; (Ukrainian), &quot;sv&quot; (Swedish), &quot;ko&quot; (Korean), &quot;in&quot; (Indonesian), &quot;ms&quot; (Malay), &quot;it&quot; (Italian), &quot;es&quot; (Spanish), &quot;iw&quot; (Hebrew), &quot;zh&quot; (Chinese), &quot;cs&quot; (Czech), &quot;ar&quot; (Arabic), &quot;vi&quot; (Vietnamese), &quot;nb&quot; (Norwegian Bokmål), &quot;th&quot; (Thai), &quot;ja&quot; (Japanese), &quot;pl&quot; (Polish), &quot;da&quot; (Danish), &quot;ro&quot; (Romanian), &quot;nl&quot; (Dutch), &quot;tr&quot; (Turkish)"
+        errorLine1="    &lt;string name=&quot;chidori_run_running&quot;>Running&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="109"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;chidori_run_completed&quot; is not translated in &quot;de&quot; (German), &quot;hi&quot; (Hindi), &quot;fi&quot; (Finnish), &quot;pt&quot; (Portuguese), &quot;fil&quot; (Filipino; Pilipino), &quot;bn&quot; (Bangla), &quot;fr&quot; (French), &quot;uk&quot; (Ukrainian), &quot;sv&quot; (Swedish), &quot;ko&quot; (Korean), &quot;in&quot; (Indonesian), &quot;ms&quot; (Malay), &quot;it&quot; (Italian), &quot;es&quot; (Spanish), &quot;iw&quot; (Hebrew), &quot;zh&quot; (Chinese), &quot;cs&quot; (Czech), &quot;ar&quot; (Arabic), &quot;vi&quot; (Vietnamese), &quot;nb&quot; (Norwegian Bokmål), &quot;th&quot; (Thai), &quot;ja&quot; (Japanese), &quot;pl&quot; (Polish), &quot;da&quot; (Danish), &quot;ro&quot; (Romanian), &quot;nl&quot; (Dutch), &quot;tr&quot; (Turkish)"
+        errorLine1="    &lt;string name=&quot;chidori_run_completed&quot;>Completed&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="110"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;chidori_run_failed&quot; is not translated in &quot;de&quot; (German), &quot;hi&quot; (Hindi), &quot;fi&quot; (Finnish), &quot;pt&quot; (Portuguese), &quot;fil&quot; (Filipino; Pilipino), &quot;bn&quot; (Bangla), &quot;fr&quot; (French), &quot;uk&quot; (Ukrainian), &quot;sv&quot; (Swedish), &quot;ko&quot; (Korean), &quot;in&quot; (Indonesian), &quot;ms&quot; (Malay), &quot;it&quot; (Italian), &quot;es&quot; (Spanish), &quot;iw&quot; (Hebrew), &quot;zh&quot; (Chinese), &quot;cs&quot; (Czech), &quot;ar&quot; (Arabic), &quot;vi&quot; (Vietnamese), &quot;nb&quot; (Norwegian Bokmål), &quot;th&quot; (Thai), &quot;ja&quot; (Japanese), &quot;pl&quot; (Polish), &quot;da&quot; (Danish), &quot;ro&quot; (Romanian), &quot;nl&quot; (Dutch), &quot;tr&quot; (Turkish)"
+        errorLine1="    &lt;string name=&quot;chidori_run_failed&quot;>Failed&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="111"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;chidori_view_run&quot; is not translated in &quot;de&quot; (German), &quot;hi&quot; (Hindi), &quot;fi&quot; (Finnish), &quot;pt&quot; (Portuguese), &quot;fil&quot; (Filipino; Pilipino), &quot;bn&quot; (Bangla), &quot;fr&quot; (French), &quot;uk&quot; (Ukrainian), &quot;sv&quot; (Swedish), &quot;ko&quot; (Korean), &quot;in&quot; (Indonesian), &quot;ms&quot; (Malay), &quot;it&quot; (Italian), &quot;es&quot; (Spanish), &quot;iw&quot; (Hebrew), &quot;zh&quot; (Chinese), &quot;cs&quot; (Czech), &quot;ar&quot; (Arabic), &quot;vi&quot; (Vietnamese), &quot;nb&quot; (Norwegian Bokmål), &quot;th&quot; (Thai), &quot;ja&quot; (Japanese), &quot;pl&quot; (Polish), &quot;da&quot; (Danish), &quot;ro&quot; (Romanian), &quot;nl&quot; (Dutch), &quot;tr&quot; (Turkish)"
+        errorLine1="    &lt;string name=&quot;chidori_view_run&quot;>View&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="112"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;chidori_run_detail_title&quot; is not translated in &quot;de&quot; (German), &quot;hi&quot; (Hindi), &quot;fi&quot; (Finnish), &quot;pt&quot; (Portuguese), &quot;fil&quot; (Filipino; Pilipino), &quot;bn&quot; (Bangla), &quot;fr&quot; (French), &quot;uk&quot; (Ukrainian), &quot;sv&quot; (Swedish), &quot;ko&quot; (Korean), &quot;in&quot; (Indonesian), &quot;ms&quot; (Malay), &quot;it&quot; (Italian), &quot;es&quot; (Spanish), &quot;iw&quot; (Hebrew), &quot;zh&quot; (Chinese), &quot;cs&quot; (Czech), &quot;ar&quot; (Arabic), &quot;vi&quot; (Vietnamese), &quot;nb&quot; (Norwegian Bokmål), &quot;th&quot; (Thai), &quot;ja&quot; (Japanese), &quot;pl&quot; (Polish), &quot;da&quot; (Danish), &quot;ro&quot; (Romanian), &quot;nl&quot; (Dutch), &quot;tr&quot; (Turkish)"
+        errorLine1="    &lt;string name=&quot;chidori_run_detail_title&quot;>Run detail&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="113"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;chidori_no_log&quot; is not translated in &quot;de&quot; (German), &quot;hi&quot; (Hindi), &quot;fi&quot; (Finnish), &quot;pt&quot; (Portuguese), &quot;fil&quot; (Filipino; Pilipino), &quot;bn&quot; (Bangla), &quot;fr&quot; (French), &quot;uk&quot; (Ukrainian), &quot;sv&quot; (Swedish), &quot;ko&quot; (Korean), &quot;in&quot; (Indonesian), &quot;ms&quot; (Malay), &quot;it&quot; (Italian), &quot;es&quot; (Spanish), &quot;iw&quot; (Hebrew), &quot;zh&quot; (Chinese), &quot;cs&quot; (Czech), &quot;ar&quot; (Arabic), &quot;vi&quot; (Vietnamese), &quot;nb&quot; (Norwegian Bokmål), &quot;th&quot; (Thai), &quot;ja&quot; (Japanese), &quot;pl&quot; (Polish), &quot;da&quot; (Danish), &quot;ro&quot; (Romanian), &quot;nl&quot; (Dutch), &quot;tr&quot; (Turkish)"
+        errorLine1="    &lt;string name=&quot;chidori_no_log&quot;>No log output.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="114"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;privacy_policy_s4b_title&quot; is not translated in &quot;de&quot; (German), &quot;hi&quot; (Hindi), &quot;fi&quot; (Finnish), &quot;pt&quot; (Portuguese), &quot;fil&quot; (Filipino; Pilipino), &quot;bn&quot; (Bangla), &quot;fr&quot; (French), &quot;uk&quot; (Ukrainian), &quot;sv&quot; (Swedish), &quot;ko&quot; (Korean), &quot;in&quot; (Indonesian), &quot;ms&quot; (Malay), &quot;it&quot; (Italian), &quot;es&quot; (Spanish), &quot;iw&quot; (Hebrew), &quot;zh&quot; (Chinese), &quot;cs&quot; (Czech), &quot;ar&quot; (Arabic), &quot;vi&quot; (Vietnamese), &quot;nb&quot; (Norwegian Bokmål), &quot;th&quot; (Thai), &quot;ja&quot; (Japanese), &quot;pl&quot; (Polish), &quot;da&quot; (Danish), &quot;ro&quot; (Romanian), &quot;nl&quot; (Dutch), &quot;tr&quot; (Turkish)"
+        errorLine1="    &lt;string name=&quot;privacy_policy_s4b_title&quot;>4b. Chidori Desktop Pairing (companion features)&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="125"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;privacy_policy_s4b_body&quot; is not translated in &quot;de&quot; (German), &quot;hi&quot; (Hindi), &quot;fi&quot; (Finnish), &quot;pt&quot; (Portuguese), &quot;fil&quot; (Filipino; Pilipino), &quot;bn&quot; (Bangla), &quot;fr&quot; (French), &quot;uk&quot; (Ukrainian), &quot;sv&quot; (Swedish), &quot;ko&quot; (Korean), &quot;in&quot; (Indonesian), &quot;ms&quot; (Malay), &quot;it&quot; (Italian), &quot;es&quot; (Spanish), &quot;iw&quot; (Hebrew), &quot;zh&quot; (Chinese), &quot;cs&quot; (Czech), &quot;ar&quot; (Arabic), &quot;vi&quot; (Vietnamese), &quot;nb&quot; (Norwegian Bokmål), &quot;th&quot; (Thai), &quot;ja&quot; (Japanese), &quot;pl&quot; (Polish), &quot;da&quot; (Danish), &quot;ro&quot; (Romanian), &quot;nl&quot; (Dutch), &quot;tr&quot; (Turkish)"
+        errorLine1="    &lt;string name=&quot;privacy_policy_s4b_body&quot;>If you pair with a chidori desktop instance on your local network, chat messages and coordinator status you view are exchanged only with that paired instance over your local network — never with a third-party server. This connection is off until you explicitly pair a device, and you can unpair at any time from Settings.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="126"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
         message="&quot;saved_prompts&quot; is not translated in &quot;de&quot; (German), &quot;hi&quot; (Hindi), &quot;fi&quot; (Finnish), &quot;pt&quot; (Portuguese), &quot;fil&quot; (Filipino; Pilipino), &quot;bn&quot; (Bangla), &quot;fr&quot; (French), &quot;uk&quot; (Ukrainian), &quot;sv&quot; (Swedish), &quot;ko&quot; (Korean), &quot;in&quot; (Indonesian), &quot;ms&quot; (Malay), &quot;it&quot; (Italian), &quot;es&quot; (Spanish), &quot;iw&quot; (Hebrew), &quot;zh&quot; (Chinese), &quot;cs&quot; (Czech), &quot;ar&quot; (Arabic), &quot;vi&quot; (Vietnamese), &quot;nb&quot; (Norwegian Bokmål), &quot;th&quot; (Thai), &quot;ja&quot; (Japanese), &quot;pl&quot; (Polish), &quot;da&quot; (Danish), &quot;ro&quot; (Romanian), &quot;nl&quot; (Dutch), &quot;tr&quot; (Turkish)"
         errorLine1="    &lt;string name=&quot;saved_prompts&quot;>Saved prompts&lt;/string>"
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="179"
+            line="222"
             column="13"/>
     </issue>
 
@@ -965,7 +1306,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="208"
+            line="252"
             column="13"/>
     </issue>
 
@@ -976,7 +1317,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="209"
+            line="253"
             column="13"/>
     </issue>
 
@@ -987,7 +1328,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="314"
+            line="358"
             column="13"/>
     </issue>
 
@@ -998,7 +1339,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="321"
+            line="365"
             column="13"/>
     </issue>
 
@@ -1009,7 +1350,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="323"
+            line="367"
             column="13"/>
     </issue>
 
@@ -1020,7 +1361,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="324"
+            line="368"
             column="13"/>
     </issue>
 
@@ -1031,7 +1372,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="325"
+            line="369"
             column="13"/>
     </issue>
 
@@ -1042,7 +1383,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="326"
+            line="370"
             column="13"/>
     </issue>
 
@@ -1053,7 +1394,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="327"
+            line="371"
             column="13"/>
     </issue>
 
@@ -1064,7 +1405,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="328"
+            line="372"
             column="13"/>
     </issue>
 
@@ -1075,7 +1416,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="330"
+            line="374"
             column="13"/>
     </issue>
 
@@ -1086,7 +1427,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="331"
+            line="375"
             column="13"/>
     </issue>
 
@@ -2032,7 +2373,7 @@
         errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="162"
+            line="205"
             column="5"/>
     </issue>
 
@@ -2043,7 +2384,7 @@
         errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="163"
+            line="206"
             column="5"/>
     </issue>
 
@@ -2054,7 +2395,7 @@
         errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="214"
+            line="258"
             column="5"/>
     </issue>
 
@@ -2076,7 +2417,7 @@
         errorLine2="                              ~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/AndroidManifest.xml"
-            line="31"
+            line="41"
             column="31"/>
     </issue>
 
@@ -2087,59 +2428,8 @@
         errorLine2="                              ~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/AndroidManifest.xml"
-            line="31"
+            line="41"
             column="31"/>
-    </issue>
-
-    <issue
-        id="ObsoleteSdkInt"
-        message="Unnecessary; `SDK_INT` is always >= 30"
-        errorLine1="                Build.VERSION.SDK_INT >= Build.VERSION_CODES.R &amp;&amp;"
-        errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/druk/lmplayground/conversation/GenerationHaptics.kt"
-            line="43"
-            column="17"/>
-    </issue>
-
-    <issue
-        id="ObsoleteSdkInt"
-        message="Unnecessary; `SDK_INT` is always >= 30"
-        errorLine1="                Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q -> {"
-        errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/druk/lmplayground/conversation/GenerationHaptics.kt"
-            line="58"
-            column="17"/>
-    </issue>
-
-    <issue
-        id="ObsoleteSdkInt"
-        message="Unnecessary; `SDK_INT` is always >= 30"
-        errorLine1="            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {"
-        errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/druk/lmplayground/inference/LlamaService.kt"
-            line="548"
-            column="17"/>
-    </issue>
-
-    <issue
-        id="ObsoleteSdkInt"
-        message="Unnecessary; `SDK_INT` is always >= 30"
-        errorLine1="        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {"
-        errorLine2="                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/druk/lmplayground/inference/ProcessUtils.kt"
-            line="9"
-            column="20"/>
-    </issue>
-
-    <issue
-        id="ObsoleteSdkInt"
-        message="This folder configuration (`v24`) is unnecessary; `minSdkVersion` is 30. Merge all the resources in this folder into `drawable`.">
-        <location
-            file="src/main/res/drawable-v24"/>
     </issue>
 
     <issue
@@ -2716,12 +3006,34 @@
 
     <issue
         id="UnusedResources"
+        message="The resource `R.string.privacy_policy_s4b_title` appears to be unused"
+        errorLine1="    &lt;string name=&quot;privacy_policy_s4b_title&quot;>4b. Chidori Desktop Pairing (companion features)&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="125"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.privacy_policy_s4b_body` appears to be unused"
+        errorLine1="    &lt;string name=&quot;privacy_policy_s4b_body&quot;>If you pair with a chidori desktop instance on your local network, chat messages and coordinator status you view are exchanged only with that paired instance over your local network — never with a third-party server. This connection is off until you explicitly pair a device, and you can unpair at any time from Settings.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="126"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
         message="The resource `R.string.starting_download` appears to be unused"
         errorLine1="    &lt;string name=&quot;starting_download&quot;>Starting download\u2026&lt;/string>"
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="155"
+            line="198"
             column="13"/>
     </issue>
 
@@ -2732,7 +3044,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="156"
+            line="199"
             column="13"/>
     </issue>
 
@@ -2743,7 +3055,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="157"
+            line="200"
             column="13"/>
     </issue>
 
@@ -2754,7 +3066,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="158"
+            line="201"
             column="13"/>
     </issue>
 
@@ -2765,7 +3077,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="259"
+            line="303"
             column="13"/>
     </issue>
 
@@ -2776,7 +3088,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="260"
+            line="304"
             column="13"/>
     </issue>
 
@@ -2787,7 +3099,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="290"
+            line="334"
             column="13"/>
     </issue>
 
@@ -2798,7 +3110,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="291"
+            line="335"
             column="13"/>
     </issue>
 
@@ -2809,7 +3121,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="292"
+            line="336"
             column="13"/>
     </issue>
 
@@ -2820,7 +3132,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="293"
+            line="337"
             column="13"/>
     </issue>
 
@@ -2831,7 +3143,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="294"
+            line="338"
             column="13"/>
     </issue>
 
@@ -2842,7 +3154,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="311"
+            line="355"
             column="13"/>
     </issue>
 
@@ -2853,7 +3165,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="313"
+            line="357"
             column="13"/>
     </issue>
 
@@ -2902,673 +3214,13 @@
     </issue>
 
     <issue
-        id="UseKtx"
-        message="Use the KTX extension function `String.toUri` instead?"
-        errorLine1="                remoteUri = Uri.parse(&quot;https://example.com/model.gguf&quot;),"
-        errorLine2="                            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/druk/lmplayground/conversation/ConversationBar.kt"
-            line="181"
-            column="29"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `Bitmap.scale` instead?"
-        errorLine1="            val s = Bitmap.createScaledBitmap(bitmap, targetW, targetH, true)"
-        errorLine2="                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/druk/lmplayground/conversation/ConversationViewModel.kt"
-            line="1946"
-            column="21"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `String.toUri` instead?"
-        errorLine1="        val storageUri = Uri.parse(storageUriString)"
-        errorLine2="                         ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/druk/lmplayground/download/DownloadWorker.kt"
-            line="115"
-            column="26"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `String.toUri` instead?"
-        errorLine1="            remoteUri = Uri.parse(&quot;https://huggingface.co/lmstudio-community/Qwen3-0.6B-GGUF/resolve/main/Qwen3-0.6B-Q4_K_M.gguf&quot;),"
-        errorLine2="                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/druk/lmplayground/models/ModelInfoProvider.kt"
-            line="43"
-            column="25"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `String.toUri` instead?"
-        errorLine1="            remoteUri = Uri.parse(&quot;https://huggingface.co/lmstudio-community/Qwen3-1.7B-GGUF/resolve/main/Qwen3-1.7B-Q4_K_M.gguf&quot;),"
-        errorLine2="                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/druk/lmplayground/models/ModelInfoProvider.kt"
-            line="52"
-            column="25"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `String.toUri` instead?"
-        errorLine1="            remoteUri = Uri.parse(&quot;https://huggingface.co/lmstudio-community/Qwen3-4B-GGUF/resolve/main/Qwen3-4B-Q4_K_M.gguf&quot;),"
-        errorLine2="                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/druk/lmplayground/models/ModelInfoProvider.kt"
-            line="61"
-            column="25"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `String.toUri` instead?"
-        errorLine1="            remoteUri = Uri.parse(&quot;https://huggingface.co/bartowski/Qwen_Qwen3.5-0.8B-GGUF/resolve/main/Qwen_Qwen3.5-0.8B-Q3_K_M.gguf&quot;),"
-        errorLine2="                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/druk/lmplayground/models/ModelInfoProvider.kt"
-            line="70"
-            column="25"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `String.toUri` instead?"
-        errorLine1="            mmprojUri = Uri.parse(&quot;https://huggingface.co/bartowski/Qwen_Qwen3.5-0.8B-GGUF/resolve/main/mmproj-Qwen_Qwen3.5-0.8B-f16.gguf&quot;)"
-        errorLine2="                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/druk/lmplayground/models/ModelInfoProvider.kt"
-            line="76"
-            column="25"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `String.toUri` instead?"
-        errorLine1="            remoteUri = Uri.parse(&quot;https://huggingface.co/bartowski/Qwen_Qwen3.5-2B-GGUF/resolve/main/Qwen_Qwen3.5-2B-Q3_K_M.gguf&quot;),"
-        errorLine2="                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/druk/lmplayground/models/ModelInfoProvider.kt"
-            line="81"
-            column="25"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `String.toUri` instead?"
-        errorLine1="            mmprojUri = Uri.parse(&quot;https://huggingface.co/bartowski/Qwen_Qwen3.5-2B-GGUF/resolve/main/mmproj-Qwen_Qwen3.5-2B-f16.gguf&quot;)"
-        errorLine2="                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/druk/lmplayground/models/ModelInfoProvider.kt"
-            line="87"
-            column="25"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `String.toUri` instead?"
-        errorLine1="            remoteUri = Uri.parse(&quot;https://huggingface.co/bartowski/Qwen_Qwen3.5-4B-GGUF/resolve/main/Qwen_Qwen3.5-4B-Q3_K_M.gguf&quot;),"
-        errorLine2="                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/druk/lmplayground/models/ModelInfoProvider.kt"
-            line="92"
-            column="25"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `String.toUri` instead?"
-        errorLine1="            mmprojUri = Uri.parse(&quot;https://huggingface.co/bartowski/Qwen_Qwen3.5-4B-GGUF/resolve/main/mmproj-Qwen_Qwen3.5-4B-f16.gguf&quot;)"
-        errorLine2="                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/druk/lmplayground/models/ModelInfoProvider.kt"
-            line="98"
-            column="25"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `String.toUri` instead?"
-        errorLine1="            remoteUri = Uri.parse(&quot;https://huggingface.co/lmstudio-community/gemma-3-1b-it-GGUF/resolve/main/gemma-3-1b-it-Q4_K_M.gguf&quot;),"
-        errorLine2="                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/druk/lmplayground/models/ModelInfoProvider.kt"
-            line="103"
-            column="25"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `String.toUri` instead?"
-        errorLine1="            remoteUri = Uri.parse(&quot;https://huggingface.co/lmstudio-community/gemma-3-4b-it-GGUF/resolve/main/gemma-3-4b-it-Q4_K_M.gguf&quot;),"
-        errorLine2="                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/druk/lmplayground/models/ModelInfoProvider.kt"
-            line="112"
-            column="25"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `String.toUri` instead?"
-        errorLine1="            mmprojUri = Uri.parse(&quot;https://huggingface.co/lmstudio-community/gemma-3-4b-it-GGUF/resolve/main/gemma-3-4b-it-mmproj-f16.gguf&quot;)"
-        errorLine2="                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/druk/lmplayground/models/ModelInfoProvider.kt"
-            line="118"
-            column="25"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `String.toUri` instead?"
-        errorLine1="            remoteUri = Uri.parse(&quot;https://huggingface.co/lmstudio-community/Llama-3.2-1B-Instruct-GGUF/resolve/main/Llama-3.2-1B-Instruct-Q4_K_M.gguf&quot;),"
-        errorLine2="                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/druk/lmplayground/models/ModelInfoProvider.kt"
-            line="123"
-            column="25"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `String.toUri` instead?"
-        errorLine1="            remoteUri = Uri.parse(&quot;https://huggingface.co/lmstudio-community/Llama-3.2-3B-Instruct-GGUF/resolve/main/Llama-3.2-3B-Instruct-Q4_K_M.gguf&quot;),"
-        errorLine2="                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/druk/lmplayground/models/ModelInfoProvider.kt"
-            line="132"
-            column="25"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `String.toUri` instead?"
-        errorLine1="            remoteUri = Uri.parse(&quot;https://huggingface.co/lmstudio-community/Phi-4-mini-instruct-GGUF/resolve/main/Phi-4-mini-instruct-Q4_K_M.gguf&quot;),"
-        errorLine2="                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/druk/lmplayground/models/ModelInfoProvider.kt"
-            line="141"
-            column="25"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `String.toUri` instead?"
-        errorLine1="            remoteUri = Uri.parse(&quot;https://huggingface.co/lmstudio-community/DeepSeek-R1-Distill-Qwen-1.5B-GGUF/resolve/main/DeepSeek-R1-Distill-Qwen-1.5B-Q4_K_M.gguf&quot;),"
-        errorLine2="                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/druk/lmplayground/models/ModelInfoProvider.kt"
-            line="150"
-            column="25"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `String.toUri` instead?"
-        errorLine1="            remoteUri = Uri.parse(&quot;https://huggingface.co/lmstudio-community/DeepSeek-R1-Distill-Qwen-7B-GGUF/resolve/main/DeepSeek-R1-Distill-Qwen-7B-Q4_K_M.gguf&quot;),"
-        errorLine2="                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/druk/lmplayground/models/ModelInfoProvider.kt"
-            line="159"
-            column="25"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `String.toUri` instead?"
-        errorLine1="            remoteUri = Uri.parse(&quot;https://huggingface.co/LiquidAI/LFM2.5-350M-GGUF/resolve/main/LFM2.5-350M-Q4_K_M.gguf&quot;),"
-        errorLine2="                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/druk/lmplayground/models/ModelInfoProvider.kt"
-            line="168"
-            column="25"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `String.toUri` instead?"
-        errorLine1="            remoteUri = Uri.parse(&quot;https://huggingface.co/lmstudio-community/LFM2.5-1.2B-Thinking-GGUF/resolve/main/LFM2.5-1.2B-Thinking-Q4_K_M.gguf&quot;),"
-        errorLine2="                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/druk/lmplayground/models/ModelInfoProvider.kt"
-            line="177"
-            column="25"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `String.toUri` instead?"
-        errorLine1="            remoteUri = Uri.parse(&quot;https://huggingface.co/lmstudio-community/Ministral-3-3B-Instruct-2512-GGUF/resolve/main/Ministral-3-3B-Instruct-2512-Q4_K_M.gguf&quot;),"
-        errorLine2="                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/druk/lmplayground/models/ModelInfoProvider.kt"
-            line="186"
-            column="25"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `String.toUri` instead?"
-        errorLine1="            mmprojUri = Uri.parse(&quot;https://huggingface.co/lmstudio-community/Ministral-3-3B-Instruct-2512-GGUF/resolve/main/mmproj-Ministral-3-3B-Instruct-2512-F16.gguf&quot;)"
-        errorLine2="                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/druk/lmplayground/models/ModelInfoProvider.kt"
-            line="192"
-            column="25"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `String.toUri` instead?"
-        errorLine1="            remoteUri = Uri.parse(&quot;https://huggingface.co/lmstudio-community/Ministral-3-3B-Reasoning-2512-GGUF/resolve/main/Ministral-3-3B-Reasoning-2512-Q4_K_M.gguf&quot;),"
-        errorLine2="                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/druk/lmplayground/models/ModelInfoProvider.kt"
-            line="197"
-            column="25"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `String.toUri` instead?"
-        errorLine1="            mmprojUri = Uri.parse(&quot;https://huggingface.co/lmstudio-community/Ministral-3-3B-Reasoning-2512-GGUF/resolve/main/mmproj-Ministral-3-3B-Reasoning-2512-F16.gguf&quot;)"
-        errorLine2="                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/druk/lmplayground/models/ModelInfoProvider.kt"
-            line="203"
-            column="25"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `String.toUri` instead?"
-        errorLine1="            remoteUri = Uri.parse(&quot;https://huggingface.co/lmstudio-community/Ministral-3-8B-Instruct-2512-GGUF/resolve/main/Ministral-3-8B-Instruct-2512-Q4_K_M.gguf&quot;),"
-        errorLine2="                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/druk/lmplayground/models/ModelInfoProvider.kt"
-            line="208"
-            column="25"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `String.toUri` instead?"
-        errorLine1="            mmprojUri = Uri.parse(&quot;https://huggingface.co/lmstudio-community/Ministral-3-8B-Instruct-2512-GGUF/resolve/main/mmproj-Ministral-3-8B-Instruct-2512-F16.gguf&quot;)"
-        errorLine2="                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/druk/lmplayground/models/ModelInfoProvider.kt"
-            line="214"
-            column="25"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `String.toUri` instead?"
-        errorLine1="            remoteUri = Uri.parse(&quot;https://huggingface.co/lmstudio-community/Ministral-3-8B-Reasoning-2512-GGUF/resolve/main/Ministral-3-8B-Reasoning-2512-Q4_K_M.gguf&quot;),"
-        errorLine2="                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/druk/lmplayground/models/ModelInfoProvider.kt"
-            line="219"
-            column="25"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `String.toUri` instead?"
-        errorLine1="            mmprojUri = Uri.parse(&quot;https://huggingface.co/lmstudio-community/Ministral-3-8B-Reasoning-2512-GGUF/resolve/main/mmproj-Ministral-3-8B-Reasoning-2512-F16.gguf&quot;)"
-        errorLine2="                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/druk/lmplayground/models/ModelInfoProvider.kt"
-            line="225"
-            column="25"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `String.toUri` instead?"
-        errorLine1="            remoteUri = Uri.parse(&quot;https://huggingface.co/lmstudio-community/granite-4.0-micro-GGUF/resolve/main/granite-4.0-micro-Q4_K_M.gguf&quot;),"
-        errorLine2="                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/druk/lmplayground/models/ModelInfoProvider.kt"
-            line="230"
-            column="25"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `String.toUri` instead?"
-        errorLine1="            remoteUri = Uri.parse(&quot;https://huggingface.co/lmstudio-community/granite-4.0-h-tiny-GGUF/resolve/main/granite-4.0-h-tiny-Q4_K_M.gguf&quot;),"
-        errorLine2="                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/druk/lmplayground/models/ModelInfoProvider.kt"
-            line="239"
-            column="25"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `String.toUri` instead?"
-        errorLine1="            remoteUri = Uri.parse(&quot;https://huggingface.co/lmstudio-community/granite-4.1-3b-GGUF/resolve/main/granite-4.1-3b-Q4_K_M.gguf&quot;),"
-        errorLine2="                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/druk/lmplayground/models/ModelInfoProvider.kt"
-            line="248"
-            column="25"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `String.toUri` instead?"
-        errorLine1="            remoteUri = Uri.parse(&quot;https://huggingface.co/lmstudio-community/granite-4.1-8b-GGUF/resolve/main/granite-4.1-8b-Q4_K_M.gguf&quot;),"
-        errorLine2="                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/druk/lmplayground/models/ModelInfoProvider.kt"
-            line="257"
-            column="25"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `String.toUri` instead?"
-        errorLine1="            remoteUri = Uri.parse(&quot;https://huggingface.co/nvidia/NVIDIA-Nemotron-3-Nano-4B-GGUF/resolve/main/NVIDIA-Nemotron3-Nano-4B-Q4_K_M.gguf&quot;),"
-        errorLine2="                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/druk/lmplayground/models/ModelInfoProvider.kt"
-            line="266"
-            column="25"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `String.toUri` instead?"
-        errorLine1="            remoteUri = Uri.parse(&quot;https://huggingface.co/lmstudio-community/gemma-3n-E2B-it-text-GGUF/resolve/main/gemma-3n-E2B-it-Q4_K_M.gguf&quot;),"
-        errorLine2="                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/druk/lmplayground/models/ModelInfoProvider.kt"
-            line="275"
-            column="25"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `String.toUri` instead?"
-        errorLine1="            remoteUri = Uri.parse(&quot;https://huggingface.co/lmstudio-community/gemma-3n-E4B-it-text-GGUF/resolve/main/gemma-3n-E4B-it-Q4_K_M.gguf&quot;),"
-        errorLine2="                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/druk/lmplayground/models/ModelInfoProvider.kt"
-            line="284"
-            column="25"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `String.toUri` instead?"
-        errorLine1="            remoteUri = Uri.parse(&quot;https://huggingface.co/google/gemma-4-E2B-it-qat-q4_0-gguf/resolve/main/gemma-4-E2B_q4_0-it.gguf&quot;),"
-        errorLine2="                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/druk/lmplayground/models/ModelInfoProvider.kt"
-            line="293"
-            column="25"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `String.toUri` instead?"
-        errorLine1="            mmprojUri = Uri.parse(&quot;https://huggingface.co/lmstudio-community/gemma-4-E2B-it-GGUF/resolve/main/mmproj-gemma-4-E2B-it-BF16.gguf&quot;)"
-        errorLine2="                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/druk/lmplayground/models/ModelInfoProvider.kt"
-            line="301"
-            column="25"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `String.toUri` instead?"
-        errorLine1="            remoteUri = Uri.parse(&quot;https://huggingface.co/google/gemma-4-E4B-it-qat-q4_0-gguf/resolve/main/gemma-4-E4B_q4_0-it.gguf&quot;),"
-        errorLine2="                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/druk/lmplayground/models/ModelInfoProvider.kt"
-            line="306"
-            column="25"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `String.toUri` instead?"
-        errorLine1="            mmprojUri = Uri.parse(&quot;https://huggingface.co/lmstudio-community/gemma-4-E4B-it-GGUF/resolve/main/mmproj-gemma-4-E4B-it-BF16.gguf&quot;)"
-        errorLine2="                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/druk/lmplayground/models/ModelInfoProvider.kt"
-            line="312"
-            column="25"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `String.toUri` instead?"
-        errorLine1="            remoteUri = Uri.parse(&quot;https://huggingface.co/google/gemma-4-12B-it-qat-q4_0-gguf/resolve/main/gemma-4-12b-it-qat-q4_0.gguf&quot;),"
-        errorLine2="                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/druk/lmplayground/models/ModelInfoProvider.kt"
-            line="317"
-            column="25"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `String.toUri` instead?"
-        errorLine1="            remoteUri = Uri.parse(&quot;https://huggingface.co/lmstudio-community/gemma-4-E2B-it-GGUF/resolve/main/gemma-4-E2B-it-Q4_K_M.gguf&quot;),"
-        errorLine2="                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/druk/lmplayground/models/ModelInfoProvider.kt"
-            line="329"
-            column="25"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `String.toUri` instead?"
-        errorLine1="            mmprojUri = Uri.parse(&quot;https://huggingface.co/lmstudio-community/gemma-4-E2B-it-GGUF/resolve/main/mmproj-gemma-4-E2B-it-BF16.gguf&quot;)"
-        errorLine2="                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/druk/lmplayground/models/ModelInfoProvider.kt"
-            line="336"
-            column="25"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `String.toUri` instead?"
-        errorLine1="            remoteUri = Uri.parse(&quot;https://huggingface.co/lmstudio-community/gemma-4-E4B-it-GGUF/resolve/main/gemma-4-E4B-it-Q4_K_M.gguf&quot;),"
-        errorLine2="                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/druk/lmplayground/models/ModelInfoProvider.kt"
-            line="341"
-            column="25"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `String.toUri` instead?"
-        errorLine1="            mmprojUri = Uri.parse(&quot;https://huggingface.co/lmstudio-community/gemma-4-E4B-it-GGUF/resolve/main/mmproj-gemma-4-E4B-it-BF16.gguf&quot;)"
-        errorLine2="                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/druk/lmplayground/models/ModelInfoProvider.kt"
-            line="348"
-            column="25"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `String.toUri` instead?"
-        errorLine1="            remoteUri = Uri.parse(&quot;https://huggingface.co/ggml-org/gemma-4-12B-it-GGUF/resolve/main/gemma-4-12B-it-Q4_K_M.gguf&quot;),"
-        errorLine2="                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/druk/lmplayground/models/ModelInfoProvider.kt"
-            line="353"
-            column="25"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `String.toUri` instead?"
-        errorLine1="            remoteUri = Uri.parse(&quot;https://huggingface.co/lmstudio-community/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/Qwen2.5-0.5B-Instruct-Q4_K_M.gguf&quot;),"
-        errorLine2="                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/druk/lmplayground/models/ModelInfoProvider.kt"
-            line="363"
-            column="25"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `String.toUri` instead?"
-        errorLine1="            remoteUri = Uri.parse(&quot;https://huggingface.co/lmstudio-community/Qwen2.5-1.5B-Instruct-GGUF/resolve/main/Qwen2.5-1.5B-Instruct-Q4_K_M.gguf&quot;),"
-        errorLine2="                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/druk/lmplayground/models/ModelInfoProvider.kt"
-            line="372"
-            column="25"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `String.toUri` instead?"
-        errorLine1="            remoteUri = Uri.parse(&quot;https://huggingface.co/bartowski/Phi-3.5-mini-instruct-GGUF/resolve/main/Phi-3.5-mini-instruct-Q4_K_M.gguf&quot;),"
-        errorLine2="                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/druk/lmplayground/models/ModelInfoProvider.kt"
-            line="381"
-            column="25"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `String.toUri` instead?"
-        errorLine1="            remoteUri = Uri.parse(&quot;https://huggingface.co/lmstudio-community/Mistral-7B-Instruct-v0.3-GGUF/resolve/main/Mistral-7B-Instruct-v0.3-Q4_K_M.gguf&quot;),"
-        errorLine2="                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/druk/lmplayground/models/ModelInfoProvider.kt"
-            line="390"
-            column="25"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `String.toUri` instead?"
-        errorLine1="            remoteUri = Uri.parse(&quot;https://huggingface.co/lmstudio-community/Meta-Llama-3.1-8B-Instruct-GGUF/resolve/main/Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf&quot;),"
-        errorLine2="                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/druk/lmplayground/models/ModelInfoProvider.kt"
-            line="399"
-            column="25"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `String.toUri` instead?"
-        errorLine1="            remoteUri = Uri.parse(&quot;https://huggingface.co/bartowski/gemma-2-9b-it-GGUF/resolve/main/gemma-2-9b-it-Q4_K_M.gguf&quot;),"
-        errorLine2="                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/druk/lmplayground/models/ModelInfoProvider.kt"
-            line="408"
-            column="25"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `String.toUri` instead?"
-        errorLine1="            remoteUri = Uri.parse(&quot;https://huggingface.co/ggml-org/gpt-oss-20b-GGUF/resolve/main/gpt-oss-20b-mxfp4.gguf&quot;),"
-        errorLine2="                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/druk/lmplayground/models/ModelInfoProvider.kt"
-            line="417"
-            column="25"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `SharedPreferences.edit` instead?"
-        errorLine1="        requireContext().getSharedPreferences(&quot;download_prefs&quot;, 0)"
-        errorLine2="        ^">
-        <location
-            file="src/main/java/com/druk/lmplayground/storage/ModelsFragment.kt"
-            line="84"
-            column="9"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `String.toUri` instead?"
-        errorLine1="                            data = Uri.parse(&quot;mailto:$email&quot;)"
-        errorLine2="                                   ~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/druk/lmplayground/settings/PrivacyPolicyFragment.kt"
-            line="32"
-            column="36"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `String.toUri` instead?"
-        errorLine1="                            data = Uri.parse(&quot;mailto:$email&quot;)"
-        errorLine2="                                   ~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/druk/lmplayground/settings/PrivacyPolicyFragment.kt"
-            line="32"
-            column="36"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `SharedPreferences.edit` instead?"
-        errorLine1="        requireContext().getSharedPreferences(&quot;download_prefs&quot;, 0)"
-        errorLine2="        ^">
-        <location
-            file="src/main/java/com/druk/lmplayground/settings/SettingsFragment.kt"
-            line="110"
-            column="9"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `String.toUri` instead?"
-        errorLine1="                            data = Uri.parse(&quot;mailto:$email&quot;)"
-        errorLine2="                                   ~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/druk/lmplayground/settings/SettingsFragment.kt"
-            line="238"
-            column="36"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `String.toUri` instead?"
-        errorLine1="                            data = Uri.parse(&quot;mailto:$email&quot;)"
-        errorLine2="                                   ~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/druk/lmplayground/settings/SettingsFragment.kt"
-            line="238"
-            column="36"/>
-    </issue>
-
-    <issue
         id="UseTomlInstead"
         message="Use version catalog instead"
         errorLine1="    implementation(&quot;androidx.javascriptengine:javascriptengine:1.0.0-beta01&quot;)"
         errorLine2="                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="build.gradle.kts"
-            line="384"
+            line="391"
             column="20"/>
     </issue>
 
