@@ -30,4 +30,4 @@ jobs:
     - name: Run lint
       run: ./gradlew app:lintDebug
     - name: Run connected android tests
-      run: ./gradlew app:mvdApi35Check
+      run: ./gradlew app:mvdApi35Check -Pandroid.experimental.testOptions.managedDevices.emulator.gpu=swiftshader_indirect
