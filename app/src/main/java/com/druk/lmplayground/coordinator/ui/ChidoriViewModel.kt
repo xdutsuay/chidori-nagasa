@@ -4,13 +4,19 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.druk.lmplayground.App
+import com.druk.lmplayground.coordinator.model.AgentRunDetail
+import com.druk.lmplayground.coordinator.model.AgentRunSummary
+import com.druk.lmplayground.coordinator.model.CoordinatorStatus
 import com.druk.lmplayground.coordinator.model.DiscoveredInstance
 import com.druk.lmplayground.coordinator.model.InstanceId
 import com.druk.lmplayground.coordinator.model.PairedInstance
 import com.druk.lmplayground.coordinator.model.PairingState
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 /**
@@ -44,6 +50,26 @@ class ChidoriViewModel(app: Application) : AndroidViewModel(app) {
 
     private val _lastPairingError = MutableStateFlow<String?>(null)
     val lastPairingError: StateFlow<String?> = _lastPairingError.asStateFlow()
+
+    // --- Coordinator monitor (PRD.md §6.3) ---------------------------------
+    // Held here rather than in a separate ViewModel so the same instance backs
+    // both the phone (ChidoriFragment) and tablet (ChidoriDetailContent) paths,
+    // and so the monitor renders in place inside the Chidori screen without a
+    // second nav destination. Read-only per protocol §2.4's v1 scope.
+
+    private val _monitoredInstance = MutableStateFlow<PairedInstance?>(null)
+    val monitoredInstance: StateFlow<PairedInstance?> = _monitoredInstance.asStateFlow()
+
+    private val _monitorStatus = MutableStateFlow<CoordinatorStatus?>(null)
+    val monitorStatus: StateFlow<CoordinatorStatus?> = _monitorStatus.asStateFlow()
+
+    private val _monitorRuns = MutableStateFlow<List<AgentRunSummary>>(emptyList())
+    val monitorRuns: StateFlow<List<AgentRunSummary>> = _monitorRuns.asStateFlow()
+
+    private val _monitorRunDetail = MutableStateFlow<AgentRunDetail?>(null)
+    val monitorRunDetail: StateFlow<AgentRunDetail?> = _monitorRunDetail.asStateFlow()
+
+    private var monitorJob: Job? = null
 
     init {
         viewModelScope.launch {
@@ -102,5 +128,51 @@ class ChidoriViewModel(app: Application) : AndroidViewModel(app) {
 
     fun dismissError() {
         _lastPairingError.value = null
+    }
+
+    /**
+     * Open the status/run monitor for [instance] and start polling. WIRE_CONTRACT.md's
+     * v1 draft has no status/run push socket (only remote chat gets one, Phase 3), so
+     * this polls on [POLL_INTERVAL_MILLIS] while the monitor is open. Re-selecting the
+     * already-monitored instance is a no-op so the poll loop isn't restarted.
+     */
+    fun openMonitor(instance: PairedInstance) {
+        if (_monitoredInstance.value?.instanceId == instance.instanceId) return
+        _monitoredInstance.value = instance
+        _monitorStatus.value = null
+        _monitorRuns.value = emptyList()
+        _monitorRunDetail.value = null
+        monitorJob?.cancel()
+        monitorJob = viewModelScope.launch {
+            while (isActive) {
+                runCatching { _monitorStatus.value = coordinatorRepository.getStatus(instance.instanceId) }
+                runCatching { _monitorRuns.value = coordinatorRepository.listRuns(instance.instanceId) }
+                delay(POLL_INTERVAL_MILLIS)
+            }
+        }
+    }
+
+    fun closeMonitor() {
+        monitorJob?.cancel()
+        monitorJob = null
+        _monitoredInstance.value = null
+        _monitorStatus.value = null
+        _monitorRuns.value = emptyList()
+        _monitorRunDetail.value = null
+    }
+
+    fun openRunDetail(runId: String) {
+        val instanceId = _monitoredInstance.value?.instanceId ?: return
+        viewModelScope.launch {
+            runCatching { _monitorRunDetail.value = coordinatorRepository.getRunDetail(instanceId, runId) }
+        }
+    }
+
+    fun dismissRunDetail() {
+        _monitorRunDetail.value = null
+    }
+
+    private companion object {
+        const val POLL_INTERVAL_MILLIS = 3000L
     }
 }

@@ -37,6 +37,10 @@ class ChidoriFragment : Fragment() {
                 val manualPort by viewModel.manualPort.collectAsStateWithLifecycle()
                 val pairingInProgressFor by viewModel.pairingInProgressFor.collectAsStateWithLifecycle()
                 val lastPairingError by viewModel.lastPairingError.collectAsStateWithLifecycle()
+                val monitoredInstance by viewModel.monitoredInstance.collectAsStateWithLifecycle()
+                val monitorStatus by viewModel.monitorStatus.collectAsStateWithLifecycle()
+                val monitorRuns by viewModel.monitorRuns.collectAsStateWithLifecycle()
+                val monitorRunDetail by viewModel.monitorRunDetail.collectAsStateWithLifecycle()
 
                 ChidoriScreen(
                     discoveredInstances = discovered,
@@ -45,11 +49,19 @@ class ChidoriFragment : Fragment() {
                     lastPairingError = lastPairingError,
                     manualHost = manualHost,
                     manualPort = manualPort,
+                    monitoredInstance = monitoredInstance,
+                    monitorStatus = monitorStatus,
+                    monitorRuns = monitorRuns,
+                    monitorRunDetail = monitorRunDetail,
                     onManualHostChanged = viewModel::onManualHostChanged,
                     onManualPortChanged = viewModel::onManualPortChanged,
                     onBeginPairing = viewModel::beginPairing,
                     onConfirmPairingCode = viewModel::confirmPairingCode,
                     onUnpair = viewModel::unpair,
+                    onPairedInstanceClick = viewModel::openMonitor,
+                    onCloseMonitor = viewModel::closeMonitor,
+                    onRunClick = { viewModel.openRunDetail(it.runId) },
+                    onDismissRunDetail = viewModel::dismissRunDetail,
                     onDismissError = viewModel::dismissError,
                     onBackClick = { findNavController().popBackStack() },
                 )
