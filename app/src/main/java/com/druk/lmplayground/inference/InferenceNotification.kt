@@ -53,7 +53,11 @@ internal object InferenceNotification {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
         val builder = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            // Status-bar icons must be a mostly-transparent alpha mask (the OS
+            // tints the shape, ignoring RGB) — ic_launcher_foreground is now
+            // empty (the launcher mark lives in ic_launcher_background as a
+            // flat image), so this reuses the monochrome silhouette instead.
+            .setSmallIcon(R.drawable.ic_launcher_monochrome)
             .setContentTitle(title ?: context.getString(R.string.inference_notification_title))
             .setContentText(text ?: context.getString(R.string.inference_notification_text))
             .setContentIntent(pi)

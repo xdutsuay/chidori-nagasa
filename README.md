@@ -20,7 +20,13 @@ Powered by [llama.cpp](https://github.com/ggml-org/llama.cpp) with GGUF-format m
 Governance for this repo — including how it stays in sync with `lclreason` and the engineering
 rules that apply to changes here — lives in [`CHIDORI_PROTOCOL.md`](CHIDORI_PROTOCOL.md). Product
 scope for the first release is in [`PRD.md`](PRD.md), phased plan in [`ROADMAP.md`](ROADMAP.md),
-and the test/release gate in [`TEST_PLAN.md`](TEST_PLAN.md).
+the wire contract in [`WIRE_CONTRACT.md`](WIRE_CONTRACT.md), and the test/release gate in
+[`TEST_PLAN.md`](TEST_PLAN.md). If you're picking up work on the `lclreason` desktop side to make
+pairing/monitor/chat actually connect, start at [`DESKTOP_HANDOFF.md`](DESKTOP_HANDOFF.md) — it's
+the implementation brief for the server half of this contract.
+
+Grab a test build from the [Releases page](https://github.com/xdutsuay/chidori-nagasa/releases) —
+debug-signed APKs, no Play Store account needed.
 
 ![preview](docs/banner.png)
 
@@ -41,11 +47,15 @@ On-device (inherited from LM Playground, rebranded, kept working — see `TEST_P
 - **ARM optimized** - KleidiAI kernels and OpenMP for faster generation on arm64 devices
 - **Large-screen ready** - tablets, foldables, and Chromebooks get a permanent sessions sidebar, list-detail Settings, and freeform window resize support
 
-chidori companion (new, in progress — see `ROADMAP.md`):
+chidori companion — phone-side v1 client mode is feature-complete (see `ROADMAP.md`). It needs a
+`lclreason` desktop speaking the matching server contract to actually connect; that's the
+remaining work, tracked in `DESKTOP_HANDOFF.md`:
 
-- **Pair with chidori desktop** over LAN via mDNS (manual host:port fallback)
+- **Pair with chidori desktop** over LAN via mDNS, or manually by host:port when discovery is
+  blocked (corporate/guest networks)
 - **Coordinator monitor** - live status and Ask/Agent/Plan/Debug run activity, read-only in v1
-- **Remote chat** - chat through the desktop's attached local/remote LLM from your phone
+- **Remote chat** - chat through the desktop's attached local/remote LLM from your phone, in a
+  surface clearly distinct from on-device chat
 - **Node mode (planned, post-v1)** - offer this phone's on-device model as a worker the desktop
   coordinator can route to, the same way it treats a local Ollama instance today. See
   `CHIDORI_PROTOCOL.md` §2.5.
@@ -98,6 +108,22 @@ git clone --recurse-submodules <this-repo-url>.git
 2. Open the project in Android Studio: `File` > `Open` > Select the cloned repository.
 3. Connect an Android device or start an emulator.
 4. Run the application using `Run` > `Run 'app'` or the play button in Android Studio.
+
+<details>
+<summary>Building from the command line (<code>./gradlew</code>) instead of Android Studio</summary>
+
+The Vulkan backend (`GGML_VULKAN=ON`) needs two host build-time deps Android Studio's SDK manager
+doesn't install by default — `build.gradle.kts` auto-probes common install locations, override via
+`-P`/env vars if yours differ:
+
+```
+brew install spirv-headers vulkan-headers   # macOS; see build.gradle.kts for Linux paths
+sdkmanager "cmake;3.31.6"
+export PATH="$ANDROID_HOME/cmake/3.31.6/bin:$PATH"   # the nested vulkan-shaders-gen
+                                                       # sub-build needs ninja on PATH
+./gradlew app:lintDebug app:testDebugUnitTest app:assembleDebug
+```
+</details>
 
 Before merging any change, read [`CHIDORI_PROTOCOL.md`](CHIDORI_PROTOCOL.md) §3 — it covers
 branch/merge gates, native-layer testing requirements, and module boundaries specific to this
