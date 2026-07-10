@@ -45,19 +45,22 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.druk.lmplayground.R
 import com.druk.lmplayground.coordinator.model.AgentRunDetail
 import com.druk.lmplayground.coordinator.model.AgentRunSummary
+import com.druk.lmplayground.coordinator.model.CoordinatorConnectionState
 import com.druk.lmplayground.coordinator.model.CoordinatorStatus
 import com.druk.lmplayground.coordinator.model.DiscoveredInstance
 import com.druk.lmplayground.coordinator.model.InstanceId
 import com.druk.lmplayground.coordinator.model.PairedInstance
 import com.druk.lmplayground.coordinator.model.PairingState
+import com.druk.lmplayground.coordinator.model.RemoteChatMessage
 
 /**
- * Settings -> Chidori Desktop. v1 client-mode scope only (PRD.md §6.2/§6.3):
- * discover + pair with a chidori/lclreason desktop instance on the LAN, or
- * enter host:port manually. Coordinator status/run monitoring and remote
- * chat (PRD.md §6.3/§6.4) land in a later pass once CoordinatorApi's
- * status/runs/chat calls are wired to a UI consumer — see
- * coordinator/README.md and ROADMAP.md Phase 2/3.
+ * Settings -> Chidori Desktop. v1 client-mode scope (PRD.md §6.2/§6.3/§6.4):
+ * discover + pair with a chidori/lclreason desktop instance on the LAN (or
+ * enter host:port manually), then monitor its coordinator and chat through
+ * its attached model. All three surfaces render in place; see
+ * ChidoriMonitorScreen's kdoc for why (tablet detail pane has no
+ * NavController). Read/monitor + chat only — no run-triggering (protocol
+ * §2.4).
  */
 @Composable
 fun ChidoriScreen(
@@ -71,27 +74,42 @@ fun ChidoriScreen(
     monitorStatus: CoordinatorStatus?,
     monitorRuns: List<AgentRunSummary>,
     monitorRunDetail: AgentRunDetail?,
+    chatOpen: Boolean,
+    chatMessages: List<RemoteChatMessage>,
+    chatConnectionState: CoordinatorConnectionState,
+    chatInput: String,
     onManualHostChanged: (String) -> Unit,
     onManualPortChanged: (String) -> Unit,
     onBeginPairing: (DiscoveredInstance) -> Unit,
+    onBeginManualPairing: () -> InstanceId?,
     onConfirmPairingCode: (InstanceId, String) -> Unit,
     onUnpair: (InstanceId) -> Unit,
     onPairedInstanceClick: (PairedInstance) -> Unit,
     onCloseMonitor: () -> Unit,
     onRunClick: (AgentRunSummary) -> Unit,
     onDismissRunDetail: () -> Unit,
+    onOpenChat: () -> Unit,
+    onCloseChat: () -> Unit,
+    onChatInputChanged: (String) -> Unit,
+    onSendChat: () -> Unit,
     onDismissError: () -> Unit,
     onBackClick: () -> Unit,
 ) {
-    // Hardware/gesture back closes the monitor first, returning to the list,
-    // rather than leaving the Chidori screen entirely.
-    BackHandler(enabled = monitoredInstance != null, onBack = onCloseMonitor)
+    // Back peels one layer at a time: chat -> monitor -> leave the screen.
+    BackHandler(enabled = chatOpen, onBack = onCloseChat)
+    BackHandler(enabled = monitoredInstance != null && !chatOpen, onBack = onCloseMonitor)
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text(monitoredInstance?.displayName ?: stringResource(R.string.chidori_desktop)) },
                 navigationIcon = {
-                    IconButton(onClick = { if (monitoredInstance != null) onCloseMonitor() else onBackClick() }) {
+                    IconButton(onClick = {
+                        when {
+                            chatOpen -> onCloseChat()
+                            monitoredInstance != null -> onCloseMonitor()
+                            else -> onBackClick()
+                        }
+                    }) {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = stringResource(R.string.back)
@@ -101,10 +119,22 @@ fun ChidoriScreen(
             )
         }
     ) { padding ->
-        if (monitoredInstance != null) {
-            // Phone drives back through its own TopAppBar above, so no in-content
-            // back header here.
-            ChidoriMonitorContent(
+        val contentModifier = Modifier
+            .fillMaxSize()
+            .padding(padding)
+        when {
+            monitoredInstance != null && chatOpen -> ChidoriChatContent(
+                displayName = monitoredInstance.displayName,
+                messages = chatMessages,
+                connectionState = chatConnectionState,
+                input = chatInput,
+                showBackHeader = false,
+                onInputChanged = onChatInputChanged,
+                onSendClick = onSendChat,
+                onClose = onCloseChat,
+                modifier = contentModifier,
+            )
+            monitoredInstance != null -> ChidoriMonitorContent(
                 displayName = monitoredInstance.displayName,
                 status = monitorStatus,
                 runs = monitorRuns,
@@ -112,13 +142,11 @@ fun ChidoriScreen(
                 showBackHeader = false,
                 onRunClick = onRunClick,
                 onDismissRunDetail = onDismissRunDetail,
+                onOpenChatClick = onOpenChat,
                 onClose = onCloseMonitor,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
+                modifier = contentModifier,
             )
-        } else {
-            ChidoriBody(
+            else -> ChidoriBody(
                 discoveredInstances = discoveredInstances,
                 pairedInstances = pairedInstances,
                 pairingInProgressFor = pairingInProgressFor,
@@ -128,13 +156,12 @@ fun ChidoriScreen(
                 onManualHostChanged = onManualHostChanged,
                 onManualPortChanged = onManualPortChanged,
                 onBeginPairing = onBeginPairing,
+                onBeginManualPairing = onBeginManualPairing,
                 onConfirmPairingCode = onConfirmPairingCode,
                 onUnpair = onUnpair,
                 onPairedInstanceClick = onPairedInstanceClick,
                 onDismissError = onDismissError,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
+                modifier = contentModifier,
             )
         }
     }
@@ -159,14 +186,30 @@ fun ChidoriDetailContent(modifier: Modifier = Modifier) {
     val monitorStatus by viewModel.monitorStatus.collectAsStateWithLifecycle()
     val monitorRuns by viewModel.monitorRuns.collectAsStateWithLifecycle()
     val monitorRunDetail by viewModel.monitorRunDetail.collectAsStateWithLifecycle()
+    val chatOpen by viewModel.chatOpen.collectAsStateWithLifecycle()
+    val chatMessages by viewModel.chatMessages.collectAsStateWithLifecycle()
+    val chatConnectionState by viewModel.chatConnectionState.collectAsStateWithLifecycle()
+    val chatInput by viewModel.chatInput.collectAsStateWithLifecycle()
 
-    BackHandler(enabled = monitoredInstance != null, onBack = viewModel::closeMonitor)
+    BackHandler(enabled = chatOpen, onBack = viewModel::closeChat)
+    BackHandler(enabled = monitoredInstance != null && !chatOpen, onBack = viewModel::closeMonitor)
 
     val monitored = monitoredInstance
-    if (monitored != null) {
-        // The detail pane's TopAppBar title is owned by SettingsScreen and stays
-        // "Chidori Desktop", so the monitor carries its own back header here.
-        ChidoriMonitorContent(
+    // The detail pane's TopAppBar title is owned by SettingsScreen and stays
+    // "Chidori Desktop", so the monitor/chat surfaces carry their own back header.
+    when {
+        monitored != null && chatOpen -> ChidoriChatContent(
+            displayName = monitored.displayName,
+            messages = chatMessages,
+            connectionState = chatConnectionState,
+            input = chatInput,
+            showBackHeader = true,
+            onInputChanged = viewModel::onChatInputChanged,
+            onSendClick = viewModel::sendChatMessage,
+            onClose = viewModel::closeChat,
+            modifier = modifier.fillMaxSize(),
+        )
+        monitored != null -> ChidoriMonitorContent(
             displayName = monitored.displayName,
             status = monitorStatus,
             runs = monitorRuns,
@@ -174,11 +217,11 @@ fun ChidoriDetailContent(modifier: Modifier = Modifier) {
             showBackHeader = true,
             onRunClick = { viewModel.openRunDetail(it.runId) },
             onDismissRunDetail = viewModel::dismissRunDetail,
+            onOpenChatClick = viewModel::openChat,
             onClose = viewModel::closeMonitor,
             modifier = modifier.fillMaxSize(),
         )
-    } else {
-        ChidoriBody(
+        else -> ChidoriBody(
             discoveredInstances = discovered,
             pairedInstances = paired,
             pairingInProgressFor = pairingInProgressFor,
@@ -188,6 +231,7 @@ fun ChidoriDetailContent(modifier: Modifier = Modifier) {
             onManualHostChanged = viewModel::onManualHostChanged,
             onManualPortChanged = viewModel::onManualPortChanged,
             onBeginPairing = viewModel::beginPairing,
+            onBeginManualPairing = viewModel::beginManualPairing,
             onConfirmPairingCode = viewModel::confirmPairingCode,
             onUnpair = viewModel::unpair,
             onPairedInstanceClick = viewModel::openMonitor,
@@ -208,6 +252,7 @@ private fun ChidoriBody(
     onManualHostChanged: (String) -> Unit,
     onManualPortChanged: (String) -> Unit,
     onBeginPairing: (DiscoveredInstance) -> Unit,
+    onBeginManualPairing: () -> InstanceId?,
     onConfirmPairingCode: (InstanceId, String) -> Unit,
     onUnpair: (InstanceId) -> Unit,
     onPairedInstanceClick: (PairedInstance) -> Unit,
@@ -300,6 +345,19 @@ private fun ChidoriBody(
                     singleLine = true,
                     modifier = Modifier.weight(1f),
                 )
+            }
+            Spacer(Modifier.height(8.dp))
+            Button(
+                onClick = {
+                    // Opens the same code-entry dialog as discovered pairing,
+                    // keyed by the placeholder id the ViewModel returns (null
+                    // when host/port are unusable — button is disabled then).
+                    onBeginManualPairing()?.let { pairingCodeDialogFor = it }
+                },
+                enabled = manualHost.isNotBlank() && manualPort.isNotBlank(),
+                modifier = Modifier.align(Alignment.End),
+            ) {
+                Text(stringResource(R.string.chidori_pair))
             }
         }
 

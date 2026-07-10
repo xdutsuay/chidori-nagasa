@@ -15,6 +15,16 @@ expose. Until that reconciliation happens, treat every shape below as a
 proposal the `chidori-nagasa` side is prepared to implement, not a
 guarantee of what the desktop app returns.
 
+**Client status:** as of this revision the `chidori-nagasa` side implements
+*all* of the below — discovery, pairing (discovered + manual host:port),
+version negotiation, status/runs polling, and the `WS /chat/stream` chat
+surface — against exactly these shapes. What's outstanding is the desktop
+side: `lclreason` needs to expose matching endpoints. `DESKTOP_HANDOFF.md`
+in this repo is the implementation brief for that work. Anything the desktop
+ends up doing differently is a change to *this* file (and, once settled, a
+`CHIDORI_PROTOCOL.md` §2 amendment) — the client is written to these shapes
+today.
+
 ## Discovery (protocol §2.1)
 
 mDNS/NSD service `_chidori._tcp.local.`. TXT record:
@@ -34,7 +44,7 @@ POST /pairing/begin
 
 POST /pairing/confirm
   body: { "code": "123456" }
-  -> 200 { "instance_id": "...", "protocol_version": "1.1.0" }
+  -> 200 { "instance_id": "...", "auth_token": "...", "protocol_version": "1.1.0" }
   -> 403 on wrong/expired code
 
 DELETE /pairing/{instance_id}
@@ -43,7 +53,17 @@ DELETE /pairing/{instance_id}
 ```
 
 Auth for all subsequent requests: a bearer token issued at pairing
-confirmation, scoped to that `instance_id`, invalidated on unpair.
+confirmation, scoped to that `instance_id`, invalidated on unpair. The
+mobile client **requires** `auth_token` in the confirm response — it treats
+a confirm reply without one as a failed pairing (there is no separate
+token-fetch call).
+
+**Manual (non-mDNS) pairing:** when the phone reaches the desktop by typed
+`host:port` rather than discovery, it does not yet know the real
+`instance_id`, so it pairs under a placeholder id and **re-keys its stored
+pairing to the `instance_id` returned in this confirm response**. The
+desktop must therefore return its true, stable `instance_id` here (the same
+value it advertises over mDNS), not echo back anything the phone sent.
 
 ## Protocol version negotiation (protocol §2.3)
 
@@ -91,7 +111,7 @@ from the phone (protocol §2.4's explicit v1 non-goal).
 ## Remote chat (protocol §2.4)
 
 ```
-WS /chat/stream
+WS /chat/stream   (bearer-authenticated like the REST calls)
   client -> { "text": string }
   server -> { "id": string, "from_user": bool, "text": string,
               "sent_at": <epoch millis> }
@@ -100,6 +120,21 @@ WS /chat/stream
 One logical stream per paired instance; the desktop side is responsible
 for routing it to whatever local/remote LLM is currently attached as its
 inference source.
+
+**Server echoes the user's own messages.** The mobile client renders its
+message list *exclusively* from `server ->` frames — it does not optimistically
+add the outgoing message locally. So for every `client -> { text }` the desktop
+must send back a `from_user: true` frame (same `text`, its own `id`/`sent_at`)
+in addition to the model's `from_user: false` reply frame(s). This keeps
+ordering and IDs authoritative on the desktop and avoids the phone having to
+de-duplicate an echo against a locally-shown copy. A frame the client can't
+parse is ignored (protocol §2.3 graceful-degradation), not fatal.
+
+The client keeps the socket open for the lifetime of the chat surface and
+shows a persistent "via &lt;desktop&gt;" banner; on socket drop it shows a
+disconnected state and stops accepting sends rather than silently dropping
+messages (PRD §6.4). It implements client mode only — it never initiates a
+run, so there are no run-control frames on this socket.
 
 ## Node mode (protocol §2.5) — not in this draft yet
 

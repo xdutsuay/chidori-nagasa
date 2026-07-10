@@ -128,7 +128,17 @@ class PairingManagerImpl(
         val existing = store.get(instanceId) ?: return PairingState.NOT_PAIRED
         val result = api.confirmPairing(instanceId, code)
         return if (result != null) {
-            store.upsert(existing.copy(pairingState = PairingState.PAIRED), authToken = result.authToken)
+            // Manual host:port pairing starts under a placeholder instanceId
+            // (the phone can't know the real one before first contact —
+            // protocol §2.2 keys trust by instance_id, not IP). The confirm
+            // response carries the server-asserted id; re-key the record to
+            // it so future discovery/monitor lookups match.
+            val confirmedId = result.instanceId ?: instanceId
+            if (confirmedId != instanceId) store.remove(instanceId)
+            store.upsert(
+                existing.copy(instanceId = confirmedId, pairingState = PairingState.PAIRED),
+                authToken = result.authToken,
+            )
             PairingState.PAIRED
         } else {
             store.upsert(existing.copy(pairingState = PairingState.NOT_PAIRED), authToken = null)

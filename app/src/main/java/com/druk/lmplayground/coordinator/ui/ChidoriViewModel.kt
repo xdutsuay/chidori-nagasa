@@ -6,11 +6,14 @@ import androidx.lifecycle.viewModelScope
 import com.druk.lmplayground.App
 import com.druk.lmplayground.coordinator.model.AgentRunDetail
 import com.druk.lmplayground.coordinator.model.AgentRunSummary
+import com.druk.lmplayground.coordinator.model.CoordinatorConnectionState
 import com.druk.lmplayground.coordinator.model.CoordinatorStatus
 import com.druk.lmplayground.coordinator.model.DiscoveredInstance
 import com.druk.lmplayground.coordinator.model.InstanceId
 import com.druk.lmplayground.coordinator.model.PairedInstance
 import com.druk.lmplayground.coordinator.model.PairingState
+import com.druk.lmplayground.coordinator.model.ProtocolVersion
+import com.druk.lmplayground.coordinator.model.RemoteChatMessage
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,9 +23,8 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 /**
- * Backs the Settings -> Chidori Desktop screen (PRD.md §6.2/§6.3, v1
- * client-mode only — no run-triggering, no chat yet; see ROADMAP.md
- * Phase 2/3 for what's still to come here).
+ * Backs the Settings -> Chidori Desktop screen (PRD.md §6.2/§6.3/§6.4,
+ * v1 client-mode only — no run-triggering or node mode; see ROADMAP.md).
  *
  * Talks only to [App.coordinatorRepository] (CHIDORI_PROTOCOL.md §3.4 —
  * this is the ViewModel layer, so it's the appropriate place to hold that
@@ -110,6 +112,30 @@ class ChidoriViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /**
+     * Manual host:port fallback (protocol §2.1 — required in v1, not
+     * gated behind mDNS working). The real instance_id isn't knowable
+     * before first contact, so pairing starts under a deterministic
+     * placeholder; PairingManager re-keys the record to the server-asserted
+     * id from `/pairing/confirm`. Returns the placeholder id (used to key
+     * the code-entry dialog), or null when host/port input is unusable.
+     */
+    fun beginManualPairing(): InstanceId? {
+        val host = _manualHost.value.trim()
+        val port = _manualPort.value.toIntOrNull()
+        if (host.isEmpty() || port == null || port !in 1..65535) return null
+        val placeholder = DiscoveredInstance(
+            instanceId = InstanceId("manual:$host:$port"),
+            displayName = "$host:$port",
+            host = host,
+            port = port,
+            protocolVersion = ProtocolVersion.CURRENT,
+            pairingRequired = true,
+        )
+        beginPairing(placeholder)
+        return placeholder.instanceId
+    }
+
     fun confirmPairingCode(instanceId: InstanceId, code: String) {
         viewModelScope.launch {
             val state = coordinatorRepository.pairingManager.confirmPairingCode(instanceId, code)
@@ -153,6 +179,7 @@ class ChidoriViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun closeMonitor() {
+        closeChat()
         monitorJob?.cancel()
         monitorJob = null
         _monitoredInstance.value = null
@@ -170,6 +197,80 @@ class ChidoriViewModel(app: Application) : AndroidViewModel(app) {
 
     fun dismissRunDetail() {
         _monitorRunDetail.value = null
+    }
+
+    // --- Remote chat (PRD.md §6.4) -----------------------------------------
+    // Routed through the monitored instance's coordinator; the surface must
+    // stay clearly distinct from on-device chat (different privacy
+    // properties — PRD §6.4/§7). Messages live in memory for the lifetime of
+    // the open chat only; the desktop side owns durable history in v1.
+
+    private val _chatOpen = MutableStateFlow(false)
+    val chatOpen: StateFlow<Boolean> = _chatOpen.asStateFlow()
+
+    private val _chatMessages = MutableStateFlow<List<RemoteChatMessage>>(emptyList())
+    val chatMessages: StateFlow<List<RemoteChatMessage>> = _chatMessages.asStateFlow()
+
+    private val _chatConnectionState =
+        MutableStateFlow(CoordinatorConnectionState.DISCONNECTED)
+    val chatConnectionState: StateFlow<CoordinatorConnectionState> = _chatConnectionState.asStateFlow()
+
+    private val _chatInput = MutableStateFlow("")
+    val chatInput: StateFlow<String> = _chatInput.asStateFlow()
+
+    private var chatStreamJob: Job? = null
+    private var chatConnectionJob: Job? = null
+
+    fun onChatInputChanged(value: String) {
+        _chatInput.value = value
+    }
+
+    /** Opens the chat surface for the currently monitored instance. */
+    fun openChat() {
+        val instance = _monitoredInstance.value ?: return
+        if (_chatOpen.value) return
+        _chatOpen.value = true
+        _chatMessages.value = emptyList()
+        chatConnectionJob = viewModelScope.launch {
+            coordinatorRepository.observeConnectionState(instance.instanceId)
+                .collect { _chatConnectionState.value = it }
+        }
+        chatStreamJob = viewModelScope.launch {
+            // The flow completes when the socket drops (see CoordinatorApi);
+            // leave the surface open showing DISCONNECTED rather than
+            // auto-closing — PRD §6.4's graceful-degradation requirement.
+            runCatching {
+                coordinatorRepository.observeRemoteChat(instance.instanceId)
+                    .collect { message -> _chatMessages.value = _chatMessages.value + message }
+            }
+        }
+    }
+
+    fun closeChat() {
+        chatStreamJob?.cancel()
+        chatStreamJob = null
+        chatConnectionJob?.cancel()
+        chatConnectionJob = null
+        _chatOpen.value = false
+        _chatMessages.value = emptyList()
+        _chatConnectionState.value = CoordinatorConnectionState.DISCONNECTED
+        _chatInput.value = ""
+    }
+
+    /**
+     * Sends the current input. Cleared only on a successful handoff to the
+     * socket — on failure the draft stays in the input and the connection
+     * banner tells the user why (never silently drop a message, PRD §6.4).
+     */
+    fun sendChatMessage() {
+        val instance = _monitoredInstance.value ?: return
+        val text = _chatInput.value.trim()
+        if (text.isEmpty()) return
+        viewModelScope.launch {
+            runCatching { coordinatorRepository.sendRemoteChatMessage(instance.instanceId, text) }
+                .onSuccess { _chatInput.value = "" }
+                .onFailure { _chatConnectionState.value = CoordinatorConnectionState.DISCONNECTED }
+        }
     }
 
     private companion object {
