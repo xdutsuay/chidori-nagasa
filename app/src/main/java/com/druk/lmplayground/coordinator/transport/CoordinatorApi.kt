@@ -9,20 +9,34 @@ import com.druk.lmplayground.coordinator.model.CoordinatorStatus
 import com.druk.lmplayground.coordinator.model.InstanceId
 import com.druk.lmplayground.coordinator.model.ProtocolVersion
 import com.druk.lmplayground.coordinator.model.RemoteChatMessage
+import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.callbackFlow
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.Response
+import okhttp3.WebSocket
+import okhttp3.WebSocketListener
 import org.json.JSONObject
 import java.io.IOException
 import java.util.UUID
 import java.util.concurrent.TimeUnit
 
-/** Result of a successful `/pairing/confirm` call — see WIRE_CONTRACT.md. */
-data class PairingConfirmation(val authToken: String, val protocolVersion: ProtocolVersion)
+/**
+ * Result of a successful `/pairing/confirm` call — see WIRE_CONTRACT.md.
+ * [instanceId] is the server-asserted identity: for manual host:port pairing
+ * the client only knows a placeholder id until this response, so callers
+ * must re-key their pairing record to this value when it differs.
+ */
+data class PairingConfirmation(
+    val authToken: String,
+    val protocolVersion: ProtocolVersion,
+    val instanceId: InstanceId?,
+)
 
 /**
  * The actual HTTP(S)/WebSocket client against one paired `lclreason`
@@ -173,7 +187,12 @@ class OkHttpCoordinatorApi(
                 val token = (if (json.has("auth_token")) json.getString("auth_token") else null)
                     ?: return@use null
                 val version = if (json.has("protocol_version")) json.getString("protocol_version") else ProtocolVersion.CURRENT.value
-                PairingConfirmation(authToken = token, protocolVersion = ProtocolVersion(version))
+                val serverInstanceId = if (json.has("instance_id")) InstanceId(json.getString("instance_id")) else null
+                PairingConfirmation(
+                    authToken = token,
+                    protocolVersion = ProtocolVersion(version),
+                    instanceId = serverInstanceId,
+                )
             }
         }.getOrNull()
     }
@@ -249,17 +268,76 @@ class OkHttpCoordinatorApi(
         },
     )
 
-    override fun observeRemoteChat(instanceId: InstanceId): Flow<RemoteChatMessage> {
-        // WebSocket-backed chat stream per WIRE_CONTRACT.md's `WS /chat/stream`.
-        // TODO(coordinator, Phase 3): wire an OkHttp WebSocketListener here once
-        // Phase 1's reconciliation confirms the endpoint path/payload shape —
-        // implementing against an unconfirmed WS contract risks writing
-        // reconnect/backoff logic against a shape that changes under it.
-        TODO("Not implemented — see ROADMAP.md Phase 3. Requires the reconciled wire contract from Phase 1 first.")
+    // One live chat socket per instance ("one logical stream per paired
+    // instance" — WIRE_CONTRACT.md). Owned by observeRemoteChat's collector:
+    // opened on collect, closed on cancel; sendRemoteChatMessage rides
+    // whatever socket is currently open for that instance.
+    private val chatSockets = mutableMapOf<String, WebSocket>()
+
+    override fun observeRemoteChat(instanceId: InstanceId): Flow<RemoteChatMessage> = callbackFlow {
+        val request = authedRequest(instanceId, "/chat/stream")?.build()
+        if (request == null) {
+            // No known endpoint (unpaired / no stored host) — surface as
+            // DISCONNECTED and end the stream rather than throwing.
+            connectionStateFlow(instanceId).value = CoordinatorConnectionState.DISCONNECTED
+            close()
+            return@callbackFlow
+        }
+        connectionStateFlow(instanceId).value = CoordinatorConnectionState.CONNECTING
+
+        val socket = client.newWebSocket(request, object : WebSocketListener() {
+            override fun onOpen(webSocket: WebSocket, response: Response) {
+                connectionStateFlow(instanceId).value = CoordinatorConnectionState.CONNECTED
+            }
+
+            override fun onMessage(webSocket: WebSocket, text: String) {
+                val message = runCatching {
+                    val json = JSONObject(text)
+                    RemoteChatMessage(
+                        id = json.getString("id"),
+                        fromUser = json.optBoolean("from_user", false),
+                        text = json.getString("text"),
+                        sentAtEpochMillis = json.optLong("sent_at", System.currentTimeMillis()),
+                    )
+                }.getOrNull() ?: return // tolerate unknown frames per protocol §2.3
+                trySend(message)
+            }
+
+            override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
+                connectionStateFlow(instanceId).value = CoordinatorConnectionState.DISCONNECTED
+                close()
+            }
+
+            override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
+                connectionStateFlow(instanceId).value = CoordinatorConnectionState.DISCONNECTED
+                close()
+            }
+        })
+        synchronized(chatSockets) { chatSockets[instanceId.value] = socket }
+
+        awaitClose {
+            synchronized(chatSockets) {
+                if (chatSockets[instanceId.value] === socket) chatSockets.remove(instanceId.value)
+            }
+            socket.close(NORMAL_CLOSURE, null)
+        }
     }
 
     override suspend fun sendRemoteChatMessage(instanceId: InstanceId, text: String) {
-        TODO("Not implemented — see ROADMAP.md Phase 3.")
+        val socket = synchronized(chatSockets) { chatSockets[instanceId.value] }
+            ?: throw IOException("No open chat stream for ${instanceId.value}")
+        val payload = JSONObject().put("text", text).toString()
+        if (!socket.send(payload)) {
+            // send() returns false when the socket is closing/closed or its
+            // outbound buffer is unavailable — surface it so the caller can
+            // keep the draft and show the disconnected state (PRD §6.4:
+            // never silently drop a message).
+            throw IOException("Chat stream to ${instanceId.value} is not writable")
+        }
+    }
+
+    private companion object {
+        const val NORMAL_CLOSURE = 1000
     }
 }
 

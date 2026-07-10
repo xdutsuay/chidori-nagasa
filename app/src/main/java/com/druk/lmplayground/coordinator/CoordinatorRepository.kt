@@ -5,11 +5,13 @@ import com.druk.lmplayground.coordinator.discovery.InstanceDiscovery
 import com.druk.lmplayground.coordinator.discovery.NsdInstanceDiscovery
 import com.druk.lmplayground.coordinator.model.AgentRunDetail
 import com.druk.lmplayground.coordinator.model.AgentRunSummary
+import com.druk.lmplayground.coordinator.model.CoordinatorConnectionState
 import com.druk.lmplayground.coordinator.model.CoordinatorStatus
 import com.druk.lmplayground.coordinator.model.DiscoveredInstance
 import com.druk.lmplayground.coordinator.model.InstanceId
 import com.druk.lmplayground.coordinator.model.ManualEndpoint
 import com.druk.lmplayground.coordinator.model.PairedInstance
+import com.druk.lmplayground.coordinator.model.RemoteChatMessage
 import com.druk.lmplayground.coordinator.node.NodeRegistrationCapability
 import com.druk.lmplayground.coordinator.node.UnimplementedNodeRegistrationCapability
 import com.druk.lmplayground.coordinator.pairing.PairedInstanceStore
@@ -87,4 +89,17 @@ class CoordinatorRepository(context: Context) {
 
     suspend fun getRunDetail(instanceId: InstanceId, runId: String): AgentRunDetail =
         api.getRunDetail(instanceId, runId)
+
+    // Remote chat (protocol §2.4, PRD.md §6.4). The flow opens the chat
+    // socket on collect and closes it on cancel; send throws IOException
+    // when no stream is open/writable so the UI can keep the draft and show
+    // the disconnected state instead of silently dropping the message.
+    fun observeRemoteChat(instanceId: InstanceId): Flow<RemoteChatMessage> =
+        api.observeRemoteChat(instanceId)
+
+    suspend fun sendRemoteChatMessage(instanceId: InstanceId, text: String) =
+        api.sendRemoteChatMessage(instanceId, text)
+
+    fun observeConnectionState(instanceId: InstanceId): Flow<CoordinatorConnectionState> =
+        api.observeConnectionState(instanceId)
 }

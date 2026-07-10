@@ -16,6 +16,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -63,6 +64,7 @@ fun ChidoriMonitorContent(
     showBackHeader: Boolean,
     onRunClick: (AgentRunSummary) -> Unit,
     onDismissRunDetail: () -> Unit,
+    onOpenChatClick: () -> Unit,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -81,6 +83,12 @@ fun ChidoriMonitorContent(
             Spacer(Modifier.height(12.dp))
         }
         StatusCard(status)
+        Spacer(Modifier.height(8.dp))
+        // Remote chat entry (PRD §6.4) — a distinct surface, not the
+        // on-device conversation screen; see ChidoriChatContent.
+        Button(onClick = onOpenChatClick, modifier = Modifier.fillMaxWidth()) {
+            Text(stringResource(R.string.chidori_chat_open))
+        }
         Spacer(Modifier.height(16.dp))
         Text(
             text = stringResource(R.string.chidori_runs_section),

@@ -41,6 +41,10 @@ class ChidoriFragment : Fragment() {
                 val monitorStatus by viewModel.monitorStatus.collectAsStateWithLifecycle()
                 val monitorRuns by viewModel.monitorRuns.collectAsStateWithLifecycle()
                 val monitorRunDetail by viewModel.monitorRunDetail.collectAsStateWithLifecycle()
+                val chatOpen by viewModel.chatOpen.collectAsStateWithLifecycle()
+                val chatMessages by viewModel.chatMessages.collectAsStateWithLifecycle()
+                val chatConnectionState by viewModel.chatConnectionState.collectAsStateWithLifecycle()
+                val chatInput by viewModel.chatInput.collectAsStateWithLifecycle()
 
                 ChidoriScreen(
                     discoveredInstances = discovered,
@@ -53,15 +57,24 @@ class ChidoriFragment : Fragment() {
                     monitorStatus = monitorStatus,
                     monitorRuns = monitorRuns,
                     monitorRunDetail = monitorRunDetail,
+                    chatOpen = chatOpen,
+                    chatMessages = chatMessages,
+                    chatConnectionState = chatConnectionState,
+                    chatInput = chatInput,
                     onManualHostChanged = viewModel::onManualHostChanged,
                     onManualPortChanged = viewModel::onManualPortChanged,
                     onBeginPairing = viewModel::beginPairing,
+                    onBeginManualPairing = viewModel::beginManualPairing,
                     onConfirmPairingCode = viewModel::confirmPairingCode,
                     onUnpair = viewModel::unpair,
                     onPairedInstanceClick = viewModel::openMonitor,
                     onCloseMonitor = viewModel::closeMonitor,
                     onRunClick = { viewModel.openRunDetail(it.runId) },
                     onDismissRunDetail = viewModel::dismissRunDetail,
+                    onOpenChat = viewModel::openChat,
+                    onCloseChat = viewModel::closeChat,
+                    onChatInputChanged = viewModel::onChatInputChanged,
+                    onSendChat = viewModel::sendChatMessage,
                     onDismissError = viewModel::dismissError,
                     onBackClick = { findNavController().popBackStack() },
                 )
