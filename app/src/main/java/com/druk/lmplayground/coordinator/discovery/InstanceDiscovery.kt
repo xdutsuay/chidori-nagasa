@@ -3,6 +3,7 @@ package com.druk.lmplayground.coordinator.discovery
 import android.content.Context
 import android.net.nsd.NsdManager
 import android.net.nsd.NsdServiceInfo
+import android.net.wifi.WifiManager
 import android.util.Log
 import com.druk.lmplayground.coordinator.model.DiscoveredInstance
 import com.druk.lmplayground.coordinator.model.InstanceId
@@ -12,7 +13,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
 
 private const val TAG = "InstanceDiscovery"
-private const val SERVICE_TYPE = "_chidori._tcp."
+// NsdManager.discoverServices appends ".local." itself — a trailing dot here
+// double-suffixes the query and silently finds nothing (protocol §2.1).
+private const val SERVICE_TYPE = "_chidori._tcp"
 
 /**
  * Finds `lclreason` desktop instances on the local network. Protocol §2.1:
@@ -53,8 +56,16 @@ class NsdInstanceDiscovery(context: Context) : InstanceDiscovery {
     private val nsdManager = context.applicationContext
         .getSystemService(Context.NSD_SERVICE) as NsdManager
 
+    private val wifiManager = context.applicationContext
+        .getSystemService(Context.WIFI_SERVICE) as WifiManager
+
     private val discovered = MutableStateFlow<Map<String, DiscoveredInstance>>(emptyMap())
     private var listener: NsdManager.DiscoveryListener? = null
+
+    // Several OEM WiFi stacks silently drop multicast/mDNS packets without
+    // this held for the duration of discovery — no error is surfaced when
+    // that happens, discovery just finds nothing (protocol §2.1).
+    private var multicastLock: WifiManager.MulticastLock? = null
 
     override fun observeDiscoveredInstances(): Flow<List<DiscoveredInstance>> =
         discovered.map { it.values.toList() }
@@ -111,6 +122,8 @@ class NsdInstanceDiscovery(context: Context) : InstanceDiscovery {
             override fun onStartDiscoveryFailed(serviceType: String, errorCode: Int) {
                 Log.e(TAG, "Start discovery failed: $errorCode")
                 listener = null
+                multicastLock?.let { lock -> runCatching { lock.release() } }
+                multicastLock = null
             }
 
             override fun onStopDiscoveryFailed(serviceType: String, errorCode: Int) {
@@ -122,6 +135,10 @@ class NsdInstanceDiscovery(context: Context) : InstanceDiscovery {
             }
         }
         listener = discoveryListener
+        multicastLock = wifiManager.createMulticastLock("chidori-nsd-discovery").apply {
+            setReferenceCounted(true)
+            acquire()
+        }
         nsdManager.discoverServices(SERVICE_TYPE, NsdManager.PROTOCOL_DNS_SD, discoveryListener)
     }
 
@@ -131,6 +148,8 @@ class NsdInstanceDiscovery(context: Context) : InstanceDiscovery {
                 .onFailure { e -> Log.w(TAG, "stopServiceDiscovery failed", e) }
         }
         listener = null
+        multicastLock?.let { lock -> runCatching { lock.release() } }
+        multicastLock = null
         discovered.value = emptyMap()
     }
 }

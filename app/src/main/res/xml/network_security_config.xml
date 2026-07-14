@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- chidori desktop companion (CHIDORI_PROTOCOL.md / DESKTOP_HANDOFF.md §1):
+     the paired lclreason instance is a plain-HTTP LAN host discovered via
+     mDNS or typed in manually, so its address isn't known ahead of time and
+     can't be pinned to a fixed <domain-config>. Cleartext is permitted
+     LAN-wide rather than scoped, matching the protocol's "no TLS in v1"
+     decision. -->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>
