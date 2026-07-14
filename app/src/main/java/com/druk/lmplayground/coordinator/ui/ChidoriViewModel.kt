@@ -104,9 +104,17 @@ class ChidoriViewModel(app: Application) : AndroidViewModel(app) {
         _pairingInProgressFor.value = instance.instanceId
         _lastPairingError.value = null
         viewModelScope.launch {
-            val state = coordinatorRepository.pairingManager.beginPairing(instance)
-            if (state != PairingState.PAIRING_IN_PROGRESS) {
-                _lastPairingError.value = "Could not reach ${instance.displayName}. Check it's on the same network."
+            val result = coordinatorRepository.pairingManager.beginPairing(instance)
+            if (result.state != PairingState.PAIRING_IN_PROGRESS) {
+                _lastPairingError.value = buildString {
+                    append("Could not reach ${instance.displayName}.")
+                    if (result.errorDetail != null) {
+                        append(' ')
+                        append(result.errorDetail)
+                    } else {
+                        append(" Check it's on the same network.")
+                    }
+                }
                 _pairingInProgressFor.value = null
             }
         }
@@ -138,10 +146,11 @@ class ChidoriViewModel(app: Application) : AndroidViewModel(app) {
 
     fun confirmPairingCode(instanceId: InstanceId, code: String) {
         viewModelScope.launch {
-            val state = coordinatorRepository.pairingManager.confirmPairingCode(instanceId, code)
+            val result = coordinatorRepository.pairingManager.confirmPairingCode(instanceId, code)
             _pairingInProgressFor.value = null
-            if (state != PairingState.PAIRED) {
-                _lastPairingError.value = "Pairing code didn't match. Try again from the desktop app."
+            if (result.state != PairingState.PAIRED) {
+                _lastPairingError.value = result.errorDetail
+                    ?: "Pairing code didn't match. Try again from the desktop app."
             }
         }
     }

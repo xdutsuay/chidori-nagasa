@@ -1,5 +1,6 @@
 package com.druk.lmplayground.coordinator.transport
 
+import android.util.Log
 import com.druk.lmplayground.coordinator.model.AgentMode
 import com.druk.lmplayground.coordinator.model.AgentRunDetail
 import com.druk.lmplayground.coordinator.model.AgentRunState
@@ -25,6 +26,34 @@ import org.json.JSONObject
 import java.io.IOException
 import java.util.UUID
 import java.util.concurrent.TimeUnit
+
+private const val TAG = "CoordinatorApi"
+
+/**
+ * Surfaces *why* a pairing attempt failed (protocol §2.2's handshake is the
+ * one place a silent failure is actively harmful to debug — see
+ * CHIDORI_PROTOCOL.md's discussion of the mDNS/cleartext outage this was
+ * added for). [Failure.reason] is shown directly in the pairing-failed
+ * dialog (ChidoriScreen.kt), so keep it short and free of anything
+ * sensitive (no auth tokens, no full request bodies).
+ */
+sealed interface PairingOutcome {
+    data object Success : PairingOutcome
+    data class Failure(val reason: String) : PairingOutcome
+}
+
+sealed interface PairingConfirmResult {
+    data class Success(val confirmation: PairingConfirmation) : PairingConfirmResult
+    data class Failure(val reason: String) : PairingConfirmResult
+}
+
+/** Short, UI-safe description of a caught exception — e.g. the platform's
+ * `CLEARTEXT_NOT_PERMITTED` IOException, whose message alone identifies the
+ * root cause. */
+private fun Throwable.describeForUi(): String {
+    val name = javaClass.simpleName
+    return if (message != null) "$name: $message" else name
+}
 
 /**
  * Result of a successful `/pairing/confirm` call — see WIRE_CONTRACT.md.
@@ -54,9 +83,9 @@ interface CoordinatorApi {
 
     suspend fun negotiateProtocolVersion(instanceId: InstanceId, clientVersion: ProtocolVersion): ProtocolVersion
 
-    suspend fun beginPairing(instanceId: InstanceId, host: String, port: Int): Boolean
+    suspend fun beginPairing(instanceId: InstanceId, host: String, port: Int): PairingOutcome
 
-    suspend fun confirmPairing(instanceId: InstanceId, code: String): PairingConfirmation?
+    suspend fun confirmPairing(instanceId: InstanceId, code: String): PairingConfirmResult
 
     suspend fun revokePairing(instanceId: InstanceId)
 
@@ -160,18 +189,28 @@ class OkHttpCoordinatorApi(
         }
     }
 
-    override suspend fun beginPairing(instanceId: InstanceId, host: String, port: Int): Boolean {
+    override suspend fun beginPairing(instanceId: InstanceId, host: String, port: Int): PairingOutcome {
         val request = Request.Builder()
             .url("http://$host:$port/pairing/begin")
             .post("{}".toRequestBody(JSON_MEDIA_TYPE.toMediaType()))
             .build()
         return runCatching {
-            client.newCall(request).execute().use { it.isSuccessful }
-        }.getOrDefault(false)
+            client.newCall(request).execute().use { response ->
+                if (response.isSuccessful) {
+                    PairingOutcome.Success
+                } else {
+                    PairingOutcome.Failure("Desktop returned HTTP ${response.code} for /pairing/begin")
+                }
+            }
+        }.getOrElse { e ->
+            Log.w(TAG, "beginPairing to $host:$port failed", e)
+            PairingOutcome.Failure(e.describeForUi())
+        }
     }
 
-    override suspend fun confirmPairing(instanceId: InstanceId, code: String): PairingConfirmation? {
-        val base = baseUrl(instanceId) ?: return null
+    override suspend fun confirmPairing(instanceId: InstanceId, code: String): PairingConfirmResult {
+        val base = baseUrl(instanceId)
+            ?: return PairingConfirmResult.Failure("No known address for this instance")
         val body = JSONObject().put("code", code).toString()
         val request = Request.Builder()
             .url("$base/pairing/confirm")
@@ -179,22 +218,33 @@ class OkHttpCoordinatorApi(
             .build()
         return runCatching {
             client.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) return@use null
-                val json = JSONObject(response.body?.string() ?: return@use null)
+                if (!response.isSuccessful) {
+                    return@use PairingConfirmResult.Failure(
+                        "Desktop returned HTTP ${response.code} for /pairing/confirm"
+                    )
+                }
+                val bodyString = response.body?.string()
+                    ?: return@use PairingConfirmResult.Failure("Empty response body from /pairing/confirm")
+                val json = JSONObject(bodyString)
                 // WIRE_CONTRACT.md's draft doesn't specify the token field name yet
                 // beyond "a bearer token issued at pairing confirmation" — using
                 // "auth_token" as the working assumption pending reconciliation.
                 val token = (if (json.has("auth_token")) json.getString("auth_token") else null)
-                    ?: return@use null
+                    ?: return@use PairingConfirmResult.Failure("Response missing auth_token field")
                 val version = if (json.has("protocol_version")) json.getString("protocol_version") else ProtocolVersion.CURRENT.value
                 val serverInstanceId = if (json.has("instance_id")) InstanceId(json.getString("instance_id")) else null
-                PairingConfirmation(
-                    authToken = token,
-                    protocolVersion = ProtocolVersion(version),
-                    instanceId = serverInstanceId,
+                PairingConfirmResult.Success(
+                    PairingConfirmation(
+                        authToken = token,
+                        protocolVersion = ProtocolVersion(version),
+                        instanceId = serverInstanceId,
+                    )
                 )
             }
-        }.getOrNull()
+        }.getOrElse { e ->
+            Log.w(TAG, "confirmPairing for ${instanceId.value} failed", e)
+            PairingConfirmResult.Failure(e.describeForUi())
+        }
     }
 
     override suspend fun revokePairing(instanceId: InstanceId) {

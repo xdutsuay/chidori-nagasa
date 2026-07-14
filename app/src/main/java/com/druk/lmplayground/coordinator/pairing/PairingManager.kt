@@ -7,8 +7,18 @@ import com.druk.lmplayground.coordinator.model.PairingState
 import com.druk.lmplayground.coordinator.pairing.data.PairedInstanceDao
 import com.druk.lmplayground.coordinator.pairing.data.PairedInstanceEntity
 import com.druk.lmplayground.coordinator.transport.CoordinatorApi
+import com.druk.lmplayground.coordinator.transport.PairingConfirmResult
+import com.druk.lmplayground.coordinator.transport.PairingOutcome
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+
+/**
+ * Outcome of a pairing attempt. [errorDetail] carries the transport-level
+ * reason (e.g. `IOException: Cleartext HTTP traffic to 192.168.1.5 not
+ * permitted`) so the UI can show something more actionable than "it
+ * failed" — see ChidoriViewModel.lastPairingError.
+ */
+data class PairingAttemptResult(val state: PairingState, val errorDetail: String? = null)
 
 /**
  * The trust handshake between this phone and a `lclreason` desktop
@@ -20,10 +30,10 @@ interface PairingManager {
     fun observePairedInstances(): Flow<List<PairedInstance>>
 
     /** Begins pairing against a discovered (or manually-entered) instance. */
-    suspend fun beginPairing(instance: DiscoveredInstance): PairingState
+    suspend fun beginPairing(instance: DiscoveredInstance): PairingAttemptResult
 
     /** Confirms a pairing code shown by the desktop app. */
-    suspend fun confirmPairingCode(instanceId: InstanceId, code: String): PairingState
+    suspend fun confirmPairingCode(instanceId: InstanceId, code: String): PairingAttemptResult
 
     /**
      * Revokes a pairing. Per protocol §2.2, revocation must take effect on
@@ -109,7 +119,7 @@ class PairingManagerImpl(
 
     override fun observePairedInstances(): Flow<List<PairedInstance>> = store.observeAll()
 
-    override suspend fun beginPairing(instance: DiscoveredInstance): PairingState {
+    override suspend fun beginPairing(instance: DiscoveredInstance): PairingAttemptResult {
         store.upsert(
             PairedInstance(
                 instanceId = instance.instanceId,
@@ -120,29 +130,35 @@ class PairingManagerImpl(
             ),
             authToken = null,
         )
-        val started = api.beginPairing(instance.instanceId, instance.host, instance.port)
-        return if (started) PairingState.PAIRING_IN_PROGRESS else PairingState.NOT_PAIRED
+        return when (val outcome = api.beginPairing(instance.instanceId, instance.host, instance.port)) {
+            is PairingOutcome.Success -> PairingAttemptResult(PairingState.PAIRING_IN_PROGRESS)
+            is PairingOutcome.Failure -> PairingAttemptResult(PairingState.NOT_PAIRED, outcome.reason)
+        }
     }
 
-    override suspend fun confirmPairingCode(instanceId: InstanceId, code: String): PairingState {
-        val existing = store.get(instanceId) ?: return PairingState.NOT_PAIRED
-        val result = api.confirmPairing(instanceId, code)
-        return if (result != null) {
-            // Manual host:port pairing starts under a placeholder instanceId
-            // (the phone can't know the real one before first contact —
-            // protocol §2.2 keys trust by instance_id, not IP). The confirm
-            // response carries the server-asserted id; re-key the record to
-            // it so future discovery/monitor lookups match.
-            val confirmedId = result.instanceId ?: instanceId
-            if (confirmedId != instanceId) store.remove(instanceId)
-            store.upsert(
-                existing.copy(instanceId = confirmedId, pairingState = PairingState.PAIRED),
-                authToken = result.authToken,
-            )
-            PairingState.PAIRED
-        } else {
-            store.upsert(existing.copy(pairingState = PairingState.NOT_PAIRED), authToken = null)
-            PairingState.NOT_PAIRED
+    override suspend fun confirmPairingCode(instanceId: InstanceId, code: String): PairingAttemptResult {
+        val existing = store.get(instanceId)
+            ?: return PairingAttemptResult(PairingState.NOT_PAIRED, "No pairing in progress for this instance")
+        return when (val outcome = api.confirmPairing(instanceId, code)) {
+            is PairingConfirmResult.Success -> {
+                val result = outcome.confirmation
+                // Manual host:port pairing starts under a placeholder instanceId
+                // (the phone can't know the real one before first contact —
+                // protocol §2.2 keys trust by instance_id, not IP). The confirm
+                // response carries the server-asserted id; re-key the record to
+                // it so future discovery/monitor lookups match.
+                val confirmedId = result.instanceId ?: instanceId
+                if (confirmedId != instanceId) store.remove(instanceId)
+                store.upsert(
+                    existing.copy(instanceId = confirmedId, pairingState = PairingState.PAIRED),
+                    authToken = result.authToken,
+                )
+                PairingAttemptResult(PairingState.PAIRED)
+            }
+            is PairingConfirmResult.Failure -> {
+                store.upsert(existing.copy(pairingState = PairingState.NOT_PAIRED), authToken = null)
+                PairingAttemptResult(PairingState.NOT_PAIRED, outcome.reason)
+            }
         }
     }
 
