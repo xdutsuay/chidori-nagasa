@@ -7,12 +7,15 @@ package com.druk.lmplayground.coordinator.model
  * internal implementation detail.
  */
 
-/** Semver-ish protocol version, e.g. "1.1.0". Negotiated per protocol §2.3. */
+/** Semver-ish protocol version, e.g. "1.2.0". Negotiated per protocol §2.3. */
 @JvmInline
 value class ProtocolVersion(val value: String) {
     companion object {
         /** Highest wire-contract version this client currently supports. */
-        val CURRENT = ProtocolVersion("1.1.0")
+        val CURRENT = ProtocolVersion("1.2.0")
+
+        /** Default companion listen port (protocol 1.2.0) — IDE stays on 8080. */
+        const val DEFAULT_COMPANION_PORT = 8027
     }
 }
 

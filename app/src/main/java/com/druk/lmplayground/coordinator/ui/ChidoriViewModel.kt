@@ -44,7 +44,7 @@ class ChidoriViewModel(app: Application) : AndroidViewModel(app) {
     private val _manualHost = MutableStateFlow("")
     val manualHost: StateFlow<String> = _manualHost.asStateFlow()
 
-    private val _manualPort = MutableStateFlow("")
+    private val _manualPort = MutableStateFlow(ProtocolVersion.DEFAULT_COMPANION_PORT.toString())
     val manualPort: StateFlow<String> = _manualPort.asStateFlow()
 
     private val _pairingInProgressFor = MutableStateFlow<InstanceId?>(null)

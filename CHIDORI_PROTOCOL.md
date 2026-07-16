@@ -3,8 +3,8 @@
 Status: **Binding**
 Owner repo: `chidori-nagasa` (this repo)
 Sister repo: `lclreason` (desktop IDE, https://github.com/xdutsuay/lclreason)
-Version: 1.1.0
-Last amended: 2026-07-09
+Version: 1.2.0
+Last amended: 2026-07-16
 
 ## 0. Purpose
 
@@ -48,14 +48,19 @@ owner.
 ### 2.1 Transport (v1)
 
 - Discovery: mDNS/NSD service type `_chidori._tcp.local.` advertised by
-  `lclreason` when its coordinator is running. TXT record carries
-  `protocol_version`, `instance_id`, and `pairing_required`.
+  `lclreason` when its **companion listener** is running. TXT record carries
+  `protocol_version`, `instance_id`, `pairing_required`, and `display_name`.
+  Instance and HostName labels must be single-label (no embedded `.local`).
+- Companion listen port: default **8027** (configurable as `companion.port` on
+  the desktop). The IDE/coordinator API may remain on a different port
+  (typically 8080). mDNS SRV **must** advertise the companion port, not the
+  IDE port.
 - Fallback: manual entry of `host:port` when mDNS is unavailable (corporate
   networks, VPNs, etc.) — this fallback is required in v1, not optional,
-  because mDNS reliability across Android OEM skins is inconsistent.
-- Transport: HTTP(S) + WebSocket on the port `lclreason` exposes locally
-  (default documented in `lclreason`'s `internal/api`). No cloud relay in v1
-  (see Roadmap Phase 2 for that).
+  because mDNS reliability across Android OEM skins is inconsistent. The
+  phone UI defaults the port field to **8027**.
+- Transport: cleartext HTTP + WebSocket on the companion port. No cloud relay
+  in v1 (see Roadmap Phase 2 for that).
 
 ### 2.2 Pairing
 
@@ -220,3 +225,4 @@ its own sake.
 |---------|------------|----------------------------------|---------------------------|
 | 1.0.0   | 2026-07-09 | Initial protocol adopted         | N/A (initial adoption)    |
 | 1.1.0   | 2026-07-09 | Added §2.5 node mode: phone can register as an inference worker with the coordinator, not just monitor it. Additive, shared registration schema. | Pending — notify lclreason before next wire-contract PR merges, per §1.3 |
+| 1.2.0   | 2026-07-16 | Dedicated companion listen port (default 8027, IDE stays on 8080); mDNS SRV must advertise companion port; single-label mDNS host/instance names; pairing begin must surface code on desktop Settings; coordinator API-key does not gate `/pairing/begin\|confirm`. | Implemented in lclreason concurrently |

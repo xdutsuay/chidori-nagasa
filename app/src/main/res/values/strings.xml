@@ -81,9 +81,9 @@
     <string name="chidori_discovered_section">Nearby on this network</string>
     <string name="chidori_discovering">Looking for chidori instances on this network…</string>
     <string name="chidori_manual_section">Manual connection</string>
-    <string name="chidori_manual_hint">If discovery doesn\'t find your desktop (e.g. on a corporate or guest network), enter its address directly.</string>
+    <string name="chidori_manual_hint">If discovery doesn\'t find your desktop, enter its LAN IP and companion port (default 8027 — not the IDE port 8080).</string>
     <string name="chidori_manual_host">Host or IP</string>
-    <string name="chidori_manual_port">Port</string>
+    <string name="chidori_manual_port">Port (8027)</string>
     <string name="chidori_pair">Pair</string>
     <string name="chidori_pairing_in_progress">Pairing…</string>
     <string name="chidori_unpair">Unpair</string>

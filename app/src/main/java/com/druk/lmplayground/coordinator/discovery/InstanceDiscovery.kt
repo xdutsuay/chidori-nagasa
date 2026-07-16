@@ -11,6 +11,12 @@ import com.druk.lmplayground.coordinator.model.ProtocolVersion
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
+import org.json.JSONObject
+import java.net.HttpURLConnection
+import java.net.Inet4Address
+import java.net.Inet6Address
+import java.net.URL
+import java.util.concurrent.Executors
 
 private const val TAG = "InstanceDiscovery"
 // NsdManager.discoverServices appends ".local." itself — a trailing dot here
@@ -22,6 +28,9 @@ private const val SERVICE_TYPE = "_chidori._tcp"
  * mDNS/NSD is the primary path, manual host:port entry is a required
  * fallback (not optional) because mDNS reliability varies across Android
  * OEM skins.
+ *
+ * Protocol 1.2.0: companion listens on a dedicated port (default 8027);
+ * mDNS SRV must advertise that port. Instance/host names are single-label.
  */
 interface InstanceDiscovery {
     /**
@@ -39,17 +48,10 @@ interface InstanceDiscovery {
  * NSD-backed implementation targeting the `_chidori._tcp.local.` service
  * type (protocol §2.1), using `android.net.nsd.NsdManager`.
  *
- * Written against WIRE_CONTRACT.md's discovery section (TXT keys:
- * protocol_version, instance_id, pairing_required, display_name) — that
- * draft is not yet reconciled against what `lclreason` actually
- * advertises, so the TXT-record key names here may need to change once
- * that reconciliation happens (protocol §1.3).
- *
- * NOT BUILD-VERIFIED: NSD/mDNS resolution behavior is notoriously
- * inconsistent across Android OEM skins (this is exactly why protocol
- * §2.1 requires the manual host:port fallback, not just this path) — treat
- * this implementation as a solid first draft that needs real-device
- * testing per TEST_PLAN.md §2.2 and §4, not as verified-working code.
+ * TXT keys (protocol 1.2.0): protocol_version, instance_id, pairing_required,
+ * display_name. When TXT is incomplete but host/port resolve, we probe
+ * `GET /version` instead of silently dropping the service (OEM NSD often
+ * returns empty attributes).
  */
 class NsdInstanceDiscovery(context: Context) : InstanceDiscovery {
 
@@ -66,6 +68,10 @@ class NsdInstanceDiscovery(context: Context) : InstanceDiscovery {
     // this held for the duration of discovery — no error is surfaced when
     // that happens, discovery just finds nothing (protocol §2.1).
     private var multicastLock: WifiManager.MulticastLock? = null
+
+    private val probeExecutor = Executors.newSingleThreadExecutor { r ->
+        Thread(r, "chidori-mdns-probe").apply { isDaemon = true }
+    }
 
     override fun observeDiscoveredInstances(): Flow<List<DiscoveredInstance>> =
         discovered.map { it.values.toList() }
@@ -84,23 +90,7 @@ class NsdInstanceDiscovery(context: Context) : InstanceDiscovery {
                     }
 
                     override fun onServiceResolved(info: NsdServiceInfo) {
-                        val attrs = info.attributes
-                        fun attr(key: String): String? = attrs[key]?.toString(Charsets.UTF_8)
-
-                        val instanceIdRaw = attr("instance_id") ?: return
-                        val protocolVersionRaw = attr("protocol_version") ?: return
-                        val pairingRequired = attr("pairing_required")?.toBooleanStrictOrNull() ?: true
-                        val displayName = attr("display_name") ?: info.serviceName
-
-                        val instance = DiscoveredInstance(
-                            instanceId = InstanceId(instanceIdRaw),
-                            displayName = displayName,
-                            host = info.host?.hostAddress ?: return,
-                            port = info.port,
-                            protocolVersion = ProtocolVersion(protocolVersionRaw),
-                            pairingRequired = pairingRequired,
-                        )
-                        discovered.value = discovered.value + (instanceIdRaw to instance)
+                        publishResolved(info)
                     }
                 })
             }
@@ -151,5 +141,107 @@ class NsdInstanceDiscovery(context: Context) : InstanceDiscovery {
         multicastLock?.let { lock -> runCatching { lock.release() } }
         multicastLock = null
         discovered.value = emptyMap()
+    }
+
+    private fun publishResolved(info: NsdServiceInfo) {
+        val host = preferredHostAddress(info) ?: run {
+            Log.w(TAG, "Resolved ${info.serviceName} but host address was null")
+            return
+        }
+        val port = info.port
+        if (port <= 0) return
+
+        val attrs = info.attributes
+        fun attr(key: String): String? = attrs?.get(key)?.toString(Charsets.UTF_8)
+
+        val instanceIdRaw = attr("instance_id")
+        val protocolVersionRaw = attr("protocol_version")
+        val pairingRequired = attr("pairing_required")?.toBooleanStrictOrNull() ?: true
+        val displayName = attr("display_name") ?: info.serviceName
+
+        if (instanceIdRaw != null && protocolVersionRaw != null) {
+            publishInstance(
+                DiscoveredInstance(
+                    instanceId = InstanceId(instanceIdRaw),
+                    displayName = displayName,
+                    host = host,
+                    port = port,
+                    protocolVersion = ProtocolVersion(protocolVersionRaw),
+                    pairingRequired = pairingRequired,
+                ),
+            )
+            return
+        }
+
+        // TXT incomplete (common on some OEM NSD stacks) — probe GET /version
+        // so we still surface the desktop instead of silently dropping it.
+        Log.i(TAG, "TXT incomplete for ${info.serviceName}; probing http://$host:$port/version")
+        probeExecutor.execute {
+            val recommended = probeRecommendedVersion(host, port) ?: return@execute
+            val id = instanceIdRaw ?: "discovered:$host:$port"
+            publishInstance(
+                DiscoveredInstance(
+                    instanceId = InstanceId(id),
+                    displayName = displayName,
+                    host = host,
+                    port = port,
+                    protocolVersion = ProtocolVersion(protocolVersionRaw ?: recommended),
+                    pairingRequired = pairingRequired,
+                ),
+            )
+        }
+    }
+
+    private fun publishInstance(instance: DiscoveredInstance) {
+        discovered.value = discovered.value + (instance.instanceId.value to instance)
+    }
+
+    companion object {
+        /**
+         * Prefer IPv4 for cleartext LAN HTTP — IPv6 literals need brackets in
+         * URLs and many OEM stacks hand back link-local IPv6 first.
+         */
+        fun preferredHostAddress(info: NsdServiceInfo): String? {
+            val host = info.host ?: return null
+            when (host) {
+                is Inet4Address -> return host.hostAddress
+                is Inet6Address -> {
+                    // Fall back to IPv6 without zone id if that's all we have.
+                    return host.hostAddress?.substringBefore('%')
+                }
+                else -> {
+                    val raw = host.hostAddress?.substringBefore('%') ?: return null
+                    return raw
+                }
+            }
+        }
+
+        fun probeRecommendedVersion(host: String, port: Int): String? {
+            return try {
+                val url = URL("http://$host:$port/version")
+                val conn = (url.openConnection() as HttpURLConnection).apply {
+                    connectTimeout = 2000
+                    readTimeout = 2000
+                    requestMethod = "GET"
+                    setRequestProperty("X-Chidori-Protocol-Version", ProtocolVersion.CURRENT.value)
+                }
+                try {
+                    if (conn.responseCode != HttpURLConnection.HTTP_OK) {
+                        Log.w(TAG, "version probe $host:$port HTTP ${conn.responseCode}")
+                        return null
+                    }
+                    val body = conn.inputStream.bufferedReader().use { it.readText() }
+                    val json = JSONObject(body)
+                    json.optString("recommended").ifBlank {
+                        ProtocolVersion.CURRENT.value
+                    }
+                } finally {
+                    conn.disconnect()
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "version probe $host:$port failed: ${e.message}")
+                null
+            }
+        }
     }
 }

@@ -7,7 +7,7 @@ matching server surface. This is the source of truth for that server work; if
 the desktop needs to diverge, change `WIRE_CONTRACT.md` in the companion repo
 first (and, once settled, log a `CHIDORI_PROTOCOL.md` §2 amendment).
 
-`protocol_version` this targets: **`1.1.0`**, client mode only (the phone
+`protocol_version` this targets: **`1.2.0`**, client mode only (the phone
 consumes the coordinator; it never triggers runs — protocol §2.4). Node mode
 (§2.5) is explicitly **not** in this handoff.
 
@@ -21,13 +21,13 @@ consumes the coordinator; it never triggers runs — protocol §2.4). Node mode
 > wire contract is in `DESKTOP_HANDOFF.md` (mirror of the companion repo's
 > `WIRE_CONTRACT.md`). Build it in `internal/api` + `internal/coordinator` +
 > `internal/registry`:
-> 1. Advertise `_chidori._tcp` over mDNS while the coordinator is running,
->    with TXT keys `protocol_version`, `instance_id`, `pairing_required`,
->    `display_name`, on the same local HTTP port the endpoints below serve.
-> 2. Serve cleartext HTTP + WebSocket on that port (LAN only): `GET /version`,
+> 1. Advertise `_chidori._tcp` over mDNS while the companion listener is
+>    running, with TXT keys `protocol_version`, `instance_id`, `pairing_required`,
+>    `display_name`, on companion port **8027** (not the IDE port).
+> 2. Serve cleartext HTTP + WebSocket on the companion port (LAN only): `GET /version`,
 >    `POST /pairing/begin`, `POST /pairing/confirm`, `DELETE /pairing/{id}`,
 >    `GET /coordinator/status`, `GET /runs?limit=`, `GET /runs/{id}`,
->    `WS /chat/stream`.
+>    `WS /chat/stream`. IDE stays on its own port (8080).
 > 3. Pairing: `begin` shows a 6-digit code in the desktop UI; `confirm`
 >    validates it and returns `{ instance_id, auth_token, protocol_version }`.
 >    All later requests carry `Authorization: Bearer <auth_token>`; unpair
@@ -45,15 +45,16 @@ consumes the coordinator; it never triggers runs — protocol §2.4). Node mode
 
 ## 1. Transport
 
-- One local HTTP server, bound to the LAN interface, serving both the REST
-  endpoints and the WebSocket upgrade on **one port** (whatever you choose —
-  the phone learns it from mDNS or the user types it; nothing is hardcoded
-  client-side).
+- A **dedicated** local HTTP server for the companion API, default port
+  **8027** (`companion.port` in config). The IDE/coordinator API remains on
+  its own port (typically 8080). Phone traffic and mDNS SRV use **only** the
+  companion port.
 - **Cleartext `http://` / `ws://`.** v1 is LAN-only with no TLS; the phone
   builds `http://<host>:<port>` and opens the WebSocket on the same origin.
   (If you later add TLS this becomes a wire-contract change.)
 - All endpoints except `/version`, `/pairing/begin`, `/pairing/confirm`
   require `Authorization: Bearer <auth_token>`.
+- Coordinator `cfg.auth` API key must not gate pairing begin/confirm.
 - Every request carries `X-Chidori-Protocol-Version: <client version>`;
   echo the version you'll actually use back in the response header of the
   same name (see §3).
@@ -65,12 +66,12 @@ connections:
 
 ```
 service type: _chidori._tcp   (domain .local)
-SRV: <host>:<port>            ← the port from §1
+SRV: <host>:<companion-port>  ← default 8027, never the IDE port
 TXT:
-  protocol_version=1.1.0
+  protocol_version=1.2.0
   instance_id=<stable uuid for this desktop install>
   pairing_required=true|false
-  display_name=<human name, e.g. "Kaustubh's MacBook">
+  display_name=<human name, single-label, e.g. "Nehas-MacBook-Air">
 ```
 
 `instance_id` must be **stable across restarts** and identical to the value
@@ -82,7 +83,7 @@ stops; the phone drops instances whose advertisement disappears.
 
 ```
 GET /version
-  -> 200 { "supported": ["1.0.0", "1.1.0"], "recommended": "1.1.0" }
+  -> 200 { "supported": ["1.0.0", "1.1.0", "1.2.0"], "recommended": "1.2.0" }
 ```
 
 The client sends its highest supported version in the request header and
@@ -102,7 +103,7 @@ POST /pairing/confirm
   body: { "code": "123456" }
   -> 200 { "instance_id": "<this desktop's stable id>",
            "auth_token": "<bearer token, scoped to instance_id>",
-           "protocol_version": "1.1.0" }
+           "protocol_version": "1.2.0" }
   -> 403 on wrong / expired code
 
 DELETE /pairing/{instance_id}      (authenticated)
