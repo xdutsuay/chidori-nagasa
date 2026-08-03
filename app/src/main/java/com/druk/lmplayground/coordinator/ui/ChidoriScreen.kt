@@ -67,6 +67,7 @@ fun ChidoriScreen(
     discoveredInstances: List<DiscoveredInstance>,
     pairedInstances: List<PairedInstance>,
     pairingInProgressFor: InstanceId?,
+    pairingCodeEntryFor: InstanceId?,
     lastPairingError: String?,
     manualHost: String,
     manualPort: String,
@@ -81,8 +82,9 @@ fun ChidoriScreen(
     onManualHostChanged: (String) -> Unit,
     onManualPortChanged: (String) -> Unit,
     onBeginPairing: (DiscoveredInstance) -> Unit,
-    onBeginManualPairing: () -> InstanceId?,
+    onBeginManualPairing: () -> Unit,
     onConfirmPairingCode: (InstanceId, String) -> Unit,
+    onDismissPairingCodeEntry: () -> Unit,
     onUnpair: (InstanceId) -> Unit,
     onPairedInstanceClick: (PairedInstance) -> Unit,
     onCloseMonitor: () -> Unit,
@@ -150,6 +152,7 @@ fun ChidoriScreen(
                 discoveredInstances = discoveredInstances,
                 pairedInstances = pairedInstances,
                 pairingInProgressFor = pairingInProgressFor,
+                pairingCodeEntryFor = pairingCodeEntryFor,
                 lastPairingError = lastPairingError,
                 manualHost = manualHost,
                 manualPort = manualPort,
@@ -158,6 +161,7 @@ fun ChidoriScreen(
                 onBeginPairing = onBeginPairing,
                 onBeginManualPairing = onBeginManualPairing,
                 onConfirmPairingCode = onConfirmPairingCode,
+                onDismissPairingCodeEntry = onDismissPairingCodeEntry,
                 onUnpair = onUnpair,
                 onPairedInstanceClick = onPairedInstanceClick,
                 onDismissError = onDismissError,
@@ -181,6 +185,7 @@ fun ChidoriDetailContent(modifier: Modifier = Modifier) {
     val manualHost by viewModel.manualHost.collectAsStateWithLifecycle()
     val manualPort by viewModel.manualPort.collectAsStateWithLifecycle()
     val pairingInProgressFor by viewModel.pairingInProgressFor.collectAsStateWithLifecycle()
+    val pairingCodeEntryFor by viewModel.pairingCodeEntryFor.collectAsStateWithLifecycle()
     val lastPairingError by viewModel.lastPairingError.collectAsStateWithLifecycle()
     val monitoredInstance by viewModel.monitoredInstance.collectAsStateWithLifecycle()
     val monitorStatus by viewModel.monitorStatus.collectAsStateWithLifecycle()
@@ -225,6 +230,7 @@ fun ChidoriDetailContent(modifier: Modifier = Modifier) {
             discoveredInstances = discovered,
             pairedInstances = paired,
             pairingInProgressFor = pairingInProgressFor,
+            pairingCodeEntryFor = pairingCodeEntryFor,
             lastPairingError = lastPairingError,
             manualHost = manualHost,
             manualPort = manualPort,
@@ -233,6 +239,7 @@ fun ChidoriDetailContent(modifier: Modifier = Modifier) {
             onBeginPairing = viewModel::beginPairing,
             onBeginManualPairing = viewModel::beginManualPairing,
             onConfirmPairingCode = viewModel::confirmPairingCode,
+            onDismissPairingCodeEntry = viewModel::dismissPairingCodeEntry,
             onUnpair = viewModel::unpair,
             onPairedInstanceClick = viewModel::openMonitor,
             onDismissError = viewModel::dismissError,
@@ -246,20 +253,21 @@ private fun ChidoriBody(
     discoveredInstances: List<DiscoveredInstance>,
     pairedInstances: List<PairedInstance>,
     pairingInProgressFor: InstanceId?,
+    pairingCodeEntryFor: InstanceId?,
     lastPairingError: String?,
     manualHost: String,
     manualPort: String,
     onManualHostChanged: (String) -> Unit,
     onManualPortChanged: (String) -> Unit,
     onBeginPairing: (DiscoveredInstance) -> Unit,
-    onBeginManualPairing: () -> InstanceId?,
+    onBeginManualPairing: () -> Unit,
     onConfirmPairingCode: (InstanceId, String) -> Unit,
+    onDismissPairingCodeEntry: () -> Unit,
     onUnpair: (InstanceId) -> Unit,
     onPairedInstanceClick: (PairedInstance) -> Unit,
     onDismissError: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var pairingCodeDialogFor by remember { mutableStateOf<InstanceId?>(null) }
 
     Column(
         modifier = modifier
@@ -308,10 +316,7 @@ private fun ChidoriBody(
                         DiscoveredInstanceRow(
                             instance = instance,
                             isPairing = pairingInProgressFor == instance.instanceId,
-                            onPairClick = {
-                                onBeginPairing(instance)
-                                pairingCodeDialogFor = instance.instanceId
-                            },
+                            onPairClick = { onBeginPairing(instance) },
                         )
                         Spacer(Modifier.height(8.dp))
                     }
@@ -348,12 +353,11 @@ private fun ChidoriBody(
             }
             Spacer(Modifier.height(8.dp))
             Button(
-                onClick = {
-                    // Opens the same code-entry dialog as discovered pairing,
-                    // keyed by the placeholder id the ViewModel returns (null
-                    // when host/port are unusable — button is disabled then).
-                    onBeginManualPairing()?.let { pairingCodeDialogFor = it }
-                },
+                // The code-entry dialog opens off pairingCodeEntryFor once
+                // /pairing/begin actually succeeds — same as discovered
+                // pairing — so a failed begin can't strand a dialog whose
+                // codes can never match.
+                onClick = onBeginManualPairing,
                 enabled = manualHost.isNotBlank() && manualPort.isNotBlank(),
                 modifier = Modifier.align(Alignment.End),
             ) {
@@ -372,13 +376,10 @@ private fun ChidoriBody(
         )
     }
 
-    pairingCodeDialogFor?.let { instanceId ->
+    pairingCodeEntryFor?.let { instanceId ->
         PairingCodeDialog(
-            onConfirm = { code ->
-                onConfirmPairingCode(instanceId, code)
-                pairingCodeDialogFor = null
-            },
-            onDismiss = { pairingCodeDialogFor = null },
+            onConfirm = { code -> onConfirmPairingCode(instanceId, code) },
+            onDismiss = onDismissPairingCodeEntry,
         )
     }
 }

@@ -10,11 +10,13 @@ import com.druk.lmplayground.coordinator.model.CoordinatorStatus
 import com.druk.lmplayground.coordinator.model.InstanceId
 import com.druk.lmplayground.coordinator.model.ProtocolVersion
 import com.druk.lmplayground.coordinator.model.RemoteChatMessage
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -156,6 +158,14 @@ class OkHttpCoordinatorApi(
         return builder
     }
 
+    // Every blocking OkHttp execute() must run here, never on the caller's
+    // context: ChidoriViewModel invokes these from viewModelScope (the main
+    // thread), and Android's default thread policy kills network-on-main
+    // with NetworkOnMainThreadException — which runCatching below then
+    // reported as a generic "couldn't reach the desktop" failure, making
+    // pairing fail on real devices even on a healthy LAN.
+    private suspend fun <T> onIo(block: () -> T): T = withContext(Dispatchers.IO) { block() }
+
     override suspend fun negotiateProtocolVersion(
         instanceId: InstanceId,
         clientVersion: ProtocolVersion,
@@ -166,19 +176,21 @@ class OkHttpCoordinatorApi(
             ?: return clientVersion // no endpoint known yet; caller will surface DISCONNECTED separately
 
         return runCatching {
-            client.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) {
-                    connectionStateFlow(instanceId).value = CoordinatorConnectionState.DISCONNECTED
-                    return@use clientVersion
-                }
-                val recommended = response.body?.string()?.let { JSONObject(it) }
-                    ?.let { json -> if (json.has("recommended")) json.getString("recommended") else null }
-                if (recommended == null) {
-                    connectionStateFlow(instanceId).value = CoordinatorConnectionState.UNSUPPORTED_VERSION
-                    clientVersion
-                } else {
-                    connectionStateFlow(instanceId).value = CoordinatorConnectionState.CONNECTED
-                    ProtocolVersion(recommended)
+            onIo {
+                client.newCall(request).execute().use { response ->
+                    if (!response.isSuccessful) {
+                        connectionStateFlow(instanceId).value = CoordinatorConnectionState.DISCONNECTED
+                        return@use clientVersion
+                    }
+                    val recommended = response.body?.string()?.let { JSONObject(it) }
+                        ?.let { json -> if (json.has("recommended")) json.getString("recommended") else null }
+                    if (recommended == null) {
+                        connectionStateFlow(instanceId).value = CoordinatorConnectionState.UNSUPPORTED_VERSION
+                        clientVersion
+                    } else {
+                        connectionStateFlow(instanceId).value = CoordinatorConnectionState.CONNECTED
+                        ProtocolVersion(recommended)
+                    }
                 }
             }
         }.getOrElse {
@@ -195,11 +207,13 @@ class OkHttpCoordinatorApi(
             .post("{}".toRequestBody(JSON_MEDIA_TYPE.toMediaType()))
             .build()
         return runCatching {
-            client.newCall(request).execute().use { response ->
-                if (response.isSuccessful) {
-                    PairingOutcome.Success
-                } else {
-                    PairingOutcome.Failure("Desktop returned HTTP ${response.code} for /pairing/begin")
+            onIo {
+                client.newCall(request).execute().use { response ->
+                    if (response.isSuccessful) {
+                        PairingOutcome.Success
+                    } else {
+                        PairingOutcome.Failure("Desktop returned HTTP ${response.code} for /pairing/begin")
+                    }
                 }
             }
         }.getOrElse { e ->
@@ -217,29 +231,31 @@ class OkHttpCoordinatorApi(
             .post(body.toRequestBody(JSON_MEDIA_TYPE.toMediaType()))
             .build()
         return runCatching {
-            client.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) {
-                    return@use PairingConfirmResult.Failure(
-                        "Desktop returned HTTP ${response.code} for /pairing/confirm"
+            onIo {
+                client.newCall(request).execute().use { response ->
+                    if (!response.isSuccessful) {
+                        return@use PairingConfirmResult.Failure(
+                            "Desktop returned HTTP ${response.code} for /pairing/confirm"
+                        )
+                    }
+                    val bodyString = response.body?.string()
+                        ?: return@use PairingConfirmResult.Failure("Empty response body from /pairing/confirm")
+                    val json = JSONObject(bodyString)
+                    // WIRE_CONTRACT.md: the bearer token arrives as "auth_token"
+                    // in this response; the mobile client treats a confirm
+                    // reply without one as a failed pairing.
+                    val token = (if (json.has("auth_token")) json.getString("auth_token") else null)
+                        ?: return@use PairingConfirmResult.Failure("Response missing auth_token field")
+                    val version = if (json.has("protocol_version")) json.getString("protocol_version") else ProtocolVersion.CURRENT.value
+                    val serverInstanceId = if (json.has("instance_id")) InstanceId(json.getString("instance_id")) else null
+                    PairingConfirmResult.Success(
+                        PairingConfirmation(
+                            authToken = token,
+                            protocolVersion = ProtocolVersion(version),
+                            instanceId = serverInstanceId,
+                        )
                     )
                 }
-                val bodyString = response.body?.string()
-                    ?: return@use PairingConfirmResult.Failure("Empty response body from /pairing/confirm")
-                val json = JSONObject(bodyString)
-                // WIRE_CONTRACT.md's draft doesn't specify the token field name yet
-                // beyond "a bearer token issued at pairing confirmation" — using
-                // "auth_token" as the working assumption pending reconciliation.
-                val token = (if (json.has("auth_token")) json.getString("auth_token") else null)
-                    ?: return@use PairingConfirmResult.Failure("Response missing auth_token field")
-                val version = if (json.has("protocol_version")) json.getString("protocol_version") else ProtocolVersion.CURRENT.value
-                val serverInstanceId = if (json.has("instance_id")) InstanceId(json.getString("instance_id")) else null
-                PairingConfirmResult.Success(
-                    PairingConfirmation(
-                        authToken = token,
-                        protocolVersion = ProtocolVersion(version),
-                        instanceId = serverInstanceId,
-                    )
-                )
             }
         }.getOrElse { e ->
             Log.w(TAG, "confirmPairing for ${instanceId.value} failed", e)
@@ -248,12 +264,15 @@ class OkHttpCoordinatorApi(
     }
 
     override suspend fun revokePairing(instanceId: InstanceId) {
-        val base = baseUrl(instanceId) ?: return
-        val request = Request.Builder()
-            .url("$base/pairing/${instanceId.value}")
-            .delete()
-            .build()
-        runCatching { client.newCall(request).execute().close() }
+        // DELETE /pairing/{id} is bearer-authenticated like every other
+        // post-pairing call (WIRE_CONTRACT.md) — the desktop 401s an
+        // unauthenticated revoke, which used to leave its copy of the token
+        // valid after the phone thought it had unpaired.
+        val request = authedRequest(instanceId, "/pairing/${instanceId.value}")
+            ?.delete()
+            ?.build()
+            ?: return
+        runCatching { onIo { client.newCall(request).execute().close() } }
         connectionStateFlow(instanceId).value = CoordinatorConnectionState.DISCONNECTED
     }
 
@@ -261,12 +280,14 @@ class OkHttpCoordinatorApi(
         val request = authedRequest(instanceId, "/coordinator/status")?.build()
             ?: return CoordinatorStatus.ERROR
         return runCatching {
-            client.newCall(request).execute().use { response ->
-                val json = JSONObject(response.body?.string() ?: "{}")
-                when (json.optString("status")) {
-                    "running" -> CoordinatorStatus.RUNNING
-                    "error" -> CoordinatorStatus.ERROR
-                    else -> CoordinatorStatus.IDLE
+            onIo {
+                client.newCall(request).execute().use { response ->
+                    val json = JSONObject(response.body?.string() ?: "{}")
+                    when (json.optString("status")) {
+                        "running" -> CoordinatorStatus.RUNNING
+                        "error" -> CoordinatorStatus.ERROR
+                        else -> CoordinatorStatus.IDLE
+                    }
                 }
             }
         }.getOrDefault(CoordinatorStatus.ERROR)
@@ -275,12 +296,14 @@ class OkHttpCoordinatorApi(
     override suspend fun listRuns(instanceId: InstanceId): List<AgentRunSummary> {
         val request = authedRequest(instanceId, "/runs?limit=50")?.build() ?: return emptyList()
         return runCatching {
-            client.newCall(request).execute().use { response ->
-                val json = JSONObject(response.body?.string() ?: "{}")
-                val runsArray = json.optJSONArray("runs") ?: return@use emptyList()
-                (0 until runsArray.length()).map { i ->
-                    val run = runsArray.getJSONObject(i)
-                    run.toAgentRunSummary()
+            onIo {
+                client.newCall(request).execute().use { response ->
+                    val json = JSONObject(response.body?.string() ?: "{}")
+                    val runsArray = json.optJSONArray("runs") ?: return@use emptyList()
+                    (0 until runsArray.length()).map { i ->
+                        val run = runsArray.getJSONObject(i)
+                        run.toAgentRunSummary()
+                    }
                 }
             }
         }.getOrDefault(emptyList())
@@ -289,16 +312,18 @@ class OkHttpCoordinatorApi(
     override suspend fun getRunDetail(instanceId: InstanceId, runId: String): AgentRunDetail {
         val request = authedRequest(instanceId, "/runs/$runId")?.build()
             ?: throw IOException("No known endpoint for $instanceId")
-        return client.newCall(request).execute().use { response ->
-            val json = JSONObject(response.body?.string() ?: throw IOException("Empty run detail response"))
-            val summary = json.getJSONObject("summary").toAgentRunSummary()
-            val logTailArray = json.optJSONArray("log_tail")
-            val logTail = logTailArray?.let { arr -> (0 until arr.length()).map { arr.getString(it) } } ?: emptyList()
-            AgentRunDetail(
-                summary = summary,
-                currentStep = if (json.has("current_step")) json.getString("current_step") else null,
-                logTail = logTail,
-            )
+        return onIo {
+            client.newCall(request).execute().use { response ->
+                val json = JSONObject(response.body?.string() ?: throw IOException("Empty run detail response"))
+                val summary = json.getJSONObject("summary").toAgentRunSummary()
+                val logTailArray = json.optJSONArray("log_tail")
+                val logTail = logTailArray?.let { arr -> (0 until arr.length()).map { arr.getString(it) } } ?: emptyList()
+                AgentRunDetail(
+                    summary = summary,
+                    currentStep = if (json.has("current_step")) json.getString("current_step") else null,
+                    logTail = logTail,
+                )
+            }
         }
     }
 

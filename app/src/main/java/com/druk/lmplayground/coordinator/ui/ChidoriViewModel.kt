@@ -50,6 +50,14 @@ class ChidoriViewModel(app: Application) : AndroidViewModel(app) {
     private val _pairingInProgressFor = MutableStateFlow<InstanceId?>(null)
     val pairingInProgressFor: StateFlow<InstanceId?> = _pairingInProgressFor.asStateFlow()
 
+    // Set only once /pairing/begin has actually succeeded on the desktop —
+    // the code-entry dialog keys off this, so a failed begin can't leave a
+    // dialog open where any code the user types is guaranteed to 403
+    // (previously the dialog opened optimistically on tap, before the begin
+    // result was known).
+    private val _pairingCodeEntryFor = MutableStateFlow<InstanceId?>(null)
+    val pairingCodeEntryFor: StateFlow<InstanceId?> = _pairingCodeEntryFor.asStateFlow()
+
     private val _lastPairingError = MutableStateFlow<String?>(null)
     val lastPairingError: StateFlow<String?> = _lastPairingError.asStateFlow()
 
@@ -105,7 +113,11 @@ class ChidoriViewModel(app: Application) : AndroidViewModel(app) {
         _lastPairingError.value = null
         viewModelScope.launch {
             val result = coordinatorRepository.pairingManager.beginPairing(instance)
-            if (result.state != PairingState.PAIRING_IN_PROGRESS) {
+            if (result.state == PairingState.PAIRING_IN_PROGRESS) {
+                // Begin succeeded: the desktop is now showing a code — open
+                // the entry dialog (collected as state by the screen).
+                _pairingCodeEntryFor.value = instance.instanceId
+            } else {
                 _lastPairingError.value = buildString {
                     append("Could not reach ${instance.displayName}.")
                     if (result.errorDetail != null) {
@@ -125,13 +137,13 @@ class ChidoriViewModel(app: Application) : AndroidViewModel(app) {
      * gated behind mDNS working). The real instance_id isn't knowable
      * before first contact, so pairing starts under a deterministic
      * placeholder; PairingManager re-keys the record to the server-asserted
-     * id from `/pairing/confirm`. Returns the placeholder id (used to key
-     * the code-entry dialog), or null when host/port input is unusable.
+     * id from `/pairing/confirm`. The code-entry dialog opens off
+     * [pairingCodeEntryFor] once begin succeeds (same as discovered pairing).
      */
-    fun beginManualPairing(): InstanceId? {
+    fun beginManualPairing() {
         val host = _manualHost.value.trim()
         val port = _manualPort.value.toIntOrNull()
-        if (host.isEmpty() || port == null || port !in 1..65535) return null
+        if (host.isEmpty() || port == null || port !in 1..65535) return
         val placeholder = DiscoveredInstance(
             instanceId = InstanceId("manual:$host:$port"),
             displayName = "$host:$port",
@@ -141,18 +153,24 @@ class ChidoriViewModel(app: Application) : AndroidViewModel(app) {
             pairingRequired = true,
         )
         beginPairing(placeholder)
-        return placeholder.instanceId
     }
 
     fun confirmPairingCode(instanceId: InstanceId, code: String) {
         viewModelScope.launch {
             val result = coordinatorRepository.pairingManager.confirmPairingCode(instanceId, code)
             _pairingInProgressFor.value = null
+            _pairingCodeEntryFor.value = null
             if (result.state != PairingState.PAIRED) {
                 _lastPairingError.value = result.errorDetail
                     ?: "Pairing code didn't match. Try again from the desktop app."
             }
         }
+    }
+
+    /** Closes the code-entry dialog without confirming (user dismissed it). */
+    fun dismissPairingCodeEntry() {
+        _pairingCodeEntryFor.value = null
+        _pairingInProgressFor.value = null
     }
 
     fun unpair(instanceId: InstanceId) {

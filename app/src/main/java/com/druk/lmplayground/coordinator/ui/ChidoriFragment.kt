@@ -36,6 +36,7 @@ class ChidoriFragment : Fragment() {
                 val manualHost by viewModel.manualHost.collectAsStateWithLifecycle()
                 val manualPort by viewModel.manualPort.collectAsStateWithLifecycle()
                 val pairingInProgressFor by viewModel.pairingInProgressFor.collectAsStateWithLifecycle()
+                val pairingCodeEntryFor by viewModel.pairingCodeEntryFor.collectAsStateWithLifecycle()
                 val lastPairingError by viewModel.lastPairingError.collectAsStateWithLifecycle()
                 val monitoredInstance by viewModel.monitoredInstance.collectAsStateWithLifecycle()
                 val monitorStatus by viewModel.monitorStatus.collectAsStateWithLifecycle()
@@ -50,6 +51,7 @@ class ChidoriFragment : Fragment() {
                     discoveredInstances = discovered,
                     pairedInstances = paired,
                     pairingInProgressFor = pairingInProgressFor,
+                    pairingCodeEntryFor = pairingCodeEntryFor,
                     lastPairingError = lastPairingError,
                     manualHost = manualHost,
                     manualPort = manualPort,
@@ -66,6 +68,7 @@ class ChidoriFragment : Fragment() {
                     onBeginPairing = viewModel::beginPairing,
                     onBeginManualPairing = viewModel::beginManualPairing,
                     onConfirmPairingCode = viewModel::confirmPairingCode,
+                    onDismissPairingCodeEntry = viewModel::dismissPairingCodeEntry,
                     onUnpair = viewModel::unpair,
                     onPairedInstanceClick = viewModel::openMonitor,
                     onCloseMonitor = viewModel::closeMonitor,
