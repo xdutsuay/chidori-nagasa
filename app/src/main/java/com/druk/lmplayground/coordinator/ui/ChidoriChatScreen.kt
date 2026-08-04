@@ -1,24 +1,18 @@
 package com.druk.lmplayground.coordinator.ui
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -27,19 +21,22 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.druk.lmplayground.R
+import com.druk.lmplayground.conversation.Message as ConversationMessage
 import com.druk.lmplayground.coordinator.model.CoordinatorConnectionState
 import com.druk.lmplayground.coordinator.model.RemoteChatMessage
 
 /**
  * Remote chat surface (PRD.md §6.4) — routed through the paired desktop's
- * coordinator, deliberately visually distinct from the on-device chat
- * (persistent "via <desktop>" banner: the privacy properties differ, and
- * the user must always be able to tell which surface they're in — PRD §7).
+ * coordinator. Bubbles reuse the on-device [Message] composable so replies
+ * render like native LMPlayground chat (markdown, selection, share/copy).
+ * The persistent "via &lt;desktop&gt;" banner stays — privacy provenance
+ * (PRD §7) must remain visible even when the bubble chrome matches local chat.
  *
  * Rendered in place inside the Chidori screen like the monitor; see
  * ChidoriMonitorScreen's kdoc for why (tablet detail pane has no
@@ -48,6 +45,9 @@ import com.druk.lmplayground.coordinator.model.RemoteChatMessage
  * Messages come exclusively from the server stream — the desktop echoes the
  * user's own messages back with `from_user=true` (WIRE_CONTRACT.md), so
  * there is no local echo to reconcile or de-duplicate.
+ *
+ * Input stays ViewModel-controlled (not [com.druk.lmplayground.conversation.UserInput])
+ * so a failed send keeps the draft (PRD §6.4).
  */
 @Composable
 fun ChidoriChatContent(
@@ -73,7 +73,7 @@ fun ChidoriChatContent(
                         contentDescription = stringResource(R.string.back),
                     )
                 }
-                Spacer(Modifier.width(4.dp))
+                Spacer(modifier.width(4.dp))
                 Text(displayName, style = MaterialTheme.typography.titleLarge)
             }
         }
@@ -89,11 +89,15 @@ fun ChidoriChatContent(
             modifier = Modifier
                 .weight(1f)
                 .fillMaxWidth(),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            contentPadding = PaddingValues(bottom = 8.dp),
         ) {
-            items(messages, key = { it.id }) { message ->
-                ChatBubble(message)
+            items(messages, key = { it.id }) { remote ->
+                val msg = remember(remote) { remote.toConversationMessage() }
+                com.druk.lmplayground.conversation.Message(
+                    msg = msg,
+                    isUserMe = remote.fromUser,
+                    showActions = !remote.fromUser,
+                )
             }
         }
 
@@ -110,7 +114,7 @@ fun ChidoriChatContent(
                 modifier = Modifier.weight(1f),
                 maxLines = 4,
             )
-            Spacer(Modifier.width(8.dp))
+            Spacer(modifier.width(8.dp))
             IconButton(
                 onClick = onSendClick,
                 enabled = input.isNotBlank() && connectionState == CoordinatorConnectionState.CONNECTED,
@@ -154,26 +158,11 @@ private fun ConnectionBanner(
     }
 }
 
-@Composable
-private fun ChatBubble(message: RemoteChatMessage) {
-    Box(modifier = Modifier.fillMaxWidth()) {
-        Card(
-            colors = CardDefaults.cardColors(
-                containerColor = if (message.fromUser) {
-                    MaterialTheme.colorScheme.primaryContainer
-                } else {
-                    MaterialTheme.colorScheme.surfaceVariant
-                }
-            ),
-            modifier = Modifier
-                .widthIn(max = 320.dp)
-                .align(if (message.fromUser) Alignment.CenterEnd else Alignment.CenterStart),
-        ) {
-            Text(
-                text = message.text,
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-            )
-        }
-    }
-}
+private fun RemoteChatMessage.toConversationMessage(): ConversationMessage = ConversationMessage(
+    author = if (fromUser) "User" else "Assistant",
+    content = text,
+    timestamp = sentAtEpochMillis,
+    // Wire ids are strings; conversation.Message keys on Long. Stable for a
+    // session as long as the desktop reuses the same id per message.
+    id = id.hashCode().toLong(),
+)

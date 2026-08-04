@@ -12,8 +12,8 @@ import com.druk.lmplayground.coordinator.model.InstanceId
 import com.druk.lmplayground.coordinator.model.ManualEndpoint
 import com.druk.lmplayground.coordinator.model.PairedInstance
 import com.druk.lmplayground.coordinator.model.RemoteChatMessage
+import com.druk.lmplayground.coordinator.node.DefaultNodeRegistrationCapability
 import com.druk.lmplayground.coordinator.node.NodeRegistrationCapability
-import com.druk.lmplayground.coordinator.node.UnimplementedNodeRegistrationCapability
 import com.druk.lmplayground.coordinator.pairing.PairedInstanceStore
 import com.druk.lmplayground.coordinator.pairing.PairingManager
 import com.druk.lmplayground.coordinator.pairing.PairingManagerImpl
@@ -56,7 +56,7 @@ class CoordinatorRepository(context: Context) {
 
     val pairingManager: PairingManager = PairingManagerImpl(pairedInstanceStore, api)
 
-    val nodeRegistration: NodeRegistrationCapability = UnimplementedNodeRegistrationCapability
+    val nodeRegistration: NodeRegistrationCapability = DefaultNodeRegistrationCapability(api)
 
     fun observeDiscoveredInstances(): Flow<List<DiscoveredInstance>> =
         discovery.observeDiscoveredInstances()

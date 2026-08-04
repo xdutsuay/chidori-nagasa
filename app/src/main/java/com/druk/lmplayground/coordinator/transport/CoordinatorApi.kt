@@ -100,7 +100,33 @@ interface CoordinatorApi {
     fun observeRemoteChat(instanceId: InstanceId): Flow<RemoteChatMessage>
 
     suspend fun sendRemoteChatMessage(instanceId: InstanceId, text: String)
+
+    /** Node mode (NODE_MODE_SPIKE.md): register this phone as an inference worker. */
+    suspend fun registerAsNode(instanceId: InstanceId, payload: NodeRegisterPayload)
+
+    suspend fun nodeHeartbeat(
+        instanceId: InstanceId,
+        nodeId: String,
+        load: Double,
+        available: Boolean,
+        models: List<String>?,
+    )
+
+    suspend fun unregisterAsNode(instanceId: InstanceId, nodeId: String)
 }
+
+/** Companion POST /node/register body. */
+data class NodeRegisterPayload(
+    val nodeId: String,
+    val displayName: String,
+    val apiBase: String,
+    val models: List<String>,
+    val contextLength: Int?,
+    val approxTokensPerSec: Double?,
+    val batteryPct: Int?,
+    val charging: Boolean?,
+    val available: Boolean,
+)
 
 private const val JSON_MEDIA_TYPE = "application/json; charset=utf-8"
 
@@ -408,6 +434,66 @@ class OkHttpCoordinatorApi(
             // keep the draft and show the disconnected state (PRD §6.4:
             // never silently drop a message).
             throw IOException("Chat stream to ${instanceId.value} is not writable")
+        }
+    }
+
+    override suspend fun registerAsNode(instanceId: InstanceId, payload: NodeRegisterPayload) {
+        val body = JSONObject()
+            .put("node_id", payload.nodeId)
+            .put("display_name", payload.displayName)
+            .put("api_base", payload.apiBase)
+            .put("models", org.json.JSONArray(payload.models))
+            .put("available", payload.available)
+        payload.contextLength?.let { body.put("context_length", it) }
+        payload.approxTokensPerSec?.let { body.put("approx_tokens_per_sec", it) }
+        payload.batteryPct?.let { body.put("battery_pct", it) }
+        payload.charging?.let { body.put("charging", it) }
+        val request = authedRequest(instanceId, "/node/register")
+            ?.post(body.toString().toRequestBody(JSON_MEDIA_TYPE.toMediaType()))
+            ?.build()
+            ?: throw IOException("No endpoint for ${instanceId.value}")
+        onIo {
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) {
+                    throw IOException("POST /node/register → HTTP ${response.code}")
+                }
+            }
+        }
+    }
+
+    override suspend fun nodeHeartbeat(
+        instanceId: InstanceId,
+        nodeId: String,
+        load: Double,
+        available: Boolean,
+        models: List<String>?,
+    ) {
+        val body = JSONObject()
+            .put("node_id", nodeId)
+            .put("load", load)
+            .put("available", available)
+        if (models != null) body.put("models", org.json.JSONArray(models))
+        val request = authedRequest(instanceId, "/node/heartbeat")
+            ?.post(body.toString().toRequestBody(JSON_MEDIA_TYPE.toMediaType()))
+            ?.build()
+            ?: throw IOException("No endpoint for ${instanceId.value}")
+        onIo {
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) {
+                    throw IOException("POST /node/heartbeat → HTTP ${response.code}")
+                }
+            }
+        }
+    }
+
+    override suspend fun unregisterAsNode(instanceId: InstanceId, nodeId: String) {
+        val body = JSONObject().put("node_id", nodeId).toString()
+        val request = authedRequest(instanceId, "/node/register")
+            ?.delete(body.toRequestBody(JSON_MEDIA_TYPE.toMediaType()))
+            ?.build()
+            ?: return
+        onIo {
+            client.newCall(request).execute().use { /* best-effort */ }
         }
     }
 

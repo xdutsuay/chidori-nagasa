@@ -61,10 +61,13 @@ fun ChidoriMonitorContent(
     status: CoordinatorStatus?,
     runs: List<AgentRunSummary>,
     selectedRunDetail: AgentRunDetail?,
+    nodeOffering: Boolean,
+    nodeOfferSupported: Boolean,
     showBackHeader: Boolean,
     onRunClick: (AgentRunSummary) -> Unit,
     onDismissRunDetail: () -> Unit,
     onOpenChatClick: () -> Unit,
+    onNodeOfferingChange: (Boolean) -> Unit,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -84,6 +87,29 @@ fun ChidoriMonitorContent(
         }
         StatusCard(status)
         Spacer(Modifier.height(8.dp))
+        if (nodeOfferSupported) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(R.string.chidori_node_offer_title),
+                        style = MaterialTheme.typography.titleSmall,
+                    )
+                    Text(
+                        text = stringResource(R.string.chidori_node_offer_subtitle),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                androidx.compose.material3.Switch(
+                    checked = nodeOffering,
+                    onCheckedChange = onNodeOfferingChange,
+                )
+            }
+            Spacer(modifier.height(8.dp))
+        }
         // Remote chat entry (PRD §6.4) — a distinct surface, not the
         // on-device conversation screen; see ChidoriChatContent.
         Button(onClick = onOpenChatClick, modifier = Modifier.fillMaxWidth()) {

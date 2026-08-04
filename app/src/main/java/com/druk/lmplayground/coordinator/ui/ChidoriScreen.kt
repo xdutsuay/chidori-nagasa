@@ -94,6 +94,11 @@ fun ChidoriScreen(
     onCloseChat: () -> Unit,
     onChatInputChanged: (String) -> Unit,
     onSendChat: () -> Unit,
+    nodeOffering: Boolean = false,
+    nodeOfferSupported: Boolean = false,
+    onNodeOfferingChange: (Boolean) -> Unit = {},
+    nodeOfferError: String? = null,
+    onDismissNodeOfferError: () -> Unit = {},
     onDismissError: () -> Unit,
     onBackClick: () -> Unit,
 ) {
@@ -141,10 +146,13 @@ fun ChidoriScreen(
                 status = monitorStatus,
                 runs = monitorRuns,
                 selectedRunDetail = monitorRunDetail,
+                nodeOffering = nodeOffering,
+                nodeOfferSupported = nodeOfferSupported,
                 showBackHeader = false,
                 onRunClick = onRunClick,
                 onDismissRunDetail = onDismissRunDetail,
                 onOpenChatClick = onOpenChat,
+                onNodeOfferingChange = onNodeOfferingChange,
                 onClose = onCloseMonitor,
                 modifier = contentModifier,
             )
@@ -168,6 +176,18 @@ fun ChidoriScreen(
                 modifier = contentModifier,
             )
         }
+    }
+    nodeOfferError?.let { err ->
+        AlertDialog(
+            onDismissRequest = onDismissNodeOfferError,
+            title = { Text(stringResource(R.string.chidori_node_offer_title)) },
+            text = { Text(err) },
+            confirmButton = {
+                TextButton(onClick = onDismissNodeOfferError) {
+                    Text(stringResource(android.R.string.ok))
+                }
+            },
+        )
     }
 }
 
@@ -195,6 +215,7 @@ fun ChidoriDetailContent(modifier: Modifier = Modifier) {
     val chatMessages by viewModel.chatMessages.collectAsStateWithLifecycle()
     val chatConnectionState by viewModel.chatConnectionState.collectAsStateWithLifecycle()
     val chatInput by viewModel.chatInput.collectAsStateWithLifecycle()
+    val nodeOffering by viewModel.nodeOffering.collectAsStateWithLifecycle()
 
     BackHandler(enabled = chatOpen, onBack = viewModel::closeChat)
     BackHandler(enabled = monitoredInstance != null && !chatOpen, onBack = viewModel::closeMonitor)
@@ -219,10 +240,13 @@ fun ChidoriDetailContent(modifier: Modifier = Modifier) {
             status = monitorStatus,
             runs = monitorRuns,
             selectedRunDetail = monitorRunDetail,
+            nodeOffering = nodeOffering,
+            nodeOfferSupported = true,
             showBackHeader = true,
             onRunClick = { viewModel.openRunDetail(it.runId) },
             onDismissRunDetail = viewModel::dismissRunDetail,
             onOpenChatClick = viewModel::openChat,
+            onNodeOfferingChange = viewModel::setNodeOffering,
             onClose = viewModel::closeMonitor,
             modifier = modifier.fillMaxSize(),
         )

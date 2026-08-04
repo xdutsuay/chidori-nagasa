@@ -30,7 +30,7 @@ interface NodeRegistrationCapability {
     suspend fun unregisterAsNode(instanceId: InstanceId)
 }
 
-/** Always-unsupported stub until Phase 3.5's design spike and a protocol amendment land. */
+/** Always-unsupported stub — prefer [DefaultNodeRegistrationCapability] in production. */
 object UnimplementedNodeRegistrationCapability : NodeRegistrationCapability {
     override val isSupported: Boolean = false
 

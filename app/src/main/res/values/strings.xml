@@ -114,6 +114,8 @@
     <string name="chidori_no_log">No log output.</string>
     <!-- Remote chat (PRD.md §6.4) -->
     <string name="chidori_chat_open">Chat through this desktop</string>
+    <string name="chidori_node_offer_title">Offer phone as inference node</string>
+    <string name="chidori_node_offer_subtitle">Lets this desktop use your loaded on-device model. Uses battery. Off by default.</string>
     <string name="chidori_chat_input_hint">Message the desktop\'s model…</string>
     <string name="chidori_chat_send">Send</string>
     <string name="chidori_chat_via_desktop">Chatting via %1$s — messages leave your device for this paired desktop</string>

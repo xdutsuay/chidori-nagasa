@@ -622,6 +622,47 @@ class ModelRuntime(
         }
     }
 
+    /**
+     * One-shot completion for node mode: temporary session on the loaded
+     * model so the UI chat session is not polluted. Fails if busy or unloaded.
+     */
+    suspend fun nodeModeComplete(prompt: String, params: GenerationParams): Result<String> {
+        val m = model ?: return Result.failure(IllegalStateException("no model loaded"))
+        if (generatingJob?.isActive == true) {
+            return Result.failure(IllegalStateException("busy — on-device chat is generating"))
+        }
+        val temp = createSessionWithParams(m, params, "")
+            ?: return Result.failure(IllegalStateException("could not create session"))
+        val marker = Job()
+        generatingJob = marker
+        return try {
+            withContext(Dispatchers.Default) {
+                temp.addMessage(prompt, false)
+                val buf = StringBuilder()
+                temp.generateAll(object : com.druk.llamacpp.LlamaGenerationCallback {
+                    override fun onFullResponse(response: String) {
+                        synchronized(buf) {
+                            buf.setLength(0)
+                            buf.append(response)
+                        }
+                    }
+                })
+                Result.success(synchronized(buf) { buf.toString() })
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Result.failure(e)
+        } finally {
+            if (generatingJob === marker) generatingJob = null
+            marker.complete()
+            try {
+                temp.destroy()
+            } catch (_: Throwable) {
+            }
+        }
+    }
+
     fun getReport(): String? {
         // Invoked synchronously on the main thread from the token-count tap.
         // Both proxy calls go over AIDL and throw InferenceUnavailableException

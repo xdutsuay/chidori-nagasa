@@ -46,6 +46,8 @@ class ChidoriFragment : Fragment() {
                 val chatMessages by viewModel.chatMessages.collectAsStateWithLifecycle()
                 val chatConnectionState by viewModel.chatConnectionState.collectAsStateWithLifecycle()
                 val chatInput by viewModel.chatInput.collectAsStateWithLifecycle()
+                val nodeOffering by viewModel.nodeOffering.collectAsStateWithLifecycle()
+                val nodeOfferError by viewModel.nodeOfferError.collectAsStateWithLifecycle()
 
                 ChidoriScreen(
                     discoveredInstances = discovered,
@@ -78,6 +80,11 @@ class ChidoriFragment : Fragment() {
                     onCloseChat = viewModel::closeChat,
                     onChatInputChanged = viewModel::onChatInputChanged,
                     onSendChat = viewModel::sendChatMessage,
+                    nodeOffering = nodeOffering,
+                    nodeOfferSupported = true,
+                    onNodeOfferingChange = viewModel::setNodeOffering,
+                    nodeOfferError = nodeOfferError,
+                    onDismissNodeOfferError = viewModel::dismissNodeOfferError,
                     onDismissError = viewModel::dismissError,
                     onBackClick = { findNavController().popBackStack() },
                 )

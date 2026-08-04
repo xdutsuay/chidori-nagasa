@@ -183,6 +183,38 @@ class ChidoriViewModel(app: Application) : AndroidViewModel(app) {
         _lastPairingError.value = null
     }
 
+    // --- Node mode (protocol §2.5) ----------------------------------------
+    private val _nodeOffering = MutableStateFlow(false)
+    val nodeOffering: StateFlow<Boolean> = _nodeOffering.asStateFlow()
+
+    private val _nodeOfferError = MutableStateFlow<String?>(null)
+    val nodeOfferError: StateFlow<String?> = _nodeOfferError.asStateFlow()
+
+    fun setNodeOffering(enabled: Boolean) {
+        val instance = _monitoredInstance.value ?: return
+        if (!_nodeOffering.value && !enabled) return
+        if (_nodeOffering.value == enabled) return
+        viewModelScope.launch {
+            if (enabled) {
+                _nodeOfferError.value = null
+                coordinatorRepository.nodeRegistration.registerAsNode(instance.instanceId)
+                    .onSuccess { _nodeOffering.value = true }
+                    .onFailure {
+                        _nodeOffering.value = false
+                        _nodeOfferError.value = it.message ?: "Could not offer as node"
+                    }
+            } else {
+                coordinatorRepository.nodeRegistration.unregisterAsNode(instance.instanceId)
+                _nodeOffering.value = false
+                _nodeOfferError.value = null
+            }
+        }
+    }
+
+    fun dismissNodeOfferError() {
+        _nodeOfferError.value = null
+    }
+
     /**
      * Open the status/run monitor for [instance] and start polling. WIRE_CONTRACT.md's
      * v1 draft has no status/run push socket (only remote chat gets one, Phase 3), so
@@ -206,6 +238,13 @@ class ChidoriViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun closeMonitor() {
+        val offered = _monitoredInstance.value
+        if (_nodeOffering.value && offered != null) {
+            viewModelScope.launch {
+                coordinatorRepository.nodeRegistration.unregisterAsNode(offered.instanceId)
+            }
+            _nodeOffering.value = false
+        }
         closeChat()
         monitorJob?.cancel()
         monitorJob = null

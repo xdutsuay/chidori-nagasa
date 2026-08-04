@@ -12,6 +12,10 @@ import com.druk.llamacpp.InferenceLimits
 import com.druk.llamacpp.InferenceState
 import com.druk.llamacpp.LlamaCpp
 import com.druk.lmplayground.App
+import com.druk.lmplayground.coordinator.node.NodeChatMessage
+import com.druk.lmplayground.coordinator.node.NodeInferenceBridge
+import com.druk.lmplayground.coordinator.node.NodeInferenceHub
+import com.druk.lmplayground.coordinator.node.NodeOfferedModel
 import com.druk.lmplayground.inference.ModelRuntime
 import com.druk.lmplayground.data.ChatSessionEntity
 import com.druk.lmplayground.data.ConversationMetadata
@@ -152,6 +156,7 @@ class ConversationViewModel(val app: Application) : AndroidViewModel(app) {
 
         override fun onModelReady(model: ModelInfo) {
             _isModelReady.postValue(true)
+            attachNodeInferenceBridge(model)
             // Update session model info if we have an active session
             val sessionId = _currentSessionId.value
             if (sessionId != null) {
@@ -1005,6 +1010,7 @@ class ConversationViewModel(val app: Application) : AndroidViewModel(app) {
             _supportsVision.postValue(false)
             _supportsToolCalling.postValue(false)
             _toolEnabledStates.postValue(emptyMap())
+            NodeInferenceHub.clear()
         }
     }
 
@@ -1027,6 +1033,27 @@ class ConversationViewModel(val app: Application) : AndroidViewModel(app) {
 
     fun resetModelList() {
         _models.postValue(emptyList())
+    }
+
+    private fun attachNodeInferenceBridge(model: ModelInfo) {
+        NodeInferenceHub.bridge = object : NodeInferenceBridge {
+            override fun currentModel(): NodeOfferedModel =
+                NodeOfferedModel(id = model.filename, displayName = model.name)
+
+            override suspend fun complete(messages: List<NodeChatMessage>): Result<String> {
+                val prompt = messages
+                    .filter { it.role.equals("user", ignoreCase = true) }
+                    .joinToString("\n\n") { it.content }
+                    .ifBlank { messages.lastOrNull()?.content.orEmpty() }
+                if (prompt.isBlank()) {
+                    return Result.failure(IllegalArgumentException("empty prompt"))
+                }
+                return runtime.nodeModeComplete(
+                    prompt,
+                    _generationParams.value ?: GenerationParams(),
+                )
+            }
+        }
     }
 
     data class RamWarning(

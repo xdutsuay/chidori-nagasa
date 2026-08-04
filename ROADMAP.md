@@ -75,6 +75,13 @@ ships, without pulling node-mode implementation into v1 scope.
   "rework," that's a signal to fix the module boundary before v1 ships, not
   after.
 
+**Spike status (2026-08-04):** documented here. Verdict: **add, don't rework**.
+**Option B started:** phone registration + OpenAI facade + monitor toggle;
+desktop companion `/node/register|heartbeat` stub + `chidori-nagasa` dispatch
+backend. Manual QA: load model → Settings → Chidori Desktop → paired row →
+toggle “Offer phone as inference node” → node should appear in IDE Inference
+Source → Ask.
+
 ## Phase 4 — Hardening and release (v1 ship)
 
 Goal: PRD §8/§9, `TEST_PLAN.md` §5 release checklist.
