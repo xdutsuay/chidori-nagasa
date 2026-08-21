@@ -1,66 +1,76 @@
-
-<h1 align="center">chidori-nagasa</h1>
+﻿# chidori-nagasa
 
 <p align="center">
-<img src="logo.png"/>
+<img src="logo.png" alt="chidori-nagasa logo" width="120"/>
 </p>
 
-chidori-nagasa is the Android companion to [chidori](https://kaustubhtripathi.com/public/lab/lclreason/),
-the AI-powered desktop IDE ([lclreason](https://github.com/xdutsuay/lclreason)). It runs LLMs
-locally on-device — download models, load them in one tap, and chat, all offline, all private —
-and pairs with a running chidori desktop instance over your local network to check on its
-coordinator, watch Ask/Agent/Plan/Debug runs, and chat through its local/remote models from your
-phone.
+<p align="center">
+<strong>On-device LLM chat + LAN companion for the <a href="https://kaustubhtripathi.com/public/lab/lclreason/">chidori</a> desktop IDE.</strong>
+</p>
 
-This project is a fork of [LM Playground](https://github.com/andriydruk/LMPlayground) by
-Andriy Druk, used as the base for on-device inference. See `NOTICE.md` for full attribution.
-Powered by [llama.cpp](https://github.com/ggml-org/llama.cpp) with GGUF-format models from
-[Hugging Face](https://huggingface.co/).
+<p align="center">
+<a href="https://github.com/xdutsuay/chidori-nagasa/releases">Download APK</a>
+·
+<a href="https://kaustubhtripathi.com/public/lab/lclreason/#download">Desktop downloads</a>
+·
+<a href="WIRE_CONTRACT.md">Wire contract</a>
+·
+<a href="NOTICE.md">Attribution</a>
+</p>
 
-Governance for this repo — including how it stays in sync with `lclreason` and the engineering
-rules that apply to changes here — lives in [`CHIDORI_PROTOCOL.md`](CHIDORI_PROTOCOL.md). Product
-scope for the first release is in [`PRD.md`](PRD.md), phased plan in [`ROADMAP.md`](ROADMAP.md),
-the wire contract in [`WIRE_CONTRACT.md`](WIRE_CONTRACT.md), and the test/release gate in
-[`TEST_PLAN.md`](TEST_PLAN.md). If you're picking up work on the `lclreason` desktop side to make
-pairing/monitor/chat actually connect, start at [`DESKTOP_HANDOFF.md`](DESKTOP_HANDOFF.md) — it's
-the implementation brief for the server half of this contract.
+---
 
-Grab a test build from the [Releases page](https://github.com/xdutsuay/chidori-nagasa/releases) —
-debug-signed APKs, no Play Store account needed.
+**chidori-nagasa** is the Android companion to [chidori](https://kaustubhtripathi.com/public/lab/lclreason/) — an AI-powered desktop IDE. On your phone it runs GGUF models locally (offline, private). When paired with a chidori desktop on the same LAN, it can monitor Ask / Agent / Plan / Debug runs, chat through the desktop's models, and optionally offer the phone as an inference node.
 
-![preview](docs/banner.png)
+Built as a substantial fork of [LM Playground](https://github.com/andriydruk/LMPlayground) by Andriy Druk (MIT). Inference is powered by [llama.cpp](https://github.com/ggml-org/llama.cpp). See [`NOTICE.md`](NOTICE.md) and [`UPSTREAM_DIVERGENCE.md`](UPSTREAM_DIVERGENCE.md) for attribution and what changed.
+
+> **Desktop source** (`lclreason`) stays private. Public desktop binaries ship from [xdutsuay/chidori](https://github.com/xdutsuay/chidori/releases). This Android repo is the open companion client.
+
+## Why this fork exists
+
+LM Playground already nails on-device chat. chidori-nagasa keeps that working and adds the pieces that make a phone useful next to a desktop AI IDE:
+
+| Area | What we added |
+|------|----------------|
+| **LAN pairing** | mDNS (`_chidori._tcp`) + manual `host:8027`, pairing codes, bearer auth |
+| **Coordinator monitor** | Live status and Ask / Agent / Plan / Debug run activity |
+| **Remote chat** | Chat through the desktop's local/remote LLMs from the phone |
+| **Phone as node** | Opt-in foreground service hosting an OpenAI-compatible facade so the desktop can route work to the phone |
+| **Windows native builds** | Gradle probes for `glslc.exe`, Vulkan SDK / SPIRV headers, `-PggmlVulkan=off` escape hatch |
+
+The wire protocol, product scope, and engineering rules live in [`CHIDORI_PROTOCOL.md`](CHIDORI_PROTOCOL.md), [`WIRE_CONTRACT.md`](WIRE_CONTRACT.md), [`PRD.md`](PRD.md), and [`ROADMAP.md`](ROADMAP.md). Desktop implementers: start at [`DESKTOP_HANDOFF.md`](DESKTOP_HANDOFF.md).
+
+## Download
+
+Grab a debug-signed APK from [Releases](https://github.com/xdutsuay/chidori-nagasa/releases) (no Play Store account). Current app version: **2.1.2**.
+
+Sideload notes:
+
+1. Enable **Install unknown apps** for your browser/file manager.
+2. Open the APK and install.
+3. For companion features, also install [chidori desktop](https://kaustubhtripathi.com/public/lab/lclreason/#download) and pair over Wi-Fi (Settings → Companion on desktop; Chidori Desktop in the Android app).
 
 ## Features
 
-On-device (inherited from LM Playground, rebranded, kept working — see `TEST_PLAN.md` §2.1):
+### On-device (from LM Playground, kept working)
 
-- **On-device inference** - no cloud, no API keys, fully offline
-- **Vision/image input** - attach a photo from your gallery or camera and ask vision-capable models about it (Gemma 4, Gemma 3, Qwen 3.5, Ministral 3)
-- **Rich markdown** in chat responses - headers, code blocks, lists, and more
-- **Reasoning model support** - thinking steps from models like GPT-OSS, DeepSeek R1, and Nemotron are displayed in a styled section
-- **Tools** - capable models can search the web, fetch a page, and run JavaScript mid-reply; each tool is off by default and enabled per model
-- **Reusable system prompts** - save a persona, tone, or output format once and apply it to any model
-- **Chat history** - conversations are saved and organized; pin, rename, delete, and resume sessions from the sidebar
-- **Custom GGUF models** - load your own model files from any source alongside the built-in catalog
-- **Reliable background downloads** - custom download engine with OkHttp and WorkManager, progress notifications with speed and ETA, automatic resume on network interruptions
-- **Storage management** - choose where to keep multi-GB model files with Android's Storage Access Framework
-- **ARM optimized** - KleidiAI kernels and OpenMP for faster generation on arm64 devices
-- **Large-screen ready** - tablets, foldables, and Chromebooks get a permanent sessions sidebar, list-detail Settings, and freeform window resize support
+- Offline inference — no cloud, no API keys for local chat
+- Vision / image input for capable models (Gemma, Qwen 3.5, Ministral, …)
+- Rich markdown replies, reasoning-model "thinking" sections
+- Optional tools (web search, fetch, JS) — off by default, per model
+- Saved system prompts, chat history, custom GGUF imports
+- Background downloads with resume, SAF storage picker
+- ARM64 optimizations (KleidiAI / OpenMP)
+- Large-screen layout for tablets, foldables, Chromebooks
 
-chidori companion — phone-side v1 client mode is feature-complete (see `ROADMAP.md`). It needs a
-`lclreason` desktop speaking the matching server contract to actually connect; that's the
-remaining work, tracked in `DESKTOP_HANDOFF.md`:
+### Companion (chidori-specific)
 
-- **Pair with chidori desktop** over LAN via mDNS, or manually by host:port when discovery is
-  blocked (corporate/guest networks)
-- **Coordinator monitor** - live status and Ask/Agent/Plan/Debug run activity, read-only in v1
-- **Remote chat** - chat through the desktop's attached local/remote LLM from your phone, in a
-  surface clearly distinct from on-device chat
-- **Node mode (planned, post-v1)** - offer this phone's on-device model as a worker the desktop
-  coordinator can route to, the same way it treats a local Ollama instance today. See
-  `CHIDORI_PROTOCOL.md` §2.5.
+- Pair with chidori desktop over LAN (mDNS or manual host:port)
+- Monitor coordinator status and runs (read-only in v1)
+- Remote chat through the desktop's attached models
+- Opt-in **phone as inference node** (foreground service + notification)
 
-## Supported Models
+## Supported models
 
 | Family | Sizes | Provider |
 |--------|-------|----------|
@@ -92,58 +102,59 @@ remaining work, tracked in `DESKTOP_HANDOFF.md`:
 
 </details>
 
-Most models use Q4_K_M quantization; Qwen 3.5 uses Q3_K_M, and GPT-OSS ships in its native MXFP4 format. See [`ModelInfoProvider.kt`](app/src/main/java/com/druk/lmplayground/models/ModelInfoProvider.kt) for the full list.
+Most models use Q4_K_M; Qwen 3.5 uses Q3_K_M; GPT-OSS ships MXFP4. Catalog: [`ModelInfoProvider.kt`](app/src/main/java/com/druk/lmplayground/models/ModelInfoProvider.kt).
 
-## Build Instructions
+## Build
 
-Prerequisites:
-* Android Studio [2024.3.1+](https://developer.android.com/studio/releases)
-* NDK 27.2.12479018
-* CMake 3.31.6
+**Prerequisites**
 
-1. Clone the repository with submodules:
+- Android Studio [2024.3.1+](https://developer.android.com/studio/releases)
+- NDK 27.2.12479018
+- CMake 3.31.6
+
+```bash
+git clone --recurse-submodules https://github.com/xdutsuay/chidori-nagasa.git
+cd chidori-nagasa
 ```
-git clone --recurse-submodules <this-repo-url>.git
-```
-2. Open the project in Android Studio: `File` > `Open` > Select the cloned repository.
-3. Connect an Android device or start an emulator.
-4. Run the application using `Run` > `Run 'app'` or the play button in Android Studio.
 
-<details>
-<summary>Building from the command line (<code>./gradlew</code>) instead of Android Studio</summary>
+Open the folder in Android Studio and Run `app`, or from the CLI:
 
-The Vulkan backend (`GGML_VULKAN=ON`) needs two host build-time deps Android Studio's SDK manager
-doesn't install by default — `build.gradle.kts` auto-probes common install locations, override via
-`-P`/env vars if yours differ:
-
-```
-brew install spirv-headers vulkan-headers   # macOS; see build.gradle.kts for Linux paths
+```bash
+# macOS / Linux (Vulkan host deps — see app/build.gradle.kts for paths)
+brew install spirv-headers vulkan-headers   # macOS example
 sdkmanager "cmake;3.31.6"
-export PATH="$ANDROID_HOME/cmake/3.31.6/bin:$PATH"   # the nested vulkan-shaders-gen
-                                                       # sub-build needs ninja on PATH
+export PATH="$ANDROID_HOME/cmake/3.31.6/bin:$PATH"
 ./gradlew app:lintDebug app:testDebugUnitTest app:assembleDebug
-```
-</details>
 
-Before merging any change, read [`CHIDORI_PROTOCOL.md`](CHIDORI_PROTOCOL.md) §3 — it covers
-branch/merge gates, native-layer testing requirements, and module boundaries specific to this
-repo.
+# Windows without MSVC / Vulkan shader host tools:
+./gradlew.bat app:assembleDebug -PggmlVulkan=off
+```
+
+Before merging changes that touch `net/coordinator`, `inference/`, or JNI: read [`CHIDORI_PROTOCOL.md`](CHIDORI_PROTOCOL.md) §3.
+
+## Repo map
+
+| Doc | Purpose |
+|-----|---------|
+| [`CHIDORI_PROTOCOL.md`](CHIDORI_PROTOCOL.md) | Governance + compatibility rules with desktop |
+| [`WIRE_CONTRACT.md`](WIRE_CONTRACT.md) | HTTP / pairing / chat contract |
+| [`DESKTOP_HANDOFF.md`](DESKTOP_HANDOFF.md) | Brief for the desktop server half |
+| [`PRD.md`](PRD.md) / [`ROADMAP.md`](ROADMAP.md) | Product scope and phases |
+| [`TEST_PLAN.md`](TEST_PLAN.md) | Regression / release gates |
+| [`UPSTREAM_DIVERGENCE.md`](UPSTREAM_DIVERGENCE.md) | Diff vs LM Playground |
+| [`ARCHITECTURE.md`](ARCHITECTURE.md) | High-level layout |
 
 ## Contributing
 
-This repo runs under [`CHIDORI_PROTOCOL.md`](CHIDORI_PROTOCOL.md), a binding set of rules for
-how this app is engineered and how it stays compatible with the `lclreason` desktop app. Read it
-before opening a PR, especially if your change touches `net/coordinator`, `inference/`, or the
-native/JNI layer.
+This repo follows [`CHIDORI_PROTOCOL.md`](CHIDORI_PROTOCOL.md). Please open an issue before large wire-contract or native-layer changes. PRs that touch companion transport should keep `net/coordinator` boundaries intact and include unit tests for the transport layer.
 
 ## License
 
-This project is licensed under the [MIT License](LICENSE). It is a derivative of LM Playground
-(also MIT) — see [`NOTICE.md`](NOTICE.md) for attribution.
+[MIT](LICENSE) — derivative of LM Playground (MIT). See [`NOTICE.md`](NOTICE.md).
 
 ## Acknowledgments
 
-Built on [LM Playground](https://github.com/andriydruk/LMPlayground) by Andriy Druk, which is
-itself built on [llama.cpp](https://github.com/ggml-org/llama.cpp). Models are GGUF-format,
-sourced from [Hugging Face](https://huggingface.co/). Companion to
-[chidori](https://kaustubhtripathi.com/public/lab/lclreason/) / [lclreason](https://github.com/xdutsuay/lclreason).
+- [LM Playground](https://github.com/andriydruk/LMPlayground) — Andriy Druk
+- [llama.cpp](https://github.com/ggml-org/llama.cpp) / [llama.cpp-android](https://github.com/andriydruk/llama.cpp-android)
+- Models: GGUF builds from [Hugging Face](https://huggingface.co/), each under their own licenses
+- Companion to [chidori](https://kaustubhtripathi.com/public/lab/lclreason/) (desktop binaries: [xdutsuay/chidori](https://github.com/xdutsuay/chidori))

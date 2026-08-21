@@ -22,10 +22,10 @@ Models used with this app are in GGUF format, generally sourced from Hugging
 Face (https://huggingface.co/), each under their own respective licenses —
 this app does not relicense model weights.
 
-chidori-nagasa is the companion app to **chidori** (the `lclreason` desktop
-IDE), https://github.com/xdutsuay/lclreason /
-https://kaustubhtripathi.com/public/lab/lclreason/. The two projects are
-governed by `CHIDORI_PROTOCOL.md` in this repo.
+chidori-nagasa is the companion app to **chidori** (desktop IDE). Product page:
+https://kaustubhtripathi.com/public/lab/lclreason/ — public desktop binaries:
+https://github.com/xdutsuay/chidori. The projects are governed by
+`CHIDORI_PROTOCOL.md` in this repo.
 
 ## What changed from upstream
 
