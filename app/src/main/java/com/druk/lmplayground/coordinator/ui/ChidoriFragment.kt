@@ -40,14 +40,19 @@ class ChidoriFragment : Fragment() {
                 val lastPairingError by viewModel.lastPairingError.collectAsStateWithLifecycle()
                 val monitoredInstance by viewModel.monitoredInstance.collectAsStateWithLifecycle()
                 val monitorStatus by viewModel.monitorStatus.collectAsStateWithLifecycle()
+                val monitorStatusMessage by viewModel.monitorStatusMessage.collectAsStateWithLifecycle()
                 val monitorRuns by viewModel.monitorRuns.collectAsStateWithLifecycle()
+                val monitorRunningSteps by viewModel.monitorRunningSteps.collectAsStateWithLifecycle()
+                val monitorLastUpdatedEpochMillis by viewModel.monitorLastUpdatedEpochMillis.collectAsStateWithLifecycle()
                 val monitorRunDetail by viewModel.monitorRunDetail.collectAsStateWithLifecycle()
                 val chatOpen by viewModel.chatOpen.collectAsStateWithLifecycle()
                 val chatMessages by viewModel.chatMessages.collectAsStateWithLifecycle()
                 val chatConnectionState by viewModel.chatConnectionState.collectAsStateWithLifecycle()
                 val chatInput by viewModel.chatInput.collectAsStateWithLifecycle()
+                val chatAwaitingReply by viewModel.chatAwaitingReply.collectAsStateWithLifecycle()
                 val nodeOffering by viewModel.nodeOffering.collectAsStateWithLifecycle()
                 val nodeOfferError by viewModel.nodeOfferError.collectAsStateWithLifecycle()
+                val nodeOfferSupported by viewModel.nodeOfferSupported.collectAsStateWithLifecycle()
 
                 ChidoriScreen(
                     discoveredInstances = discovered,
@@ -59,12 +64,16 @@ class ChidoriFragment : Fragment() {
                     manualPort = manualPort,
                     monitoredInstance = monitoredInstance,
                     monitorStatus = monitorStatus,
+                    monitorStatusMessage = monitorStatusMessage,
                     monitorRuns = monitorRuns,
+                    monitorRunningSteps = monitorRunningSteps,
+                    monitorLastUpdatedEpochMillis = monitorLastUpdatedEpochMillis,
                     monitorRunDetail = monitorRunDetail,
                     chatOpen = chatOpen,
                     chatMessages = chatMessages,
                     chatConnectionState = chatConnectionState,
                     chatInput = chatInput,
+                    chatAwaitingReply = chatAwaitingReply,
                     onManualHostChanged = viewModel::onManualHostChanged,
                     onManualPortChanged = viewModel::onManualPortChanged,
                     onBeginPairing = viewModel::beginPairing,
@@ -81,7 +90,7 @@ class ChidoriFragment : Fragment() {
                     onChatInputChanged = viewModel::onChatInputChanged,
                     onSendChat = viewModel::sendChatMessage,
                     nodeOffering = nodeOffering,
-                    nodeOfferSupported = true,
+                    nodeOfferSupported = nodeOfferSupported,
                     onNodeOfferingChange = viewModel::setNodeOffering,
                     nodeOfferError = nodeOfferError,
                     onDismissNodeOfferError = viewModel::dismissNodeOfferError,

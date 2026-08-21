@@ -1,5 +1,9 @@
 package com.druk.lmplayground.coordinator.node
 
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+
 /**
  * Narrow callback so `net/coordinator` can offer node mode without a
  * compile-time dependency on `inference/` / ModelRuntime (protocol §3.4).
@@ -34,8 +38,16 @@ object AbsentNodeInferenceBridge : NodeInferenceBridge {
  * Node registration reads this; do not put ModelRuntime types here.
  */
 object NodeInferenceHub {
+    private val _hasLoadedModel = MutableStateFlow(false)
+    /** True when [bridge] reports a loaded on-device model (gates the node-offer toggle). */
+    val hasLoadedModel: StateFlow<Boolean> = _hasLoadedModel.asStateFlow()
+
     @Volatile
     var bridge: NodeInferenceBridge = AbsentNodeInferenceBridge
+        set(value) {
+            field = value
+            _hasLoadedModel.value = value.currentModel() != null
+        }
 
     fun clear() {
         bridge = AbsentNodeInferenceBridge

@@ -98,10 +98,13 @@
     <!-- Coordinator monitor (PRD.md §6.3) -->
     <string name="chidori_runs_section">Recent runs</string>
     <string name="chidori_no_runs">No runs yet.</string>
+    <string name="chidori_watching_runs">Watching %1$s — Ask/Agent/Plan/Debug runs will appear here.</string>
     <string name="chidori_status_loading">Checking status…</string>
     <string name="chidori_status_idle">Idle</string>
     <string name="chidori_status_running">Running</string>
     <string name="chidori_status_error">Error</string>
+    <string name="chidori_status_disconnected">Disconnected — can\'t reach the desktop</string>
+    <string name="chidori_monitor_updated">Updated %1$s</string>
     <string name="chidori_mode_ask">Ask</string>
     <string name="chidori_mode_agent">Agent</string>
     <string name="chidori_mode_plan">Plan</string>
@@ -114,10 +117,17 @@
     <string name="chidori_no_log">No log output.</string>
     <!-- Remote chat (PRD.md §6.4) -->
     <string name="chidori_chat_open">Chat through this desktop</string>
+    <string name="chidori_chat_action">Chat</string>
     <string name="chidori_node_offer_title">Offer phone as inference node</string>
     <string name="chidori_node_offer_subtitle">Lets this desktop use your loaded on-device model. Uses battery. Off by default.</string>
+    <string name="node_notification_channel_name">Inference node</string>
+    <string name="node_notification_channel_description">Keeps this phone available as a LAN inference worker for a paired desktop.</string>
+    <string name="node_notification_title" translatable="false">chidori-nagasa</string>
+    <string name="node_notification_text">Offering on-device model as inference node</string>
     <string name="chidori_chat_input_hint">Message the desktop\'s model…</string>
     <string name="chidori_chat_send">Send</string>
+    <string name="chidori_chat_empty">Messages are routed via %1$s. Replies from the desktop\'s model appear here.</string>
+    <string name="chidori_chat_replying">Desktop is replying…</string>
     <string name="chidori_chat_via_desktop">Chatting via %1$s — messages leave your device for this paired desktop</string>
     <string name="chidori_chat_connecting">Connecting to the desktop…</string>
     <string name="chidori_chat_disconnected">Disconnected from %1$s — messages aren\'t being sent</string>

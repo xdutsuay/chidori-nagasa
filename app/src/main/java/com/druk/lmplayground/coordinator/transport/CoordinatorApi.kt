@@ -7,6 +7,7 @@ import com.druk.lmplayground.coordinator.model.AgentRunState
 import com.druk.lmplayground.coordinator.model.AgentRunSummary
 import com.druk.lmplayground.coordinator.model.CoordinatorConnectionState
 import com.druk.lmplayground.coordinator.model.CoordinatorStatus
+import com.druk.lmplayground.coordinator.model.CoordinatorStatusInfo
 import com.druk.lmplayground.coordinator.model.InstanceId
 import com.druk.lmplayground.coordinator.model.ProtocolVersion
 import com.druk.lmplayground.coordinator.model.RemoteChatMessage
@@ -91,7 +92,7 @@ interface CoordinatorApi {
 
     suspend fun revokePairing(instanceId: InstanceId)
 
-    suspend fun getStatus(instanceId: InstanceId): CoordinatorStatus
+    suspend fun getStatus(instanceId: InstanceId): CoordinatorStatusInfo
 
     suspend fun listRuns(instanceId: InstanceId): List<AgentRunSummary>
 
@@ -302,21 +303,29 @@ class OkHttpCoordinatorApi(
         connectionStateFlow(instanceId).value = CoordinatorConnectionState.DISCONNECTED
     }
 
-    override suspend fun getStatus(instanceId: InstanceId): CoordinatorStatus {
+    override suspend fun getStatus(instanceId: InstanceId): CoordinatorStatusInfo {
         val request = authedRequest(instanceId, "/coordinator/status")?.build()
-            ?: return CoordinatorStatus.ERROR
+            ?: return CoordinatorStatusInfo(CoordinatorStatus.ERROR, "No known endpoint")
         return runCatching {
             onIo {
                 client.newCall(request).execute().use { response ->
+                    if (!response.isSuccessful) {
+                        return@use CoordinatorStatusInfo(
+                            CoordinatorStatus.ERROR,
+                            "HTTP ${response.code}",
+                        )
+                    }
                     val json = JSONObject(response.body?.string() ?: "{}")
-                    when (json.optString("status")) {
+                    val status = when (json.optString("status")) {
                         "running" -> CoordinatorStatus.RUNNING
                         "error" -> CoordinatorStatus.ERROR
                         else -> CoordinatorStatus.IDLE
                     }
+                    val err = json.optString("error_message").takeIf { it.isNotBlank() }
+                    CoordinatorStatusInfo(status, err)
                 }
             }
-        }.getOrDefault(CoordinatorStatus.ERROR)
+        }.getOrDefault(CoordinatorStatusInfo(CoordinatorStatus.ERROR, "Status request failed"))
     }
 
     override suspend fun listRuns(instanceId: InstanceId): List<AgentRunSummary> {
@@ -367,6 +376,7 @@ class OkHttpCoordinatorApi(
             "failed" -> AgentRunState.FAILED
             else -> AgentRunState.RUNNING
         },
+        currentStep = optString("current_step").takeIf { it.isNotBlank() },
     )
 
     // One live chat socket per instance ("one logical stream per paired

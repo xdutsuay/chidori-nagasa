@@ -3,9 +3,7 @@ package com.druk.lmplayground.coordinator.node
 import android.util.Log
 import org.json.JSONArray
 import org.json.JSONObject
-import java.io.BufferedReader
-import java.io.InputStreamReader
-import java.io.OutputStreamWriter
+import java.io.ByteArrayOutputStream
 import java.net.InetSocketAddress
 import java.net.ServerSocket
 import java.net.Socket
@@ -24,12 +22,12 @@ class NodeOpenAiServer(
 ) {
     private val running = AtomicBoolean(false)
     private var serverSocket: ServerSocket? = null
-    private var pool = Executors.newCachedThreadPool()
+    private var pool = newWorkerPool()
 
     /** Bind ephemeral port; returns the local listen port. */
     fun start(): Int {
         check(!running.get()) { "already started" }
-        if (pool.isShutdown) pool = Executors.newCachedThreadPool()
+        if (pool.isShutdown) pool = newWorkerPool()
         val ss = ServerSocket()
         ss.reuseAddress = true
         ss.bind(InetSocketAddress(0))
@@ -40,7 +38,13 @@ class NodeOpenAiServer(
             while (running.get()) {
                 try {
                     val client = ss.accept()
-                    workers.execute { handleClient(client) }
+                    workers.execute {
+                        try {
+                            handleClient(client)
+                        } catch (t: Throwable) {
+                            Log.e(TAG, "client handler failed", t)
+                        }
+                    }
                 } catch (_: Exception) {
                     if (!running.get()) break
                 }
@@ -61,37 +65,18 @@ class NodeOpenAiServer(
 
     private fun handleClient(socket: Socket) {
         socket.use { s ->
-            s.soTimeout = 120_000
-            val input = BufferedReader(InputStreamReader(s.getInputStream()))
-            val requestLine = input.readLine() ?: return
-            val parts = requestLine.split(" ")
-            if (parts.size < 2) {
-                writeResponse(s, 400, "text/plain", "bad request")
+            s.soTimeout = HEADER_TIMEOUT_MS
+            val req = readHttp(s) ?: return
+            if (req.errorStatus != 0) {
+                writeResponse(s, req.errorStatus, "text/plain", req.errorBody)
                 return
             }
-            val method = parts[0]
-            val path = parts[1].substringBefore('?')
-            var contentLength = 0
-            while (true) {
-                val line = input.readLine() ?: break
-                if (line.isEmpty()) break
-                val lower = line.lowercase()
-                if (lower.startsWith("content-length:")) {
-                    contentLength = lower.substringAfter(':').trim().toIntOrNull() ?: 0
-                }
-            }
-            val body = if (contentLength > 0) {
-                val buf = CharArray(contentLength)
-                var read = 0
-                while (read < contentLength) {
-                    val n = input.read(buf, read, contentLength - read)
-                    if (n < 0) break
-                    read += n
-                }
-                String(buf, 0, read)
-            } else {
-                ""
-            }
+            // Generation on-device can exceed any header timeout; disable SO_TIMEOUT
+            // for the rest of the connection (KMA-64 / Agent EOF).
+            s.soTimeout = 0
+            val method = req.method
+            val path = req.path
+            val body = req.body
 
             when {
                 method == "GET" && (path == "/v1/models" || path == "/models") -> {
@@ -126,6 +111,16 @@ class NodeOpenAiServer(
         val messages = mutableListOf<NodeChatMessage>()
         try {
             val json = JSONObject(body)
+            val tools = json.optJSONArray("tools")
+            if (tools != null && tools.length() > 0) {
+                writeResponse(
+                    socket,
+                    400,
+                    "application/json",
+                    errorJson("this phone node is Ask-only; Agent/tools are not supported"),
+                )
+                return
+            }
             val arr = json.optJSONArray("messages") ?: JSONArray()
             for (i in 0 until arr.length()) {
                 val m = arr.getJSONObject(i)
@@ -194,19 +189,105 @@ class NodeOpenAiServer(
             503 -> "503 Service Unavailable"
             else -> "$code"
         }
-        OutputStreamWriter(socket.getOutputStream(), Charsets.UTF_8).use { out ->
-            out.write("HTTP/1.1 $status\r\n")
-            out.write("Content-Type: $contentType\r\n")
-            out.write("Content-Length: ${bytes.size}\r\n")
-            out.write("Connection: close\r\n")
-            out.write("\r\n")
-            out.flush()
-        }
-        socket.getOutputStream().write(bytes)
-        socket.getOutputStream().flush()
+        // Do not wrap getOutputStream() in a Writer.use {} — closing the writer
+        // closes the socket, so the body write hit "Socket is closed" and the
+        // desktop decoder saw unexpected EOF (KMA-64 framing).
+        val header = "HTTP/1.1 $status\r\n" +
+            "Content-Type: $contentType\r\n" +
+            "Content-Length: ${bytes.size}\r\n" +
+            "Connection: close\r\n" +
+            "\r\n"
+        val out = socket.getOutputStream()
+        out.write(header.toByteArray(Charsets.US_ASCII))
+        out.write(bytes)
+        out.flush()
     }
+
+    /** Byte-accurate HTTP/1.1 request: headers then Content-Length body (KMA-64). */
+    private fun readHttp(socket: Socket): ParsedHttp? {
+        val ins = socket.getInputStream()
+        val headerBytes = ByteArrayOutputStream()
+        var match = 0
+        while (headerBytes.size() < MAX_HEADER_BYTES) {
+            val b = ins.read()
+            if (b < 0) {
+                return if (headerBytes.size() == 0) {
+                    null
+                } else {
+                    ParsedHttp(errorStatus = 400, errorBody = "incomplete headers")
+                }
+            }
+            headerBytes.write(b)
+            if (b == CRLF4[match].toInt()) {
+                match++
+                if (match == 4) break
+            } else {
+                match = if (b == CRLF4[0].toInt()) 1 else 0
+            }
+        }
+        if (match != 4) {
+            return ParsedHttp(errorStatus = 400, errorBody = "headers too large")
+        }
+        val headerText = headerBytes.toString(Charsets.US_ASCII)
+        val lines = headerText.split("\r\n")
+        val requestLine = lines.firstOrNull().orEmpty()
+        val parts = requestLine.split(" ")
+        if (parts.size < 2) {
+            return ParsedHttp(errorStatus = 400, errorBody = "bad request")
+        }
+        var contentLength = 0
+        for (line in lines.drop(1)) {
+            if (line.isEmpty()) break
+            val lower = line.lowercase()
+            if (lower.startsWith("content-length:")) {
+                contentLength = lower.substringAfter(':').trim().toIntOrNull() ?: -1
+            }
+        }
+        if (contentLength < 0) {
+            return ParsedHttp(errorStatus = 400, errorBody = "invalid content-length")
+        }
+        if (contentLength > MAX_BODY_BYTES) {
+            return ParsedHttp(errorStatus = 400, errorBody = "payload too large")
+        }
+        val bodyBytes = ByteArray(contentLength)
+        var off = 0
+        while (off < contentLength) {
+            val n = ins.read(bodyBytes, off, contentLength - off)
+            if (n < 0) {
+                return ParsedHttp(errorStatus = 400, errorBody = "incomplete body")
+            }
+            off += n
+        }
+        return ParsedHttp(
+            method = parts[0],
+            path = parts[1].substringBefore('?'),
+            body = String(bodyBytes, Charsets.UTF_8),
+        )
+    }
+
+    private data class ParsedHttp(
+        val method: String = "",
+        val path: String = "",
+        val body: String = "",
+        val errorStatus: Int = 0,
+        val errorBody: String = "",
+    )
 
     private companion object {
         const val TAG = "NodeOpenAiServer"
+        const val HEADER_TIMEOUT_MS = 30_000
+        const val MAX_HEADER_BYTES = 16 * 1024
+        const val MAX_BODY_BYTES = 1 * 1024 * 1024
+        val CRLF4 = byteArrayOf(13, 10, 13, 10)
+
+        // Accept loop + a small number of in-flight completions (KMA-65 bound).
+        fun newWorkerPool() = Executors.newFixedThreadPool(4) { runnable ->
+            Thread(runnable, "node-openai").apply {
+                isDaemon = true
+                uncaughtExceptionHandler = Thread.UncaughtExceptionHandler { t, e ->
+                    Log.e(TAG, "uncaught in ${t.name}", e)
+                }
+            }
+        }
     }
 }

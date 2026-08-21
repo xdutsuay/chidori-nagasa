@@ -73,6 +73,14 @@
             android:foregroundServiceType="dataSync"
             android:exported="false" />
 
+        <!-- Phone-as-inference-node OpenAI facade (KMA-97). Must be a foreground
+             dataSync service — a bare ServerSocket in the UI process is killed
+             by the OS shortly after bind on Android 8+/14. -->
+        <service
+            android:name="com.druk.lmplayground.coordinator.node.NodeService"
+            android:foregroundServiceType="dataSync"
+            android:exported="false" />
+
         <!-- AppCompat per-app language: enables automatic storage of the user's language
              preference on pre-Android 13 devices. On Android 13+ the system handles it
              via the android:localeConfig declaration above. -->

@@ -73,7 +73,15 @@ enum class CoordinatorStatus {
     IDLE,
     RUNNING,
     ERROR,
+    /** Phone cannot reach the desktop monitor endpoints (PRD §6.3 / U7). */
+    DISCONNECTED,
 }
+
+/** Snapshot from GET /coordinator/status (includes optional error_message). */
+data class CoordinatorStatusInfo(
+    val status: CoordinatorStatus,
+    val errorMessage: String? = null,
+)
 
 /** chidori's four AI reasoning modes, mirrored from the lclreason desktop app. */
 enum class AgentMode {
@@ -94,6 +102,8 @@ data class AgentRunSummary(
     val mode: AgentMode,
     val startedAtEpochMillis: Long,
     val state: AgentRunState,
+    /** Live step when state is RUNNING (optional wire field). */
+    val currentStep: String? = null,
 )
 
 data class AgentRunDetail(

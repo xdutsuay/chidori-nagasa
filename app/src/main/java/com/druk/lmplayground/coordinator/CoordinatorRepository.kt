@@ -6,7 +6,7 @@ import com.druk.lmplayground.coordinator.discovery.NsdInstanceDiscovery
 import com.druk.lmplayground.coordinator.model.AgentRunDetail
 import com.druk.lmplayground.coordinator.model.AgentRunSummary
 import com.druk.lmplayground.coordinator.model.CoordinatorConnectionState
-import com.druk.lmplayground.coordinator.model.CoordinatorStatus
+import com.druk.lmplayground.coordinator.model.CoordinatorStatusInfo
 import com.druk.lmplayground.coordinator.model.DiscoveredInstance
 import com.druk.lmplayground.coordinator.model.InstanceId
 import com.druk.lmplayground.coordinator.model.ManualEndpoint
@@ -56,7 +56,8 @@ class CoordinatorRepository(context: Context) {
 
     val pairingManager: PairingManager = PairingManagerImpl(pairedInstanceStore, api)
 
-    val nodeRegistration: NodeRegistrationCapability = DefaultNodeRegistrationCapability(api)
+    val nodeRegistration: NodeRegistrationCapability =
+        DefaultNodeRegistrationCapability(appContext, api)
 
     fun observeDiscoveredInstances(): Flow<List<DiscoveredInstance>> =
         discovery.observeDiscoveredInstances()
@@ -83,7 +84,7 @@ class CoordinatorRepository(context: Context) {
     // status/runs in WIRE_CONTRACT.md's v1 draft; only remote chat uses a
     // live socket, and that's still Phase 3). Exposed here, not from
     // `transport` directly, per protocol §3.4.
-    suspend fun getStatus(instanceId: InstanceId): CoordinatorStatus = api.getStatus(instanceId)
+    suspend fun getStatus(instanceId: InstanceId): CoordinatorStatusInfo = api.getStatus(instanceId)
 
     suspend fun listRuns(instanceId: InstanceId): List<AgentRunSummary> = api.listRuns(instanceId)
 
