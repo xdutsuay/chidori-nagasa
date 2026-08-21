@@ -2,8 +2,10 @@ package com.druk.lmplayground.coordinator.ui
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import com.druk.lmplayground.App
+import com.druk.lmplayground.coordinator.model.AgentRunState
 import com.druk.lmplayground.coordinator.model.AgentRunDetail
 import com.druk.lmplayground.coordinator.model.AgentRunSummary
 import com.druk.lmplayground.coordinator.model.CoordinatorConnectionState
@@ -14,11 +16,15 @@ import com.druk.lmplayground.coordinator.model.PairedInstance
 import com.druk.lmplayground.coordinator.model.PairingState
 import com.druk.lmplayground.coordinator.model.ProtocolVersion
 import com.druk.lmplayground.coordinator.model.RemoteChatMessage
+import com.druk.lmplayground.coordinator.node.NodeInferenceHub
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
@@ -31,7 +37,10 @@ import kotlinx.coroutines.launch
  * single reference; it must not reach into `discovery`/`pairing`/
  * `transport` types directly).
  */
-class ChidoriViewModel(app: Application) : AndroidViewModel(app) {
+class ChidoriViewModel(
+    app: Application,
+    private val savedStateHandle: SavedStateHandle,
+) : AndroidViewModel(app) {
 
     private val coordinatorRepository = (app as App).coordinatorRepository
 
@@ -73,13 +82,25 @@ class ChidoriViewModel(app: Application) : AndroidViewModel(app) {
     private val _monitorStatus = MutableStateFlow<CoordinatorStatus?>(null)
     val monitorStatus: StateFlow<CoordinatorStatus?> = _monitorStatus.asStateFlow()
 
+    private val _monitorStatusMessage = MutableStateFlow<String?>(null)
+    val monitorStatusMessage: StateFlow<String?> = _monitorStatusMessage.asStateFlow()
+
     private val _monitorRuns = MutableStateFlow<List<AgentRunSummary>>(emptyList())
     val monitorRuns: StateFlow<List<AgentRunSummary>> = _monitorRuns.asStateFlow()
 
     private val _monitorRunDetail = MutableStateFlow<AgentRunDetail?>(null)
     val monitorRunDetail: StateFlow<AgentRunDetail?> = _monitorRunDetail.asStateFlow()
 
+    /** Current step text for RUNNING runs, keyed by runId (KMA-128). */
+    private val _monitorRunningSteps = MutableStateFlow<Map<String, String>>(emptyMap())
+    val monitorRunningSteps: StateFlow<Map<String, String>> = _monitorRunningSteps.asStateFlow()
+
+    private val _monitorLastUpdatedEpochMillis = MutableStateFlow<Long?>(null)
+    val monitorLastUpdatedEpochMillis: StateFlow<Long?> = _monitorLastUpdatedEpochMillis.asStateFlow()
+
     private var monitorJob: Job? = null
+    private var detailRunId: String? = null
+    private var consecutivePollFailures = 0
 
     init {
         viewModelScope.launch {
@@ -88,7 +109,10 @@ class ChidoriViewModel(app: Application) : AndroidViewModel(app) {
         }
         viewModelScope.launch {
             coordinatorRepository.observePairedInstances()
-                .collect { _pairedInstances.value = it }
+                .collect { list ->
+                    _pairedInstances.value = list
+                    restoreMonitoredInstanceIfNeeded(list)
+                }
         }
         coordinatorRepository.startDiscovery()
     }
@@ -190,6 +214,19 @@ class ChidoriViewModel(app: Application) : AndroidViewModel(app) {
     private val _nodeOfferError = MutableStateFlow<String?>(null)
     val nodeOfferError: StateFlow<String?> = _nodeOfferError.asStateFlow()
 
+    /**
+     * Kill switch ([NodeRegistrationCapability.isSupported]) AND an on-device
+     * model must be loaded before the offer toggle is shown (KMA-97).
+     */
+    val nodeOfferSupported: StateFlow<Boolean> = NodeInferenceHub.hasLoadedModel
+        .map { hasModel -> coordinatorRepository.nodeRegistration.isSupported && hasModel }
+        .stateIn(
+            viewModelScope,
+            SharingStarted.WhileSubscribed(5_000),
+            initialValue = coordinatorRepository.nodeRegistration.isSupported &&
+                NodeInferenceHub.hasLoadedModel.value,
+        )
+
     fun setNodeOffering(enabled: Boolean) {
         val instance = _monitoredInstance.value ?: return
         if (!_nodeOffering.value && !enabled) return
@@ -224,17 +261,71 @@ class ChidoriViewModel(app: Application) : AndroidViewModel(app) {
     fun openMonitor(instance: PairedInstance) {
         if (_monitoredInstance.value?.instanceId == instance.instanceId) return
         _monitoredInstance.value = instance
+        savedStateHandle[KEY_MONITORED_INSTANCE_ID] = instance.instanceId.value
         _monitorStatus.value = null
+        _monitorStatusMessage.value = null
         _monitorRuns.value = emptyList()
         _monitorRunDetail.value = null
+        _monitorRunningSteps.value = emptyMap()
+        _monitorLastUpdatedEpochMillis.value = null
+        detailRunId = null
+        consecutivePollFailures = 0
         monitorJob?.cancel()
         monitorJob = viewModelScope.launch {
             while (isActive) {
-                runCatching { _monitorStatus.value = coordinatorRepository.getStatus(instance.instanceId) }
-                runCatching { _monitorRuns.value = coordinatorRepository.listRuns(instance.instanceId) }
+                pollMonitorOnce(instance.instanceId)
                 delay(POLL_INTERVAL_MILLIS)
             }
         }
+    }
+
+    private suspend fun pollMonitorOnce(instanceId: InstanceId) {
+        val statusResult = runCatching { coordinatorRepository.getStatus(instanceId) }
+        val runsResult = runCatching { coordinatorRepository.listRuns(instanceId) }
+        if (statusResult.isFailure && runsResult.isFailure) {
+            consecutivePollFailures++
+            if (consecutivePollFailures >= POLL_FAILURES_BEFORE_DISCONNECT) {
+                _monitorStatus.value = CoordinatorStatus.DISCONNECTED
+                _monitorStatusMessage.value = null
+            }
+            return
+        }
+        consecutivePollFailures = 0
+        statusResult.onSuccess { info ->
+            _monitorStatus.value = info.status
+            _monitorStatusMessage.value = info.errorMessage
+        }
+        runsResult.onSuccess { runs ->
+            _monitorRuns.value = runs
+            val fromList = runs.mapNotNull { run ->
+                run.currentStep?.takeIf { it.isNotBlank() }?.let { run.runId to it }
+            }.toMap()
+            _monitorRunningSteps.value = fromList
+            // Enrich RUNNING rows that lack a step from the list payload.
+            refreshRunningSteps(instanceId, runs.filter { it.currentStep.isNullOrBlank() })
+        }
+        _monitorLastUpdatedEpochMillis.value = System.currentTimeMillis()
+        val openId = detailRunId
+        if (openId != null) {
+            runCatching {
+                _monitorRunDetail.value = coordinatorRepository.getRunDetail(instanceId, openId)
+            }
+        }
+    }
+
+    private suspend fun refreshRunningSteps(instanceId: InstanceId, runs: List<AgentRunSummary>) {
+        val running = runs.filter { it.state == AgentRunState.RUNNING }.take(MAX_RUNNING_STEP_FETCHES)
+        if (running.isEmpty()) return
+        val steps = _monitorRunningSteps.value.toMutableMap()
+        for (run in running) {
+            runCatching {
+                coordinatorRepository.getRunDetail(instanceId, run.runId)
+            }.onSuccess { detail ->
+                val step = detail.currentStep?.takeIf { it.isNotBlank() } ?: return@onSuccess
+                steps[run.runId] = step
+            }
+        }
+        _monitorRunningSteps.value = steps
     }
 
     fun closeMonitor() {
@@ -248,20 +339,43 @@ class ChidoriViewModel(app: Application) : AndroidViewModel(app) {
         closeChat()
         monitorJob?.cancel()
         monitorJob = null
+        detailRunId = null
+        consecutivePollFailures = 0
         _monitoredInstance.value = null
+        savedStateHandle.remove<String>(KEY_MONITORED_INSTANCE_ID)
         _monitorStatus.value = null
+        _monitorStatusMessage.value = null
         _monitorRuns.value = emptyList()
         _monitorRunDetail.value = null
+        _monitorRunningSteps.value = emptyMap()
+        _monitorLastUpdatedEpochMillis.value = null
+    }
+
+    /**
+     * After process death / config change, reopen the monitor for the last
+     * selected paired instance so the chat entry stays reachable (KMA-98).
+     */
+    private fun restoreMonitoredInstanceIfNeeded(paired: List<PairedInstance>) {
+        if (_monitoredInstance.value != null || paired.isEmpty()) return
+        val savedId = savedStateHandle.get<String>(KEY_MONITORED_INSTANCE_ID)
+        val match = if (savedId != null) {
+            paired.firstOrNull { it.instanceId.value == savedId } ?: paired.first()
+        } else {
+            return
+        }
+        openMonitor(match)
     }
 
     fun openRunDetail(runId: String) {
         val instanceId = _monitoredInstance.value?.instanceId ?: return
+        detailRunId = runId
         viewModelScope.launch {
             runCatching { _monitorRunDetail.value = coordinatorRepository.getRunDetail(instanceId, runId) }
         }
     }
 
     fun dismissRunDetail() {
+        detailRunId = null
         _monitorRunDetail.value = null
     }
 
@@ -284,6 +398,9 @@ class ChidoriViewModel(app: Application) : AndroidViewModel(app) {
     private val _chatInput = MutableStateFlow("")
     val chatInput: StateFlow<String> = _chatInput.asStateFlow()
 
+    private val _chatAwaitingReply = MutableStateFlow(false)
+    val chatAwaitingReply: StateFlow<Boolean> = _chatAwaitingReply.asStateFlow()
+
     private var chatStreamJob: Job? = null
     private var chatConnectionJob: Job? = null
 
@@ -297,6 +414,7 @@ class ChidoriViewModel(app: Application) : AndroidViewModel(app) {
         if (_chatOpen.value) return
         _chatOpen.value = true
         _chatMessages.value = emptyList()
+        _chatAwaitingReply.value = false
         chatConnectionJob = viewModelScope.launch {
             coordinatorRepository.observeConnectionState(instance.instanceId)
                 .collect { _chatConnectionState.value = it }
@@ -307,7 +425,10 @@ class ChidoriViewModel(app: Application) : AndroidViewModel(app) {
             // auto-closing — PRD §6.4's graceful-degradation requirement.
             runCatching {
                 coordinatorRepository.observeRemoteChat(instance.instanceId)
-                    .collect { message -> _chatMessages.value = _chatMessages.value + message }
+                    .collect { message ->
+                        _chatMessages.value = coalesceRemoteChat(_chatMessages.value, message)
+                        if (!message.fromUser) _chatAwaitingReply.value = false
+                    }
             }
         }
     }
@@ -321,6 +442,7 @@ class ChidoriViewModel(app: Application) : AndroidViewModel(app) {
         _chatMessages.value = emptyList()
         _chatConnectionState.value = CoordinatorConnectionState.DISCONNECTED
         _chatInput.value = ""
+        _chatAwaitingReply.value = false
     }
 
     /**
@@ -334,12 +456,21 @@ class ChidoriViewModel(app: Application) : AndroidViewModel(app) {
         if (text.isEmpty()) return
         viewModelScope.launch {
             runCatching { coordinatorRepository.sendRemoteChatMessage(instance.instanceId, text) }
-                .onSuccess { _chatInput.value = "" }
-                .onFailure { _chatConnectionState.value = CoordinatorConnectionState.DISCONNECTED }
+                .onSuccess {
+                    _chatInput.value = ""
+                    _chatAwaitingReply.value = true
+                }
+                .onFailure {
+                    _chatConnectionState.value = CoordinatorConnectionState.DISCONNECTED
+                    _chatAwaitingReply.value = false
+                }
         }
     }
 
     private companion object {
         const val POLL_INTERVAL_MILLIS = 3000L
+        const val POLL_FAILURES_BEFORE_DISCONNECT = 2
+        const val MAX_RUNNING_STEP_FETCHES = 3
+        const val KEY_MONITORED_INSTANCE_ID = "monitored-instance-id"
     }
 }

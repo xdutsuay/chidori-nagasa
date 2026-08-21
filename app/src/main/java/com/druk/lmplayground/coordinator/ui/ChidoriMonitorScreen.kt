@@ -1,6 +1,7 @@
 package com.druk.lmplayground.coordinator.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -16,8 +17,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -25,6 +26,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -37,6 +39,8 @@ import com.druk.lmplayground.coordinator.model.AgentRunDetail
 import com.druk.lmplayground.coordinator.model.AgentRunState
 import com.druk.lmplayground.coordinator.model.AgentRunSummary
 import com.druk.lmplayground.coordinator.model.CoordinatorStatus
+import java.text.DateFormat
+import java.util.Date
 
 /**
  * Coordinator status + run list for one paired instance (PRD.md §6.3).
@@ -59,7 +63,10 @@ import com.druk.lmplayground.coordinator.model.CoordinatorStatus
 fun ChidoriMonitorContent(
     displayName: String,
     status: CoordinatorStatus?,
+    statusMessage: String? = null,
     runs: List<AgentRunSummary>,
+    runningSteps: Map<String, String>,
+    lastUpdatedEpochMillis: Long?,
     selectedRunDetail: AgentRunDetail?,
     nodeOffering: Boolean,
     nodeOfferSupported: Boolean,
@@ -81,41 +88,50 @@ fun ChidoriMonitorContent(
                     )
                 }
                 Spacer(Modifier.width(4.dp))
-                Text(displayName, style = MaterialTheme.typography.titleLarge)
+                Text(
+                    displayName,
+                    style = MaterialTheme.typography.titleLarge,
+                    modifier = Modifier.weight(1f),
+                )
+                TextButton(onClick = onOpenChatClick) {
+                    Text(stringResource(R.string.chidori_chat_action))
+                }
             }
             Spacer(Modifier.height(12.dp))
         }
-        StatusCard(status)
+        StatusCard(
+            status = status,
+            statusMessage = statusMessage,
+            lastUpdatedEpochMillis = lastUpdatedEpochMillis,
+        )
         Spacer(Modifier.height(8.dp))
         if (nodeOfferSupported) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = stringResource(R.string.chidori_node_offer_title),
-                        style = MaterialTheme.typography.titleSmall,
-                    )
-                    Text(
-                        text = stringResource(R.string.chidori_node_offer_subtitle),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = stringResource(R.string.chidori_node_offer_title),
+                            style = MaterialTheme.typography.titleSmall,
+                        )
+                        Text(
+                            text = stringResource(R.string.chidori_node_offer_subtitle),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    androidx.compose.material3.Switch(
+                        checked = nodeOffering,
+                        onCheckedChange = onNodeOfferingChange,
                     )
                 }
-                androidx.compose.material3.Switch(
-                    checked = nodeOffering,
-                    onCheckedChange = onNodeOfferingChange,
-                )
             }
-            Spacer(modifier.height(8.dp))
+            Spacer(Modifier.height(16.dp))
         }
-        // Remote chat entry (PRD §6.4) — a distinct surface, not the
-        // on-device conversation screen; see ChidoriChatContent.
-        Button(onClick = onOpenChatClick, modifier = Modifier.fillMaxWidth()) {
-            Text(stringResource(R.string.chidori_chat_open))
-        }
-        Spacer(Modifier.height(16.dp))
         Text(
             text = stringResource(R.string.chidori_runs_section),
             style = MaterialTheme.typography.titleMedium,
@@ -123,14 +139,18 @@ fun ChidoriMonitorContent(
         Spacer(Modifier.height(8.dp))
         if (runs.isEmpty()) {
             Text(
-                text = stringResource(R.string.chidori_no_runs),
+                text = stringResource(R.string.chidori_watching_runs, displayName),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         } else {
             LazyColumn(modifier = Modifier.weight(1f).fillMaxWidth()) {
                 items(runs, key = { it.runId }) { run ->
-                    RunRow(run = run, onClick = { onRunClick(run) })
+                    RunRow(
+                        run = run,
+                        currentStep = runningSteps[run.runId] ?: run.currentStep,
+                        onClick = { onRunClick(run) },
+                    )
                     Spacer(Modifier.height(8.dp))
                 }
             }
@@ -143,7 +163,12 @@ fun ChidoriMonitorContent(
 }
 
 @Composable
-private fun StatusCard(status: CoordinatorStatus?) {
+private fun StatusCard(
+    status: CoordinatorStatus?,
+    statusMessage: String?,
+    lastUpdatedEpochMillis: Long?,
+) {
+    val timeFormat = remember { DateFormat.getTimeInstance(DateFormat.SHORT) }
     Card(modifier = Modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier
@@ -158,19 +183,42 @@ private fun StatusCard(status: CoordinatorStatus?) {
                     CoordinatorStatus.IDLE -> MaterialTheme.colorScheme.outline
                     CoordinatorStatus.RUNNING -> MaterialTheme.colorScheme.primary
                     CoordinatorStatus.ERROR -> MaterialTheme.colorScheme.error
+                    CoordinatorStatus.DISCONNECTED -> MaterialTheme.colorScheme.error
                 }
                 DotIndicator(color)
             }
             Spacer(Modifier.width(12.dp))
-            Text(
-                text = when (status) {
-                    null -> stringResource(R.string.chidori_status_loading)
-                    CoordinatorStatus.IDLE -> stringResource(R.string.chidori_status_idle)
-                    CoordinatorStatus.RUNNING -> stringResource(R.string.chidori_status_running)
-                    CoordinatorStatus.ERROR -> stringResource(R.string.chidori_status_error)
-                },
-                style = MaterialTheme.typography.bodyLarge,
-            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = when (status) {
+                        null -> stringResource(R.string.chidori_status_loading)
+                        CoordinatorStatus.IDLE -> stringResource(R.string.chidori_status_idle)
+                        CoordinatorStatus.RUNNING -> stringResource(R.string.chidori_status_running)
+                        CoordinatorStatus.ERROR -> stringResource(R.string.chidori_status_error)
+                        CoordinatorStatus.DISCONNECTED ->
+                            stringResource(R.string.chidori_status_disconnected)
+                    },
+                    style = MaterialTheme.typography.bodyLarge,
+                )
+                if (!statusMessage.isNullOrBlank()) {
+                    Text(
+                        text = statusMessage,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 2.dp),
+                    )
+                }
+                if (lastUpdatedEpochMillis != null && status != CoordinatorStatus.DISCONNECTED) {
+                    Text(
+                        text = stringResource(
+                            R.string.chidori_monitor_updated,
+                            timeFormat.format(Date(lastUpdatedEpochMillis)),
+                        ),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
         }
     }
 }
@@ -182,13 +230,36 @@ private fun DotIndicator(color: Color) {
             .height(12.dp)
             .width(12.dp)
             .clip(CircleShape)
-            .then(Modifier.background(color))
+            .background(color),
     )
 }
 
 @Composable
-private fun RunRow(run: AgentRunSummary, onClick: () -> Unit) {
-    Card(modifier = Modifier.fillMaxWidth()) {
+private fun RunRow(run: AgentRunSummary, currentStep: String?, onClick: () -> Unit) {
+    val timeFormat = remember { DateFormat.getTimeInstance(DateFormat.SHORT) }
+    val isRunning = run.state == AgentRunState.RUNNING
+    val cardColors = if (isRunning) {
+        CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+    } else {
+        CardDefaults.cardColors()
+    }
+    Card(
+        onClick = onClick,
+        colors = cardColors,
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(
+                if (isRunning) {
+                    Modifier.border(
+                        width = 1.dp,
+                        color = MaterialTheme.colorScheme.primary,
+                        shape = CardDefaults.shape,
+                    )
+                } else {
+                    Modifier
+                },
+            ),
+    ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -205,15 +276,29 @@ private fun RunRow(run: AgentRunSummary, onClick: () -> Unit) {
                     },
                     style = MaterialTheme.typography.bodyLarge,
                 )
+                val stateLabel = when (run.state) {
+                    AgentRunState.RUNNING -> stringResource(R.string.chidori_run_running)
+                    AgentRunState.COMPLETED -> stringResource(R.string.chidori_run_completed)
+                    AgentRunState.FAILED -> stringResource(R.string.chidori_run_failed)
+                }
+                val started = if (run.startedAtEpochMillis > 0L) {
+                    timeFormat.format(Date(run.startedAtEpochMillis))
+                } else {
+                    null
+                }
                 Text(
-                    text = when (run.state) {
-                        AgentRunState.RUNNING -> stringResource(R.string.chidori_run_running)
-                        AgentRunState.COMPLETED -> stringResource(R.string.chidori_run_completed)
-                        AgentRunState.FAILED -> stringResource(R.string.chidori_run_failed)
-                    },
+                    text = if (started != null) "$stateLabel · $started" else stateLabel,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                if (!currentStep.isNullOrBlank()) {
+                    Text(
+                        text = currentStep,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier.padding(top = 4.dp),
+                    )
+                }
             }
             TextButton(onClick = onClick) { Text(stringResource(R.string.chidori_view_run)) }
         }

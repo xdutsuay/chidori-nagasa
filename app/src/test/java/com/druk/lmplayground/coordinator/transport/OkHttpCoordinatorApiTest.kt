@@ -171,7 +171,7 @@ class OkHttpCoordinatorApiTest {
         val recorded = server.takeRequest()
         assertEquals("/coordinator/status", recorded.path)
         assertEquals("Bearer tok123", recorded.getHeader("Authorization"))
-        assertEquals(CoordinatorStatus.RUNNING, status)
+        assertEquals(CoordinatorStatus.RUNNING, status.status)
     }
 
     @Test
@@ -180,7 +180,21 @@ class OkHttpCoordinatorApiTest {
 
         val status = api.getStatus(instanceId)
 
-        assertEquals(CoordinatorStatus.IDLE, status)
+        assertEquals(CoordinatorStatus.IDLE, status.status)
+    }
+
+    @Test
+    fun `getStatus surfaces error_message`() = runTest {
+        server.enqueue(
+            MockResponse()
+                .setResponseCode(200)
+                .setBody("""{"status":"error","error_message":"gopls crashed"}"""),
+        )
+
+        val status = api.getStatus(instanceId)
+
+        assertEquals(CoordinatorStatus.ERROR, status.status)
+        assertEquals("gopls crashed", status.errorMessage)
     }
 
     // ---- listRuns ----------------------------------------------------
@@ -227,7 +241,7 @@ class OkHttpCoordinatorApiTest {
                 withTimeout(5_000) { api.getStatus(instanceId) }
             }
 
-            assertEquals(CoordinatorStatus.RUNNING, status)
+            assertEquals(CoordinatorStatus.RUNNING, status.status)
         } finally {
             singleThreadedCaller.close()
         }

@@ -73,12 +73,16 @@ fun ChidoriScreen(
     manualPort: String,
     monitoredInstance: PairedInstance?,
     monitorStatus: CoordinatorStatus?,
+    monitorStatusMessage: String? = null,
     monitorRuns: List<AgentRunSummary>,
+    monitorRunningSteps: Map<String, String> = emptyMap(),
+    monitorLastUpdatedEpochMillis: Long? = null,
     monitorRunDetail: AgentRunDetail?,
     chatOpen: Boolean,
     chatMessages: List<RemoteChatMessage>,
     chatConnectionState: CoordinatorConnectionState,
     chatInput: String,
+    chatAwaitingReply: Boolean = false,
     onManualHostChanged: (String) -> Unit,
     onManualPortChanged: (String) -> Unit,
     onBeginPairing: (DiscoveredInstance) -> Unit,
@@ -122,7 +126,14 @@ fun ChidoriScreen(
                             contentDescription = stringResource(R.string.back)
                         )
                     }
-                }
+                },
+                actions = {
+                    if (monitoredInstance != null && !chatOpen) {
+                        TextButton(onClick = onOpenChat) {
+                            Text(stringResource(R.string.chidori_chat_action))
+                        }
+                    }
+                },
             )
         }
     ) { padding ->
@@ -135,6 +146,7 @@ fun ChidoriScreen(
                 messages = chatMessages,
                 connectionState = chatConnectionState,
                 input = chatInput,
+                awaitingReply = chatAwaitingReply,
                 showBackHeader = false,
                 onInputChanged = onChatInputChanged,
                 onSendClick = onSendChat,
@@ -144,7 +156,10 @@ fun ChidoriScreen(
             monitoredInstance != null -> ChidoriMonitorContent(
                 displayName = monitoredInstance.displayName,
                 status = monitorStatus,
+                statusMessage = monitorStatusMessage,
                 runs = monitorRuns,
+                runningSteps = monitorRunningSteps,
+                lastUpdatedEpochMillis = monitorLastUpdatedEpochMillis,
                 selectedRunDetail = monitorRunDetail,
                 nodeOffering = nodeOffering,
                 nodeOfferSupported = nodeOfferSupported,
@@ -209,13 +224,19 @@ fun ChidoriDetailContent(modifier: Modifier = Modifier) {
     val lastPairingError by viewModel.lastPairingError.collectAsStateWithLifecycle()
     val monitoredInstance by viewModel.monitoredInstance.collectAsStateWithLifecycle()
     val monitorStatus by viewModel.monitorStatus.collectAsStateWithLifecycle()
+    val monitorStatusMessage by viewModel.monitorStatusMessage.collectAsStateWithLifecycle()
     val monitorRuns by viewModel.monitorRuns.collectAsStateWithLifecycle()
+    val monitorRunningSteps by viewModel.monitorRunningSteps.collectAsStateWithLifecycle()
+    val monitorLastUpdatedEpochMillis by viewModel.monitorLastUpdatedEpochMillis.collectAsStateWithLifecycle()
     val monitorRunDetail by viewModel.monitorRunDetail.collectAsStateWithLifecycle()
     val chatOpen by viewModel.chatOpen.collectAsStateWithLifecycle()
     val chatMessages by viewModel.chatMessages.collectAsStateWithLifecycle()
     val chatConnectionState by viewModel.chatConnectionState.collectAsStateWithLifecycle()
     val chatInput by viewModel.chatInput.collectAsStateWithLifecycle()
+    val chatAwaitingReply by viewModel.chatAwaitingReply.collectAsStateWithLifecycle()
     val nodeOffering by viewModel.nodeOffering.collectAsStateWithLifecycle()
+    val nodeOfferSupported by viewModel.nodeOfferSupported.collectAsStateWithLifecycle()
+    val nodeOfferError by viewModel.nodeOfferError.collectAsStateWithLifecycle()
 
     BackHandler(enabled = chatOpen, onBack = viewModel::closeChat)
     BackHandler(enabled = monitoredInstance != null && !chatOpen, onBack = viewModel::closeMonitor)
@@ -229,6 +250,7 @@ fun ChidoriDetailContent(modifier: Modifier = Modifier) {
             messages = chatMessages,
             connectionState = chatConnectionState,
             input = chatInput,
+            awaitingReply = chatAwaitingReply,
             showBackHeader = true,
             onInputChanged = viewModel::onChatInputChanged,
             onSendClick = viewModel::sendChatMessage,
@@ -238,10 +260,13 @@ fun ChidoriDetailContent(modifier: Modifier = Modifier) {
         monitored != null -> ChidoriMonitorContent(
             displayName = monitored.displayName,
             status = monitorStatus,
+            statusMessage = monitorStatusMessage,
             runs = monitorRuns,
+            runningSteps = monitorRunningSteps,
+            lastUpdatedEpochMillis = monitorLastUpdatedEpochMillis,
             selectedRunDetail = monitorRunDetail,
             nodeOffering = nodeOffering,
-            nodeOfferSupported = true,
+            nodeOfferSupported = nodeOfferSupported,
             showBackHeader = true,
             onRunClick = { viewModel.openRunDetail(it.runId) },
             onDismissRunDetail = viewModel::dismissRunDetail,
@@ -268,6 +293,18 @@ fun ChidoriDetailContent(modifier: Modifier = Modifier) {
             onPairedInstanceClick = viewModel::openMonitor,
             onDismissError = viewModel::dismissError,
             modifier = modifier.fillMaxSize(),
+        )
+    }
+    nodeOfferError?.let { err ->
+        AlertDialog(
+            onDismissRequest = viewModel::dismissNodeOfferError,
+            title = { Text(stringResource(R.string.chidori_node_offer_title)) },
+            text = { Text(err) },
+            confirmButton = {
+                TextButton(onClick = viewModel::dismissNodeOfferError) {
+                    Text(stringResource(android.R.string.ok))
+                }
+            },
         )
     }
 }

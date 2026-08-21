@@ -1,5 +1,6 @@
 package com.druk.lmplayground.coordinator.node
 
+import android.content.Context
 import android.util.Log
 import com.druk.lmplayground.coordinator.model.InstanceId
 import com.druk.lmplayground.coordinator.transport.CoordinatorApi
@@ -18,9 +19,11 @@ import kotlinx.coroutines.sync.withLock
 
 /**
  * Real node-mode registration (protocol §2.5 / NODE_MODE_SPIKE.md).
- * Starts [NodeOpenAiServer], POSTs companion `/node/register`, heartbeats.
+ * Starts [NodeService] (foreground host for [NodeOpenAiServer]), POSTs companion
+ * `/node/register`, heartbeats.
  */
 class DefaultNodeRegistrationCapability(
+    context: Context,
     private val api: CoordinatorApi,
     private val bridge: () -> NodeInferenceBridge = { NodeInferenceHub.bridge },
     private val lanIpv4: () -> String? = { primaryIpv4() },
@@ -29,8 +32,8 @@ class DefaultNodeRegistrationCapability(
 
     override val isSupported: Boolean = true
 
+    private val appContext = context.applicationContext
     private val mu = Mutex()
-    private var server: NodeOpenAiServer? = null
     private var registeredInstance: InstanceId? = null
     private var nodeId: String? = null
     private var heartbeatJob: Job? = null
@@ -41,13 +44,11 @@ class DefaultNodeRegistrationCapability(
         val ip = lanIpv4()
             ?: return Result.failure(IllegalStateException("No LAN IPv4 address — check Wi‑Fi"))
         unregisterLocked()
-        val srv = NodeOpenAiServer(bridge)
         val port = try {
-            srv.start()
+            NodeService.startAndAwaitPort(appContext)
         } catch (e: Exception) {
             return Result.failure(e)
         }
-        server = srv
         val id = "nagasa-${instanceId.value}"
         nodeId = id
         val apiBase = "http://$ip:$port/v1"
@@ -102,13 +103,12 @@ class DefaultNodeRegistrationCapability(
         if (inst != null && id != null) {
             runCatching { api.unregisterAsNode(inst, id) }
         }
+        val shouldStopHost = registeredInstance != null || nodeId != null
         registeredInstance = null
         nodeId = null
-        try {
-            server?.stop()
-        } catch (_: Exception) {
+        if (shouldStopHost) {
+            NodeService.stop(appContext)
         }
-        server = null
     }
 
     companion object {
