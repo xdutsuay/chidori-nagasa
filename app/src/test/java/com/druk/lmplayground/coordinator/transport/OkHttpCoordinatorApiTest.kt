@@ -20,6 +20,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import java.io.IOException
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
@@ -212,6 +213,78 @@ class OkHttpCoordinatorApiTest {
         assertEquals(AgentMode.AGENT, run.mode)
         assertEquals(123L, run.startedAtEpochMillis)
         assertEquals(AgentRunState.RUNNING, run.state)
+    }
+
+    @Test
+    fun `listRuns parses current_step on running rows`() = runTest {
+        val responseJson =
+            """{"runs":[{"run_id":"r1","mode":"plan","started_at":456,"state":"running","current_step":"Drafting plan"}]}"""
+        server.enqueue(MockResponse().setResponseCode(200).setBody(responseJson))
+
+        val runs = api.listRuns(instanceId)
+
+        assertEquals("Drafting plan", runs.single().currentStep)
+    }
+
+    @Test(expected = IOException::class)
+    fun `getStatus throws when no endpoint is known`() = runTest {
+        api = OkHttpCoordinatorApi(
+            client = OkHttpClient(),
+            authTokenProvider = { currentToken },
+            endpointProvider = { null },
+        )
+        api.getStatus(instanceId)
+    }
+
+    @Test(expected = IOException::class)
+    fun `listRuns throws when no endpoint is known`() = runTest {
+        api = OkHttpCoordinatorApi(
+            client = OkHttpClient(),
+            authTokenProvider = { currentToken },
+            endpointProvider = { null },
+        )
+        api.listRuns(instanceId)
+    }
+
+    @Test(expected = IOException::class)
+    fun `listRuns throws on HTTP error instead of returning empty list`() = runTest {
+        server.enqueue(MockResponse().setResponseCode(503))
+
+        api.listRuns(instanceId)
+    }
+
+    // ---- cancelRun / injectRunMessage (KMA-129) -------------------------
+
+    @Test
+    fun `cancelRun posts to runs cancel with bearer auth`() = runTest {
+        server.enqueue(MockResponse().setResponseCode(200).setBody("""{"run_id":"r1","status":"cancelled"}"""))
+
+        api.cancelRun(instanceId, "r1")
+
+        val recorded = server.takeRequest()
+        assertEquals("POST", recorded.method)
+        assertEquals("/runs/r1/cancel", recorded.path)
+        assertEquals("Bearer tok123", recorded.getHeader("Authorization"))
+    }
+
+    @Test
+    fun `injectRunMessage posts text body and returns status`() = runTest {
+        server.enqueue(MockResponse().setResponseCode(200).setBody("""{"run_id":"r1","status":"queued"}"""))
+
+        val status = api.injectRunMessage(instanceId, "r1", "keep going")
+
+        assertEquals("queued", status)
+        val recorded = server.takeRequest()
+        assertEquals("POST", recorded.method)
+        assertEquals("/runs/r1/messages", recorded.path)
+        assertEquals("Bearer tok123", recorded.getHeader("Authorization"))
+        assertTrue(recorded.body.readUtf8().contains("keep going"))
+    }
+
+    @Test(expected = IOException::class)
+    fun `cancelRun throws on HTTP error`() = runTest {
+        server.enqueue(MockResponse().setResponseCode(404))
+        api.cancelRun(instanceId, "missing")
     }
 
     // ---- Dispatchers.IO hop (regression for NetworkOnMainThreadException) --

@@ -98,6 +98,12 @@ interface CoordinatorApi {
 
     suspend fun getRunDetail(instanceId: InstanceId, runId: String): AgentRunDetail
 
+    /** POST /runs/{run_id}/cancel — stop an in-flight desktop run (KMA-129). */
+    suspend fun cancelRun(instanceId: InstanceId, runId: String)
+
+    /** POST /runs/{run_id}/messages — inject a follow-up prompt (KMA-129). */
+    suspend fun injectRunMessage(instanceId: InstanceId, runId: String, text: String): String
+
     fun observeRemoteChat(instanceId: InstanceId): Flow<RemoteChatMessage>
 
     suspend fun sendRemoteChatMessage(instanceId: InstanceId, text: String)
@@ -305,43 +311,43 @@ class OkHttpCoordinatorApi(
 
     override suspend fun getStatus(instanceId: InstanceId): CoordinatorStatusInfo {
         val request = authedRequest(instanceId, "/coordinator/status")?.build()
-            ?: return CoordinatorStatusInfo(CoordinatorStatus.ERROR, "No known endpoint")
-        return runCatching {
-            onIo {
-                client.newCall(request).execute().use { response ->
-                    if (!response.isSuccessful) {
-                        return@use CoordinatorStatusInfo(
-                            CoordinatorStatus.ERROR,
-                            "HTTP ${response.code}",
-                        )
-                    }
-                    val json = JSONObject(response.body?.string() ?: "{}")
-                    val status = when (json.optString("status")) {
-                        "running" -> CoordinatorStatus.RUNNING
-                        "error" -> CoordinatorStatus.ERROR
-                        else -> CoordinatorStatus.IDLE
-                    }
-                    val err = json.optString("error_message").takeIf { it.isNotBlank() }
-                    CoordinatorStatusInfo(status, err)
+            ?: throw IOException("No known endpoint for ${instanceId.value}")
+        return onIo {
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) {
+                    return@use CoordinatorStatusInfo(
+                        CoordinatorStatus.ERROR,
+                        "HTTP ${response.code}",
+                    )
                 }
+                val json = JSONObject(response.body?.string() ?: "{}")
+                val status = when (json.optString("status")) {
+                    "running" -> CoordinatorStatus.RUNNING
+                    "error" -> CoordinatorStatus.ERROR
+                    else -> CoordinatorStatus.IDLE
+                }
+                val err = json.optString("error_message").takeIf { it.isNotBlank() }
+                CoordinatorStatusInfo(status, err)
             }
-        }.getOrDefault(CoordinatorStatusInfo(CoordinatorStatus.ERROR, "Status request failed"))
+        }
     }
 
     override suspend fun listRuns(instanceId: InstanceId): List<AgentRunSummary> {
-        val request = authedRequest(instanceId, "/runs?limit=50")?.build() ?: return emptyList()
-        return runCatching {
-            onIo {
-                client.newCall(request).execute().use { response ->
-                    val json = JSONObject(response.body?.string() ?: "{}")
-                    val runsArray = json.optJSONArray("runs") ?: return@use emptyList()
-                    (0 until runsArray.length()).map { i ->
-                        val run = runsArray.getJSONObject(i)
-                        run.toAgentRunSummary()
-                    }
+        val request = authedRequest(instanceId, "/runs?limit=50")?.build()
+            ?: throw IOException("No known endpoint for ${instanceId.value}")
+        return onIo {
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) {
+                    throw IOException("GET /runs → HTTP ${response.code}")
+                }
+                val json = JSONObject(response.body?.string() ?: "{}")
+                val runsArray = json.optJSONArray("runs") ?: return@use emptyList()
+                (0 until runsArray.length()).map { i ->
+                    val run = runsArray.getJSONObject(i)
+                    run.toAgentRunSummary()
                 }
             }
-        }.getOrDefault(emptyList())
+        }
     }
 
     override suspend fun getRunDetail(instanceId: InstanceId, runId: String): AgentRunDetail {
@@ -358,6 +364,37 @@ class OkHttpCoordinatorApi(
                     currentStep = if (json.has("current_step")) json.getString("current_step") else null,
                     logTail = logTail,
                 )
+            }
+        }
+    }
+
+    override suspend fun cancelRun(instanceId: InstanceId, runId: String) {
+        val request = authedRequest(instanceId, "/runs/$runId/cancel")
+            ?.post("{}".toRequestBody(JSON_MEDIA_TYPE.toMediaType()))
+            ?.build()
+            ?: throw IOException("No known endpoint for ${instanceId.value}")
+        onIo {
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) {
+                    throw IOException("POST /runs/$runId/cancel → HTTP ${response.code}")
+                }
+            }
+        }
+    }
+
+    override suspend fun injectRunMessage(instanceId: InstanceId, runId: String, text: String): String {
+        val body = JSONObject().put("text", text).toString()
+        val request = authedRequest(instanceId, "/runs/$runId/messages")
+            ?.post(body.toRequestBody(JSON_MEDIA_TYPE.toMediaType()))
+            ?.build()
+            ?: throw IOException("No known endpoint for ${instanceId.value}")
+        return onIo {
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) {
+                    throw IOException("POST /runs/$runId/messages → HTTP ${response.code}")
+                }
+                val json = JSONObject(response.body?.string() ?: "{}")
+                json.optString("status", "accepted")
             }
         }
     }

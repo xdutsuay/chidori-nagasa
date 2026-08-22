@@ -91,6 +91,12 @@ class ChidoriViewModel(
     private val _monitorRunDetail = MutableStateFlow<AgentRunDetail?>(null)
     val monitorRunDetail: StateFlow<AgentRunDetail?> = _monitorRunDetail.asStateFlow()
 
+    private val _runInjectInput = MutableStateFlow("")
+    val runInjectInput: StateFlow<String> = _runInjectInput.asStateFlow()
+
+    private val _runControlInProgress = MutableStateFlow(false)
+    val runControlInProgress: StateFlow<Boolean> = _runControlInProgress.asStateFlow()
+
     /** Current step text for RUNNING runs, keyed by runId (KMA-128). */
     private val _monitorRunningSteps = MutableStateFlow<Map<String, String>>(emptyMap())
     val monitorRunningSteps: StateFlow<Map<String, String>> = _monitorRunningSteps.asStateFlow()
@@ -282,33 +288,51 @@ class ChidoriViewModel(
     private suspend fun pollMonitorOnce(instanceId: InstanceId) {
         val statusResult = runCatching { coordinatorRepository.getStatus(instanceId) }
         val runsResult = runCatching { coordinatorRepository.listRuns(instanceId) }
-        if (statusResult.isFailure && runsResult.isFailure) {
-            consecutivePollFailures++
-            if (consecutivePollFailures >= POLL_FAILURES_BEFORE_DISCONNECT) {
-                _monitorStatus.value = CoordinatorStatus.DISCONNECTED
-                _monitorStatusMessage.value = null
+        when (
+            val evaluation = evaluateMonitorPoll(
+                consecutivePollFailures,
+                statusResult,
+                runsResult,
+                POLL_FAILURES_BEFORE_DISCONNECT,
+            )
+        ) {
+            is MonitorPollEvaluation.Unreachable -> {
+                consecutivePollFailures = evaluation.consecutiveFailures
+                if (evaluation.disconnected) {
+                    _monitorStatus.value = CoordinatorStatus.DISCONNECTED
+                }
+                _monitorStatusMessage.value = evaluation.message
+                return
             }
-            return
-        }
-        consecutivePollFailures = 0
-        statusResult.onSuccess { info ->
-            _monitorStatus.value = info.status
-            _monitorStatusMessage.value = info.errorMessage
-        }
-        runsResult.onSuccess { runs ->
-            _monitorRuns.value = runs
-            val fromList = runs.mapNotNull { run ->
-                run.currentStep?.takeIf { it.isNotBlank() }?.let { run.runId to it }
-            }.toMap()
-            _monitorRunningSteps.value = fromList
-            // Enrich RUNNING rows that lack a step from the list payload.
-            refreshRunningSteps(instanceId, runs.filter { it.currentStep.isNullOrBlank() })
+            is MonitorPollEvaluation.Connected -> {
+                consecutivePollFailures = 0
+                evaluation.status?.let { info ->
+                    _monitorStatus.value = info.status
+                    _monitorStatusMessage.value = evaluation.warningMessage ?: info.errorMessage
+                }
+                evaluation.runs?.let { runs ->
+                    _monitorRuns.value = runs
+                    val fromList = runningStepsFromRuns(runs)
+                    _monitorRunningSteps.value = fromList
+                    refreshRunningSteps(instanceId, runs.filter { it.currentStep.isNullOrBlank() })
+                }
+            }
         }
         _monitorLastUpdatedEpochMillis.value = System.currentTimeMillis()
         val openId = detailRunId
         if (openId != null) {
             runCatching {
-                _monitorRunDetail.value = coordinatorRepository.getRunDetail(instanceId, openId)
+                coordinatorRepository.getRunDetail(instanceId, openId)
+            }.onSuccess { detail ->
+                _monitorRunDetail.value = detail
+                if (detail.summary.state == AgentRunState.RUNNING) {
+                    detail.currentStep?.takeIf { it.isNotBlank() }?.let { step ->
+                        _monitorRunningSteps.value =
+                            _monitorRunningSteps.value + (openId to step)
+                    }
+                }
+            }.onFailure { e ->
+                _monitorStatusMessage.value = describePollThrowable(e)
             }
         }
     }
@@ -323,6 +347,8 @@ class ChidoriViewModel(
             }.onSuccess { detail ->
                 val step = detail.currentStep?.takeIf { it.isNotBlank() } ?: return@onSuccess
                 steps[run.runId] = step
+            }.onFailure { e ->
+                _monitorStatusMessage.value = describePollThrowable(e)
             }
         }
         _monitorRunningSteps.value = steps
@@ -370,13 +396,55 @@ class ChidoriViewModel(
         val instanceId = _monitoredInstance.value?.instanceId ?: return
         detailRunId = runId
         viewModelScope.launch {
-            runCatching { _monitorRunDetail.value = coordinatorRepository.getRunDetail(instanceId, runId) }
+            runCatching { coordinatorRepository.getRunDetail(instanceId, runId) }
+                .onSuccess { _monitorRunDetail.value = it }
+                .onFailure { e -> _monitorStatusMessage.value = describePollThrowable(e) }
         }
     }
 
     fun dismissRunDetail() {
         detailRunId = null
         _monitorRunDetail.value = null
+        _runInjectInput.value = ""
+    }
+
+    fun onRunInjectInputChanged(value: String) {
+        _runInjectInput.value = value
+    }
+
+    fun stopRun() {
+        val instanceId = _monitoredInstance.value?.instanceId ?: return
+        val runId = detailRunId ?: return
+        if (_runControlInProgress.value) return
+        viewModelScope.launch {
+            _runControlInProgress.value = true
+            runCatching { coordinatorRepository.cancelRun(instanceId, runId) }
+                .onSuccess { refreshRunDetail(instanceId, runId) }
+                .onFailure { e -> _monitorStatusMessage.value = describePollThrowable(e) }
+            _runControlInProgress.value = false
+        }
+    }
+
+    fun injectRunMessage() {
+        val instanceId = _monitoredInstance.value?.instanceId ?: return
+        val runId = detailRunId ?: return
+        val text = _runInjectInput.value.trim()
+        if (text.isEmpty() || _runControlInProgress.value) return
+        viewModelScope.launch {
+            _runControlInProgress.value = true
+            runCatching { coordinatorRepository.injectRunMessage(instanceId, runId, text) }
+                .onSuccess {
+                    _runInjectInput.value = ""
+                    refreshRunDetail(instanceId, runId)
+                }
+                .onFailure { e -> _monitorStatusMessage.value = describePollThrowable(e) }
+            _runControlInProgress.value = false
+        }
+    }
+
+    private suspend fun refreshRunDetail(instanceId: InstanceId, runId: String) {
+        runCatching { coordinatorRepository.getRunDetail(instanceId, runId) }
+            .onSuccess { _monitorRunDetail.value = it }
     }
 
     // --- Remote chat (PRD.md §6.4) -----------------------------------------

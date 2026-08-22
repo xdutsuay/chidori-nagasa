@@ -45,6 +45,8 @@ class ChidoriFragment : Fragment() {
                 val monitorRunningSteps by viewModel.monitorRunningSteps.collectAsStateWithLifecycle()
                 val monitorLastUpdatedEpochMillis by viewModel.monitorLastUpdatedEpochMillis.collectAsStateWithLifecycle()
                 val monitorRunDetail by viewModel.monitorRunDetail.collectAsStateWithLifecycle()
+                val runInjectInput by viewModel.runInjectInput.collectAsStateWithLifecycle()
+                val runControlInProgress by viewModel.runControlInProgress.collectAsStateWithLifecycle()
                 val chatOpen by viewModel.chatOpen.collectAsStateWithLifecycle()
                 val chatMessages by viewModel.chatMessages.collectAsStateWithLifecycle()
                 val chatConnectionState by viewModel.chatConnectionState.collectAsStateWithLifecycle()
@@ -69,6 +71,8 @@ class ChidoriFragment : Fragment() {
                     monitorRunningSteps = monitorRunningSteps,
                     monitorLastUpdatedEpochMillis = monitorLastUpdatedEpochMillis,
                     monitorRunDetail = monitorRunDetail,
+                    runInjectInput = runInjectInput,
+                    runControlInProgress = runControlInProgress,
                     chatOpen = chatOpen,
                     chatMessages = chatMessages,
                     chatConnectionState = chatConnectionState,
@@ -85,6 +89,9 @@ class ChidoriFragment : Fragment() {
                     onCloseMonitor = viewModel::closeMonitor,
                     onRunClick = { viewModel.openRunDetail(it.runId) },
                     onDismissRunDetail = viewModel::dismissRunDetail,
+                    onRunInjectInputChanged = viewModel::onRunInjectInputChanged,
+                    onStopRun = viewModel::stopRun,
+                    onInjectRunMessage = viewModel::injectRunMessage,
                     onOpenChat = viewModel::openChat,
                     onCloseChat = viewModel::closeChat,
                     onChatInputChanged = viewModel::onChatInputChanged,

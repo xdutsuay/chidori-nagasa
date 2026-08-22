@@ -78,6 +78,8 @@ fun ChidoriScreen(
     monitorRunningSteps: Map<String, String> = emptyMap(),
     monitorLastUpdatedEpochMillis: Long? = null,
     monitorRunDetail: AgentRunDetail?,
+    runInjectInput: String = "",
+    runControlInProgress: Boolean = false,
     chatOpen: Boolean,
     chatMessages: List<RemoteChatMessage>,
     chatConnectionState: CoordinatorConnectionState,
@@ -94,6 +96,9 @@ fun ChidoriScreen(
     onCloseMonitor: () -> Unit,
     onRunClick: (AgentRunSummary) -> Unit,
     onDismissRunDetail: () -> Unit,
+    onRunInjectInputChanged: (String) -> Unit = {},
+    onStopRun: () -> Unit = {},
+    onInjectRunMessage: () -> Unit = {},
     onOpenChat: () -> Unit,
     onCloseChat: () -> Unit,
     onChatInputChanged: (String) -> Unit,
@@ -161,11 +166,16 @@ fun ChidoriScreen(
                 runningSteps = monitorRunningSteps,
                 lastUpdatedEpochMillis = monitorLastUpdatedEpochMillis,
                 selectedRunDetail = monitorRunDetail,
+                runInjectInput = runInjectInput,
+                runControlInProgress = runControlInProgress,
                 nodeOffering = nodeOffering,
                 nodeOfferSupported = nodeOfferSupported,
                 showBackHeader = false,
                 onRunClick = onRunClick,
                 onDismissRunDetail = onDismissRunDetail,
+                onRunInjectInputChanged = onRunInjectInputChanged,
+                onStopRun = onStopRun,
+                onInjectRunMessage = onInjectRunMessage,
                 onOpenChatClick = onOpenChat,
                 onNodeOfferingChange = onNodeOfferingChange,
                 onClose = onCloseMonitor,
@@ -229,6 +239,8 @@ fun ChidoriDetailContent(modifier: Modifier = Modifier) {
     val monitorRunningSteps by viewModel.monitorRunningSteps.collectAsStateWithLifecycle()
     val monitorLastUpdatedEpochMillis by viewModel.monitorLastUpdatedEpochMillis.collectAsStateWithLifecycle()
     val monitorRunDetail by viewModel.monitorRunDetail.collectAsStateWithLifecycle()
+    val runInjectInput by viewModel.runInjectInput.collectAsStateWithLifecycle()
+    val runControlInProgress by viewModel.runControlInProgress.collectAsStateWithLifecycle()
     val chatOpen by viewModel.chatOpen.collectAsStateWithLifecycle()
     val chatMessages by viewModel.chatMessages.collectAsStateWithLifecycle()
     val chatConnectionState by viewModel.chatConnectionState.collectAsStateWithLifecycle()
@@ -265,11 +277,16 @@ fun ChidoriDetailContent(modifier: Modifier = Modifier) {
             runningSteps = monitorRunningSteps,
             lastUpdatedEpochMillis = monitorLastUpdatedEpochMillis,
             selectedRunDetail = monitorRunDetail,
+            runInjectInput = runInjectInput,
+            runControlInProgress = runControlInProgress,
             nodeOffering = nodeOffering,
             nodeOfferSupported = nodeOfferSupported,
             showBackHeader = true,
             onRunClick = { viewModel.openRunDetail(it.runId) },
             onDismissRunDetail = viewModel::dismissRunDetail,
+            onRunInjectInputChanged = viewModel::onRunInjectInputChanged,
+            onStopRun = viewModel::stopRun,
+            onInjectRunMessage = viewModel::injectRunMessage,
             onOpenChatClick = viewModel::openChat,
             onNodeOfferingChange = viewModel::setNodeOffering,
             onClose = viewModel::closeMonitor,

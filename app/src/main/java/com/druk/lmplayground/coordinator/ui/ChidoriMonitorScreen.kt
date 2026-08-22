@@ -23,6 +23,8 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -58,6 +60,8 @@ import java.util.Date
  *
  * Polls via [ChidoriViewModel]; see that class for why (no WS push for
  * status/runs in WIRE_CONTRACT.md v1).
+ *
+ * KMA-129 adds remote stop + inject on the run detail surface.
  */
 @Composable
 fun ChidoriMonitorContent(
@@ -68,11 +72,16 @@ fun ChidoriMonitorContent(
     runningSteps: Map<String, String>,
     lastUpdatedEpochMillis: Long?,
     selectedRunDetail: AgentRunDetail?,
+    runInjectInput: String = "",
+    runControlInProgress: Boolean = false,
     nodeOffering: Boolean,
     nodeOfferSupported: Boolean,
     showBackHeader: Boolean,
     onRunClick: (AgentRunSummary) -> Unit,
     onDismissRunDetail: () -> Unit,
+    onRunInjectInputChanged: (String) -> Unit = {},
+    onStopRun: () -> Unit = {},
+    onInjectRunMessage: () -> Unit = {},
     onOpenChatClick: () -> Unit,
     onNodeOfferingChange: (Boolean) -> Unit,
     onClose: () -> Unit,
@@ -98,6 +107,13 @@ fun ChidoriMonitorContent(
                 }
             }
             Spacer(Modifier.height(12.dp))
+        }
+        if (status == CoordinatorStatus.DISCONNECTED) {
+            MonitorDisconnectBanner(
+                displayName = displayName,
+                detailMessage = statusMessage,
+            )
+            Spacer(Modifier.height(8.dp))
         }
         StatusCard(
             status = status,
@@ -158,7 +174,15 @@ fun ChidoriMonitorContent(
     }
 
     selectedRunDetail?.let { detail ->
-        RunDetailDialog(detail = detail, onDismiss = onDismissRunDetail)
+        RunDetailDialog(
+            detail = detail,
+            injectInput = runInjectInput,
+            controlInProgress = runControlInProgress,
+            onInjectInputChanged = onRunInjectInputChanged,
+            onStop = onStopRun,
+            onInject = onInjectRunMessage,
+            onDismiss = onDismissRunDetail,
+        )
     }
 }
 
@@ -200,7 +224,7 @@ private fun StatusCard(
                     },
                     style = MaterialTheme.typography.bodyLarge,
                 )
-                if (!statusMessage.isNullOrBlank()) {
+                if (!statusMessage.isNullOrBlank() && status != CoordinatorStatus.DISCONNECTED) {
                     Text(
                         text = statusMessage,
                         style = MaterialTheme.typography.bodySmall,
@@ -232,6 +256,29 @@ private fun DotIndicator(color: Color) {
             .clip(CircleShape)
             .background(color),
     )
+}
+
+@Composable
+private fun MonitorDisconnectBanner(displayName: String, detailMessage: String?) {
+    Surface(
+        color = MaterialTheme.colorScheme.errorContainer,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+            Text(
+                text = stringResource(R.string.chidori_monitor_disconnected_banner, displayName),
+                style = MaterialTheme.typography.labelMedium,
+            )
+            if (!detailMessage.isNullOrBlank()) {
+                Text(
+                    text = detailMessage,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onErrorContainer,
+                    modifier = Modifier.padding(top = 2.dp),
+                )
+            }
+        }
+    }
 }
 
 @Composable
@@ -306,7 +353,16 @@ private fun RunRow(run: AgentRunSummary, currentStep: String?, onClick: () -> Un
 }
 
 @Composable
-private fun RunDetailDialog(detail: AgentRunDetail, onDismiss: () -> Unit) {
+private fun RunDetailDialog(
+    detail: AgentRunDetail,
+    injectInput: String,
+    controlInProgress: Boolean,
+    onInjectInputChanged: (String) -> Unit,
+    onStop: () -> Unit,
+    onInject: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val isRunning = detail.summary.state == AgentRunState.RUNNING
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(detail.currentStep ?: stringResource(R.string.chidori_run_detail_title)) },
@@ -319,10 +375,39 @@ private fun RunDetailDialog(detail: AgentRunDetail, onDismiss: () -> Unit) {
                         Text(line, style = MaterialTheme.typography.bodySmall)
                     }
                 }
+                Spacer(Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = injectInput,
+                    onValueChange = onInjectInputChanged,
+                    enabled = !controlInProgress,
+                    label = { Text(stringResource(R.string.chidori_run_inject_hint)) },
+                    modifier = Modifier.fillMaxWidth(),
+                    minLines = 2,
+                )
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(android.R.string.ok)) }
+            TextButton(
+                onClick = onInject,
+                enabled = !controlInProgress && injectInput.isNotBlank(),
+            ) {
+                Text(stringResource(R.string.chidori_run_inject_send))
+            }
+        },
+        dismissButton = {
+            Row {
+                if (isRunning) {
+                    TextButton(
+                        onClick = onStop,
+                        enabled = !controlInProgress,
+                    ) {
+                        Text(stringResource(R.string.chidori_run_stop))
+                    }
+                }
+                TextButton(onClick = onDismiss) {
+                    Text(stringResource(android.R.string.ok))
+                }
+            }
         },
     )
 }

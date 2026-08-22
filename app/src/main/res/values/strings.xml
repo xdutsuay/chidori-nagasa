@@ -104,6 +104,7 @@
     <string name="chidori_status_running">Running</string>
     <string name="chidori_status_error">Error</string>
     <string name="chidori_status_disconnected">Disconnected — can\'t reach the desktop</string>
+    <string name="chidori_monitor_disconnected_banner">Can\'t reach %1$s — runs may be stale until reconnected</string>
     <string name="chidori_monitor_updated">Updated %1$s</string>
     <string name="chidori_mode_ask">Ask</string>
     <string name="chidori_mode_agent">Agent</string>
@@ -115,6 +116,9 @@
     <string name="chidori_view_run">View</string>
     <string name="chidori_run_detail_title">Run detail</string>
     <string name="chidori_no_log">No log output.</string>
+    <string name="chidori_run_stop">Stop</string>
+    <string name="chidori_run_inject_hint">Add a follow-up prompt to this session…</string>
+    <string name="chidori_run_inject_send">Send to session</string>
     <!-- Remote chat (PRD.md §6.4) -->
     <string name="chidori_chat_open">Chat through this desktop</string>
     <string name="chidori_chat_action">Chat</string>

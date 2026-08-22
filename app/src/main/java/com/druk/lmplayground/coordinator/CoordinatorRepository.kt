@@ -91,6 +91,12 @@ class CoordinatorRepository(context: Context) {
     suspend fun getRunDetail(instanceId: InstanceId, runId: String): AgentRunDetail =
         api.getRunDetail(instanceId, runId)
 
+    suspend fun cancelRun(instanceId: InstanceId, runId: String) =
+        api.cancelRun(instanceId, runId)
+
+    suspend fun injectRunMessage(instanceId: InstanceId, runId: String, text: String): String =
+        api.injectRunMessage(instanceId, runId, text)
+
     // Remote chat (protocol §2.4, PRD.md §6.4). The flow opens the chat
     // socket on collect and closes it on cancel; send throws IOException
     // when no stream is open/writable so the UI can keep the draft and show
