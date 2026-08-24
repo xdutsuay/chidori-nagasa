@@ -44,19 +44,20 @@ class DefaultNodeRegistrationCapability(
         val ip = lanIpv4()
             ?: return Result.failure(IllegalStateException("No LAN IPv4 address — check Wi‑Fi"))
         unregisterLocked()
-        val port = try {
+        val endpoint = try {
             NodeService.startAndAwaitPort(appContext)
         } catch (e: Exception) {
             return Result.failure(e)
         }
         val id = "nagasa-${instanceId.value}"
         nodeId = id
-        val apiBase = "http://$ip:$port/v1"
+        val apiBase = "http://$ip:${endpoint.port}/v1"
         val payload = NodeRegisterPayload(
             nodeId = id,
             displayName = model.displayName,
             apiBase = apiBase,
             models = listOf(model.id),
+            dataPlaneToken = endpoint.dataPlaneToken,
             contextLength = null,
             approxTokensPerSec = null,
             batteryPct = null,

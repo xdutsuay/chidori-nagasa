@@ -10,10 +10,13 @@ import android.util.Log
 import androidx.core.content.ContextCompat
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicReference
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeout
+
+data class NodeListenEndpoint(val port: Int, val dataPlaneToken: String)
 
 /**
  * Foreground [dataSync] host for [NodeOpenAiServer].
@@ -90,14 +93,19 @@ class NodeService : Service() {
     private fun ensureServerStarted() {
         if (server != null) {
             val port = listenPort.get()
-            if (port > 0) completePending(port)
+            val token = listenToken.get()
+            if (port > 0 && token.isNotEmpty()) {
+                completePending(NodeListenEndpoint(port, token))
+            }
             return
         }
-        val srv = NodeOpenAiServer { NodeInferenceHub.bridge }
+        val token = NodeOpenAiServer.newDataPlaneToken()
+        val srv = NodeOpenAiServer(token) { NodeInferenceHub.bridge }
         val port = srv.start()
         server = srv
         listenPort.set(port)
-        completePending(port)
+        listenToken.set(token)
+        completePending(NodeListenEndpoint(port, token))
         Log.i(TAG, "NodeOpenAiServer listening on $port")
     }
 
@@ -109,6 +117,7 @@ class NodeService : Service() {
         }
         server = null
         listenPort.set(-1)
+        listenToken.set("")
         if (isForeground) {
             try {
                 stopForeground(STOP_FOREGROUND_REMOVE)
@@ -126,19 +135,23 @@ class NodeService : Service() {
 
         private val mu = Mutex()
         private val listenPort = AtomicInteger(-1)
+        private val listenToken = AtomicReference("")
         private val startRequested = AtomicBoolean(false)
         private val hosted = AtomicBoolean(false)
-        @Volatile private var pendingPort: CompletableDeferred<Int>? = null
+        @Volatile private var pendingPort: CompletableDeferred<NodeListenEndpoint>? = null
 
         /**
-         * Starts the foreground service (if needed) and returns the listen port.
-         * Throws if the service fails to bind a socket within [START_TIMEOUT_MS].
+         * Starts the foreground service (if needed) and returns listen port +
+         * data-plane bearer. Throws if the service fails to bind within [START_TIMEOUT_MS].
          */
-        suspend fun startAndAwaitPort(context: Context): Int = mu.withLock {
-            val existing = listenPort.get()
-            if (existing > 0) return existing
+        suspend fun startAndAwaitPort(context: Context): NodeListenEndpoint = mu.withLock {
+            val existingPort = listenPort.get()
+            val existingToken = listenToken.get()
+            if (existingPort > 0 && existingToken.isNotEmpty()) {
+                return NodeListenEndpoint(existingPort, existingToken)
+            }
 
-            val deferred = CompletableDeferred<Int>()
+            val deferred = CompletableDeferred<NodeListenEndpoint>()
             pendingPort = deferred
             startRequested.set(true)
             val app = context.applicationContext
@@ -164,18 +177,20 @@ class NodeService : Service() {
                 pendingPort?.cancel()
                 pendingPort = null
                 listenPort.set(-1)
+                listenToken.set("")
                 return
             }
             val app = context.applicationContext
             startRequested.set(false)
             listenPort.set(-1)
+            listenToken.set("")
             pendingPort?.cancel()
             pendingPort = null
             app.stopService(Intent(app, NodeService::class.java))
         }
 
-        private fun completePending(port: Int) {
-            pendingPort?.complete(port)
+        private fun completePending(endpoint: NodeListenEndpoint) {
+            pendingPort?.complete(endpoint)
             pendingPort = null
         }
 

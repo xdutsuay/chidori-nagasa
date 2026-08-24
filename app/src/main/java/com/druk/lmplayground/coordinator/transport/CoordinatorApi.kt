@@ -133,6 +133,7 @@ data class NodeRegisterPayload(
     val batteryPct: Int?,
     val charging: Boolean?,
     val available: Boolean,
+    val dataPlaneToken: String,
 )
 
 private const val JSON_MEDIA_TYPE = "application/json; charset=utf-8"
@@ -491,6 +492,7 @@ class OkHttpCoordinatorApi(
             .put("api_base", payload.apiBase)
             .put("models", org.json.JSONArray(payload.models))
             .put("available", payload.available)
+            .put("data_plane_token", payload.dataPlaneToken)
         payload.contextLength?.let { body.put("context_length", it) }
         payload.approxTokensPerSec?.let { body.put("approx_tokens_per_sec", it) }
         payload.batteryPct?.let { body.put("battery_pct", it) }

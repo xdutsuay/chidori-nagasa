@@ -7,8 +7,11 @@ import java.io.ByteArrayOutputStream
 import java.net.InetSocketAddress
 import java.net.ServerSocket
 import java.net.Socket
+import java.security.MessageDigest
+import java.security.SecureRandom
 import java.util.UUID
 import java.util.concurrent.Executors
+import java.util.concurrent.Semaphore
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.runBlocking
 
@@ -16,13 +19,20 @@ import kotlinx.coroutines.runBlocking
  * Minimal OpenAI-compatible facade for node mode (NODE_MODE_SPIKE.md).
  * Serves GET /v1/models and POST /v1/chat/completions (non-streaming).
  * Stdlib ServerSocket — no new dependency.
+ *
+ * Binding: wildcard (all interfaces) so the paired desktop can dial the phone
+ * LAN IP in [api_base]. Access control is the data-plane bearer (KMA-65), not
+ * loopback-only bind. Control-plane pairing remains on companion :8027.
  */
 class NodeOpenAiServer(
+    private val dataPlaneToken: String,
+    private val maxConcurrentCompletions: Int = DEFAULT_MAX_COMPLETIONS,
     private val bridge: () -> NodeInferenceBridge,
 ) {
     private val running = AtomicBoolean(false)
     private var serverSocket: ServerSocket? = null
     private var pool = newWorkerPool()
+    private val completionSlots = Semaphore(maxConcurrentCompletions.coerceAtLeast(1))
 
     /** Bind ephemeral port; returns the local listen port. */
     fun start(): Int {
@@ -78,6 +88,11 @@ class NodeOpenAiServer(
             val path = req.path
             val body = req.body
 
+            if (!authorized(req.authorization)) {
+                writeResponse(s, 401, "application/json", errorJson("unauthorized"))
+                return
+            }
+
             when {
                 method == "GET" && (path == "/v1/models" || path == "/models") -> {
                     val model = bridge().currentModel()
@@ -108,6 +123,23 @@ class NodeOpenAiServer(
     }
 
     private fun handleChatCompletions(socket: Socket, body: String) {
+        if (!completionSlots.tryAcquire()) {
+            writeResponse(
+                socket,
+                429,
+                "application/json",
+                errorJson("capacity exhausted — phone node is busy"),
+            )
+            return
+        }
+        try {
+            handleChatCompletionsLocked(socket, body)
+        } finally {
+            completionSlots.release()
+        }
+    }
+
+    private fun handleChatCompletionsLocked(socket: Socket, body: String) {
         val messages = mutableListOf<NodeChatMessage>()
         try {
             val json = JSONObject(body)
@@ -185,7 +217,9 @@ class NodeOpenAiServer(
         val status = when (code) {
             200 -> "200 OK"
             400 -> "400 Bad Request"
+            401 -> "401 Unauthorized"
             404 -> "404 Not Found"
+            429 -> "429 Too Many Requests"
             503 -> "503 Service Unavailable"
             else -> "$code"
         }
@@ -236,11 +270,15 @@ class NodeOpenAiServer(
             return ParsedHttp(errorStatus = 400, errorBody = "bad request")
         }
         var contentLength = 0
+        var authorization = ""
         for (line in lines.drop(1)) {
             if (line.isEmpty()) break
             val lower = line.lowercase()
             if (lower.startsWith("content-length:")) {
                 contentLength = lower.substringAfter(':').trim().toIntOrNull() ?: -1
+            }
+            if (lower.startsWith("authorization:")) {
+                authorization = line.substringAfter(':').trim()
             }
         }
         if (contentLength < 0) {
@@ -262,23 +300,43 @@ class NodeOpenAiServer(
             method = parts[0],
             path = parts[1].substringBefore('?'),
             body = String(bodyBytes, Charsets.UTF_8),
+            authorization = authorization,
         )
+    }
+
+    private fun authorized(header: String): Boolean {
+        if (dataPlaneToken.isEmpty()) return false
+        val prefix = "Bearer "
+        if (!header.regionMatches(0, prefix, 0, prefix.length, ignoreCase = true)) {
+            return false
+        }
+        val got = header.substring(prefix.length).trim().toByteArray(Charsets.UTF_8)
+        val want = dataPlaneToken.toByteArray(Charsets.UTF_8)
+        return MessageDigest.isEqual(got, want)
     }
 
     private data class ParsedHttp(
         val method: String = "",
         val path: String = "",
         val body: String = "",
+        val authorization: String = "",
         val errorStatus: Int = 0,
         val errorBody: String = "",
     )
 
-    private companion object {
+    companion object {
         const val TAG = "NodeOpenAiServer"
         const val HEADER_TIMEOUT_MS = 30_000
         const val MAX_HEADER_BYTES = 16 * 1024
         const val MAX_BODY_BYTES = 1 * 1024 * 1024
+        const val DEFAULT_MAX_COMPLETIONS = 2
         val CRLF4 = byteArrayOf(13, 10, 13, 10)
+
+        fun newDataPlaneToken(): String {
+            val bytes = ByteArray(32)
+            SecureRandom().nextBytes(bytes)
+            return bytes.joinToString("") { b -> "%02x".format(b) }
+        }
 
         // Accept loop + a small number of in-flight completions (KMA-65 bound).
         fun newWorkerPool() = Executors.newFixedThreadPool(4) { runnable ->
