@@ -110,7 +110,7 @@ android {
     namespace = "com.druk.lmplayground"
 
     defaultConfig {
-        applicationId = "com.druk.lmplayground"
+        applicationId = "com.xdutsuay.chidori.nagasa"
         minSdk = libs.versions.minSdk.get().toInt()
         targetSdk = libs.versions.targetSdk.get().toInt()
         val versionProps = Properties().apply {

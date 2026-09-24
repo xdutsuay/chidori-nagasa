@@ -1,1 +1,1 @@
-Run language models privately on your phone. No cloud, no internet, no tracking.
+On-device LLM chat and LAN companion for the chidori desktop IDE.

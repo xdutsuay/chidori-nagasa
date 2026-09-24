@@ -24,18 +24,14 @@ Format: one entry per divergence, oldest first.
 | 2026-07-10 | `app/src/main/res/mipmap/ic_launcher.xml`, `app/src/main/res/drawable/ic_launcher_foreground.xml`, `app/src/main/res/drawable-nodpi/ic_launcher_background.png`, `app/src/main/res/drawable-nodpi/ic_launcher_monochrome.png`, `app/src/main/res/drawable/ic_launcher_monochrome.xml` (removed), `app/src/main/res/values/ic_launcher_background.xml` (removed), `logo.png`, `app/src/main/java/com/druk/lmplayground/inference/InferenceNotification.kt` | Replaced LM Playground's blue Penrose-triangle launcher icon with the chidori mark (ring + lightning bolts + `xdutsuay`), sourced from the sister `lclreason` desktop app's own `appicon.png` so both apps share one identity. Background layer now carries the full flat image (real alpha padding, no unsafe-zone cropping); foreground is empty; monochrome (Android 13+ themed icons) is a luminance-thresholded silhouette generated from the same source. The status-bar inference notification, which previously reused `ic_launcher_foreground` as its small icon, was repointed to `ic_launcher_monochrome` — foreground going empty would otherwise have made that notification invisible. | Icon revamp requested to match the sister project's branding; the notification-icon fix was a necessary side effect, not separately requested. | Re-derive `ic_launcher_foreground`'s emptiness and the notification's icon reference together if upstream's notification code changes — they're coupled. Re-sync the icon assets from `lclreason`'s `appicon.png` if that source changes. |
 | 2026-07-10 | `.github/workflows/deploy-internal.yml`, `.github/workflows/update-listing.yml` (both removed) | Deleted upstream's Play Store auto-deploy-on-push-to-main and listing-sync workflows. | No publishing secrets are configured for this fork (different app identity, not published under LM Playground's listing); the workflows fired on every push to `main` and always failed after ~40 min at signing, for no benefit. | If this fork ever does set up its own Play Store publishing, write new workflows against this fork's own identity/secrets rather than restoring these — they assumed LM Playground's `applicationId` and listing. |
 
+| 2026-09-25 | `app/build.gradle.kts`, `version.properties`, `fastlane/metadata/`, `strings.xml` | `applicationId` changed to `com.xdutsuay.chidori.nagasa` (Kotlin `namespace` / `com.druk.llamacpp` JNI packages left unchanged). Fastlane en-US rebranded for chidori-nagasa; privacy contact → GitHub Issues; nav header leftovers scrubbed. Version bumped to 2.2.0 for F-Droid first ship. | Unique package id required for F-Droid / store listing; must not collide with upstream LM Playground (`com.druk.lmplayground`). | Keep `applicationId` fork-specific on sync. Do not restore upstream `com.druk.lmplayground`. |
+
 ## Not yet changed (tracked so it's not forgotten, not because it's decided)
 
-- `applicationId` / package namespace (`com.druk.lmplayground`,
-  `com.druk.llamacpp`) are **unchanged** as of this entry. Renaming the
-  Kotlin package is mechanical but renaming `com.druk.llamacpp` touches the
-  JNI bridge (native method signatures must match exactly), and there is no
-  Android/NDK build toolchain available in the environment this fork draft
-  was produced in to verify a rename compiles and the native bridge still
-  resolves. Do not rename blind — do it as its own PR, on a machine with
-  Android Studio + NDK, verified by an actual build and a device run,
+- Kotlin package / JNI rename (`com.druk.lmplayground`, `com.druk.llamacpp`)
+  is **still deferred**. Only `applicationId` was changed for store identity.
+  Renaming `com.druk.llamacpp` touches the JNI bridge (native method
+  signatures must match exactly). Do that as its own PR with NDK verification
   per `CHIDORI_PROTOCOL.md` §3.2.
-- `debug.keystore`, `fastlane/`: not yet reviewed for chidori-nagasa-specific
-  signing/release config (the two Play-Store-publishing CI workflows that
-  consumed the release-signing secrets were removed on 2026-07-10, but
-  `fastlane/metadata/` and `debug.keystore` itself are untouched).
+- Localized `values-*/strings.xml` still contain upstream "LM Playground"
+  privacy wording in many locales; English default is rebranded.

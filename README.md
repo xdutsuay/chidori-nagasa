@@ -42,7 +42,7 @@ The wire protocol, product scope, and engineering rules live in [`CHIDORI_PROTOC
 
 ## Download
 
-Grab a debug-signed APK from [Releases](https://github.com/xdutsuay/chidori-nagasa/releases) (no Play Store account). Current app version: **2.1.2**.
+Grab a debug-signed APK from [Releases](https://github.com/xdutsuay/chidori-nagasa/releases) (no Play Store account). Current app version: **2.2.0** (`com.xdutsuay.chidori.nagasa`).
 
 Sideload notes:
 

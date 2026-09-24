@@ -1,0 +1,4 @@
+- New package id com.xdutsuay.chidori.nagasa for independent store identity
+- Fastlane listing rebranded for chidori-nagasa (on-device + LAN companion)
+- Privacy contact points to GitHub Issues; nav header leftovers cleaned up
+- Ready for F-Droid inclusion (FOSS-only main, MIT)

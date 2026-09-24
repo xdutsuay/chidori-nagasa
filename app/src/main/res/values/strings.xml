@@ -3,8 +3,8 @@
 
     <string name="navigation_drawer_open">Open navigation drawer</string>
     <string name="navigation_drawer_close">Close navigation drawer</string>
-    <string name="nav_header_title" translatable="false">Composer</string>
-    <string name="nav_header_subtitle" translatable="false">android.studio@android.com</string>
+    <string name="nav_header_title" translatable="false">chidori-nagasa</string>
+    <string name="nav_header_subtitle" translatable="false">https://github.com/xdutsuay/chidori-nagasa</string>
     <string name="nav_header_desc">Navigation header</string>
     <string name="action_settings">Settings</string>
 
@@ -153,8 +153,7 @@
     <string name="privacy_policy_s6_body">By using chidori-nagasa, you acknowledge and agree to this Privacy Policy. If you do not agree with the policy, please refrain from using the app. Your continued use of the app following the posting of any updates or changes to this policy will be deemed your acceptance of those changes.</string>
     <string name="privacy_policy_s7_title">7. Contact Us</string>
     <string name="privacy_policy_s7_body">If you have any questions or suggestions about this Privacy Policy, do not hesitate to contact us.</string>
-    <!-- TODO(chidori-nagasa): replace with a real support contact before this ships to a store listing. -->
-    <string name="privacy_policy_contact_email" translatable="false">TODO@chidori.app</string>
+    <string name="privacy_policy_contact_email" translatable="false">https://github.com/xdutsuay/chidori-nagasa/issues</string>
     <string name="send_feedback">Send Feedback</string>
     <string name="faq">FAQ</string>
     <string name="faq_subtitle">Frequently asked questions</string>
