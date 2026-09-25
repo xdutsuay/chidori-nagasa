@@ -26,5 +26,11 @@ data class ChatSessionEntity(
      * the web_search link map; future features can add keys without a schema
      * change. See [ConversationMetadata].
      */
-    val metadata: String = "{}"
+    val metadata: String = "{}",
+    /** [ChatRoute.LOCAL] or [ChatRoute.CLOUD]. Existing rows migrate to LOCAL. */
+    val route: String = ChatRoute.LOCAL,
+    /** Set when [route] is CLOUD — references cloud_providers.id. */
+    val cloudProviderId: String? = null,
+    /** Set when [route] is CLOUD — OpenAI-compatible model id. */
+    val cloudModel: String? = null,
 )

@@ -6,15 +6,19 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
+import com.druk.lmplayground.cloud.CloudProviderDao
+import com.druk.lmplayground.cloud.CloudProviderEntity
 
 @Database(
     entities = [
         ChatSessionEntity::class,
         ChatMessageEntity::class,
         SystemPromptEntity::class,
-        PromptUsage::class
+        PromptUsage::class,
+        CloudProviderEntity::class,
+        UsageEventEntity::class,
     ],
-    version = 7,
+    version = 8,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -22,6 +26,10 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun chatDao(): ChatDao
 
     abstract fun systemPromptDao(): SystemPromptDao
+
+    abstract fun cloudProviderDao(): CloudProviderDao
+
+    abstract fun usageEventDao(): UsageEventDao
 
     companion object {
         @Volatile
@@ -58,14 +66,9 @@ abstract class AppDatabase : RoomDatabase() {
          */
         private val MIGRATION_4_5 = object : Migration(4, 5) {
             override fun migrate(db: SupportSQLiteDatabase) {
-                // Denormalized system-prompt text stored alongside each chat
-                // session so reopening a conversation replays with the same
-                // prompt it was started with.
                 db.execSQL(
                     "ALTER TABLE chat_sessions ADD COLUMN systemPrompt TEXT NOT NULL DEFAULT ''"
                 )
-
-                // Library of reusable system prompts.
                 db.execSQL(
                     "CREATE TABLE IF NOT EXISTS system_prompts (" +
                         "id TEXT NOT NULL PRIMARY KEY, " +
@@ -74,8 +77,6 @@ abstract class AppDatabase : RoomDatabase() {
                         "updatedAt INTEGER NOT NULL DEFAULT 0" +
                         ")"
                 )
-
-                // Per-model MRU markers.
                 db.execSQL(
                     "CREATE TABLE IF NOT EXISTS prompt_usage (" +
                         "promptId TEXT NOT NULL, " +
@@ -92,10 +93,6 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
-        /**
-         * Generic per-conversation metadata blob (JSON). Backs
-         * [ConversationMetadata]; first use is the web_search link map.
-         */
         private val MIGRATION_5_6 = object : Migration(5, 6) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL(
@@ -104,14 +101,57 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
-        /**
-         * Persist attached images: each message can reference an on-disk image
-         * copy ([ChatMessageEntity.imagePath]) so saved conversations keep their
-         * images across restarts.
-         */
         private val MIGRATION_6_7 = object : Migration(6, 7) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE chat_messages ADD COLUMN imagePath TEXT")
+            }
+        }
+
+        /**
+         * Cloud providers + usage dashboard + cloud route columns on sessions.
+         * Existing sessions become LOCAL with null cloud fields.
+         */
+        val MIGRATION_7_8 = object : Migration(7, 8) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "ALTER TABLE chat_sessions ADD COLUMN route TEXT NOT NULL DEFAULT 'LOCAL'",
+                )
+                db.execSQL("ALTER TABLE chat_sessions ADD COLUMN cloudProviderId TEXT")
+                db.execSQL("ALTER TABLE chat_sessions ADD COLUMN cloudModel TEXT")
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS cloud_providers (" +
+                        "id TEXT NOT NULL PRIMARY KEY, " +
+                        "name TEXT NOT NULL, " +
+                        "baseUrl TEXT NOT NULL, " +
+                        "defaultModel TEXT NOT NULL, " +
+                        "allowHttp INTEGER NOT NULL, " +
+                        "createdAt INTEGER NOT NULL, " +
+                        "updatedAt INTEGER NOT NULL" +
+                        ")",
+                )
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS usage_events (" +
+                        "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "createdAt INTEGER NOT NULL, " +
+                        "route TEXT NOT NULL, " +
+                        "provider TEXT NOT NULL, " +
+                        "model TEXT NOT NULL, " +
+                        "promptTokens INTEGER, " +
+                        "completionTokens INTEGER, " +
+                        "costMicros INTEGER, " +
+                        "estimated INTEGER NOT NULL, " +
+                        "sessionId TEXT" +
+                        ")",
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_usage_events_createdAt ON usage_events (createdAt)",
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_usage_events_route ON usage_events (route)",
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_usage_events_model ON usage_events (model)",
+                )
             }
         }
 
@@ -128,7 +168,8 @@ abstract class AppDatabase : RoomDatabase() {
                         MIGRATION_3_4,
                         MIGRATION_4_5,
                         MIGRATION_5_6,
-                        MIGRATION_6_7
+                        MIGRATION_6_7,
+                        MIGRATION_7_8,
                     )
                     .build().also { INSTANCE = it }
             }

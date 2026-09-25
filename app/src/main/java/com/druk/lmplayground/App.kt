@@ -6,10 +6,15 @@ import android.content.ComponentName
 import android.os.Bundle
 import com.druk.llamacpp.InferenceClient
 import com.druk.llamacpp.LlamaCpp
+import com.druk.lmplayground.cloud.CloudClient
+import com.druk.lmplayground.cloud.CloudKeyStore
+import com.druk.lmplayground.cloud.CloudProviderRepository
+import com.druk.lmplayground.cloud.EncryptedCloudKeyStore
 import com.druk.lmplayground.coordinator.CoordinatorRepository
 import com.druk.lmplayground.data.AppDatabase
 import com.druk.lmplayground.data.ChatRepository
 import com.druk.lmplayground.data.SystemPromptRepository
+import com.druk.lmplayground.data.UsageRepository
 import com.druk.lmplayground.download.DownloadNotificationManager
 import com.druk.lmplayground.inference.LlamaService
 import com.druk.lmplayground.inference.ProcessUtils
@@ -25,6 +30,14 @@ class App : Application() {
     lateinit var chatRepository: ChatRepository
         private set
     lateinit var systemPromptRepository: SystemPromptRepository
+        private set
+    lateinit var cloudKeyStore: CloudKeyStore
+        private set
+    lateinit var cloudProviderRepository: CloudProviderRepository
+        private set
+    lateinit var usageRepository: UsageRepository
+        private set
+    lateinit var cloudClient: CloudClient
         private set
 
     // chidori desktop companion features (net/coordinator, see CHIDORI_PROTOCOL.md §2/§3.4).
@@ -91,6 +104,13 @@ class App : Application() {
         val database = AppDatabase.getInstance(this)
         chatRepository = ChatRepository(database.chatDao())
         systemPromptRepository = SystemPromptRepository(database.systemPromptDao())
+        cloudKeyStore = EncryptedCloudKeyStore.create(this)
+        cloudProviderRepository = CloudProviderRepository(
+            database.cloudProviderDao(),
+            cloudKeyStore,
+        )
+        usageRepository = UsageRepository(database.usageEventDao())
+        cloudClient = CloudClient()
 
         coordinatorRepository = CoordinatorRepository(this)
     }
