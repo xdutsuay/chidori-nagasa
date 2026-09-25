@@ -313,6 +313,26 @@ class ConversationViewModel(val app: Application) : AndroidViewModel(app) {
                     sessionStore.persistMessage(sessionId, assistantMessage)
                     sessionStore.touchSessionTimestamp(sessionId)
                     persistConversationMetadata(sessionId)
+                    try {
+                        val appRef = app as? App
+                        val modelLabel = _loadedModel.value?.name
+                            ?: _loadedModel.value?.filename
+                            ?: "local"
+                        appRef?.usageRepository?.record(
+                            com.druk.lmplayground.data.UsageEventEntity(
+                                createdAt = System.currentTimeMillis(),
+                                route = com.druk.lmplayground.data.UsageRoute.LOCAL,
+                                provider = "on-device",
+                                model = modelLabel,
+                                promptTokens = null,
+                                completionTokens = assistantMessage.responseTokens.takeIf { it > 0 }
+                                    ?: totalTokens.takeIf { it > 0 },
+                                costMicros = null,
+                                estimated = false,
+                                sessionId = sessionId,
+                            ),
+                        )
+                    } catch (_: Throwable) { /* best-effort */ }
                 } catch (_: Throwable) { /* best-effort */ }
             }
         }

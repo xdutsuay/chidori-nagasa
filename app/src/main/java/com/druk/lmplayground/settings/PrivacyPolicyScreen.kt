@@ -44,6 +44,8 @@ private val policySections = listOf(
     PolicySection(R.string.privacy_policy_s2_title, R.string.privacy_policy_s2_body),
     PolicySection(R.string.privacy_policy_s3_title, R.string.privacy_policy_s3_body),
     PolicySection(R.string.privacy_policy_s4_title, R.string.privacy_policy_s4_body),
+    PolicySection(R.string.privacy_policy_s4b_title, R.string.privacy_policy_s4b_body),
+    PolicySection(R.string.privacy_policy_s4c_title, R.string.privacy_policy_s4c_body),
     PolicySection(R.string.privacy_policy_s5_title, R.string.privacy_policy_s5_body),
     PolicySection(R.string.privacy_policy_s6_title, R.string.privacy_policy_s6_body),
 )

@@ -231,6 +231,12 @@ class SettingsFragment : Fragment() {
                     onChidoriClick = {
                         findNavController().navigateFromSettings(R.id.action_settings_to_chidori)
                     },
+                    onCloudApisClick = {
+                        findNavController().navigateFromSettings(R.id.action_settings_to_cloud_apis)
+                    },
+                    onUsageClick = {
+                        findNavController().navigateFromSettings(R.id.action_settings_to_usage)
+                    },
                     onSoundHapticClick = {
                         findNavController().navigateFromSettings(R.id.action_settings_to_sound_haptic)
                     },
