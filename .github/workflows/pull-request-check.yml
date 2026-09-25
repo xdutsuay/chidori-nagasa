@@ -1,6 +1,9 @@
+# Disabled until re-enabled by the maintainer.
+# To turn CI back on: restore `pull_request:` under `on:` (see git history).
 name: Pull Request Check
 
-on: pull_request
+on:
+  workflow_dispatch:
 
 jobs:
 
