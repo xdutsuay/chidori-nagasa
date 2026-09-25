@@ -12,14 +12,24 @@ import com.druk.llamacpp.InferenceLimits
 import com.druk.llamacpp.InferenceState
 import com.druk.llamacpp.LlamaCpp
 import com.druk.lmplayground.App
+import com.druk.lmplayground.cloud.CloudChatMessage
+import com.druk.lmplayground.cloud.CloudClientException
+import com.druk.lmplayground.cloud.CloudError
+import com.druk.lmplayground.cloud.CloudProviderEntity
+import com.druk.lmplayground.cloud.CloudStreamEvent
+import com.druk.lmplayground.cloud.CloudUsage
 import com.druk.lmplayground.coordinator.node.NodeChatMessage
 import com.druk.lmplayground.coordinator.node.NodeInferenceBridge
 import com.druk.lmplayground.coordinator.node.NodeInferenceHub
 import com.druk.lmplayground.coordinator.node.NodeOfferedModel
 import com.druk.lmplayground.inference.ModelRuntime
+import com.druk.lmplayground.data.ChatRoute
 import com.druk.lmplayground.data.ChatSessionEntity
 import com.druk.lmplayground.data.ConversationMetadata
 import com.druk.lmplayground.data.SystemPromptEntity
+import com.druk.lmplayground.data.UsageAggregator
+import com.druk.lmplayground.data.UsageEventEntity
+import com.druk.lmplayground.data.UsageRoute
 import com.druk.lmplayground.models.DeviceCapability
 import com.druk.lmplayground.models.ModelInfo
 import com.druk.lmplayground.models.ModelInfoProvider
@@ -32,8 +42,21 @@ import androidx.compose.runtime.snapshots.Snapshot
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import android.net.Uri
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+
+/** Active OpenAI-compatible remote source on the shared Conversation screen. */
+data class ActiveCloudSource(
+    val provider: CloudProviderEntity,
+    val model: String,
+) {
+    fun displayModelInfo(): ModelInfo = ModelInfo(
+        name = provider.name,
+        filename = "cloud:${provider.id}",
+        description = model.ifBlank { "Remote" },
+    )
+}
 
 
 class ConversationViewModel(val app: Application) : AndroidViewModel(app) {
@@ -49,6 +72,8 @@ class ConversationViewModel(val app: Application) : AndroidViewModel(app) {
     private val _modelLoadingProgress = MutableLiveData(0f)
     private val _loadedModel = MutableLiveData<ModelInfo?>(null)
     private val _loadedModelStatus = MutableLiveData<String?>(null)
+    private val _activeCloudSource = MutableLiveData<ActiveCloudSource?>(null)
+    private var cloudStreamJob: Job? = null
 
     private val _models = MutableLiveData<List<ModelWithStatus>>(emptyList())
     private val _supportsThinking = MutableLiveData(false)
@@ -367,6 +392,7 @@ class ConversationViewModel(val app: Application) : AndroidViewModel(app) {
     val modelLoadingProgress: LiveData<Float> = _modelLoadingProgress
     val loadedModel: LiveData<ModelInfo?> = _loadedModel
     val loadedModelStatus: LiveData<String?> = _loadedModelStatus
+    val activeCloudSource: LiveData<ActiveCloudSource?> = _activeCloudSource
     val models: LiveData<List<ModelWithStatus>> = _models
     val supportsThinking: LiveData<Boolean> = _supportsThinking
     val thinkingEnabled: LiveData<Boolean> = _thinkingEnabled
@@ -514,6 +540,9 @@ class ConversationViewModel(val app: Application) : AndroidViewModel(app) {
     fun loadModel(modelInfo: ModelInfo, forceLoad: Boolean = false) {
         val llamaCpp = llamaCpp ?: return
 
+        // Local GGUF wins the source slot — drop any remote route.
+        clearCloudSource()
+
         // Clear any prior vision-module offer; the mmproj block below re-posts
         // it if this model loads vision-capable but without its image module.
         _visionModuleHint.value = null
@@ -653,7 +682,70 @@ class ConversationViewModel(val app: Application) : AndroidViewModel(app) {
     }
 
     @MainThread
+    fun selectCloudProvider(provider: CloudProviderEntity) {
+        val model = provider.defaultModel.ifBlank { "openrouter/auto" }
+        selectCloudSource(ActiveCloudSource(provider, model))
+    }
+
+    @MainThread
+    fun selectCloudProviderById(providerId: String) {
+        viewModelScope.launch {
+            val appRef = app as? App ?: return@launch
+            val provider = appRef.cloudProviderRepository.getById(providerId) ?: run {
+                _userError.postValue(
+                    app.getString(com.druk.lmplayground.R.string.cloud_provider_not_found),
+                )
+                return@launch
+            }
+            selectCloudProvider(provider)
+        }
+    }
+
+    @MainThread
+    private fun selectCloudSource(source: ActiveCloudSource) {
+        cloudStreamJob?.cancel()
+        cloudStreamJob = null
+        _activeCloudSource.value = source
+        // Tear down local model so the bar / input reflect the remote source.
+        viewModelScope.launch {
+            if (runtime.hasNativeHandles()) {
+                runtime.unloadNative()
+            }
+            _loadedModel.postValue(null)
+            _loadedModelStatus.postValue(source.model)
+            _isModelReady.postValue(false)
+            _supportsThinking.postValue(false)
+            _supportsVision.postValue(false)
+            _supportsToolCalling.postValue(false)
+            _toolEnabledStates.postValue(emptyMap())
+            NodeInferenceHub.clear()
+        }
+        // Fresh thread when switching onto cloud (matches picking a new GGUF
+        // with an empty chat expectation). Keep messages if already mid-cloud
+        // same provider? Prefer clear session id so first send creates CLOUD row.
+        _currentSessionId.value = null
+        _sessionModelHint.value = null
+        uiState.resetMessages()
+        toolRegistry.webLinkStore.clear()
+    }
+
+    private fun clearCloudSource() {
+        cloudStreamJob?.cancel()
+        cloudStreamJob = null
+        _activeCloudSource.value = null
+    }
+
+    @MainThread
     fun addMessage(message: Message, imageUri: Uri? = null) {
+        if (_activeCloudSource.value != null) {
+            addCloudMessage(message)
+            return
+        }
+        addLocalMessage(message, imageUri)
+    }
+
+    @MainThread
+    private fun addLocalMessage(message: Message, imageUri: Uri? = null) {
         // Persist the image so it survives the picker URI lifetime and is kept
         // with the saved conversation (path stored on the message row below).
         val persistedImageFile = imageUri?.let { imageStore.persistImageFile(it) }
@@ -730,16 +822,153 @@ class ConversationViewModel(val app: Application) : AndroidViewModel(app) {
         }
     }
 
+    @MainThread
+    private fun addCloudMessage(message: Message) {
+        val source = _activeCloudSource.value ?: return
+        val appRef = app as? App
+        if (appRef == null) {
+            _userError.postValue(app.getString(com.druk.lmplayground.R.string.cloud_stream_failed))
+            return
+        }
+        val key = appRef.cloudProviderRepository.getKey(source.provider.id)
+        if (key.isNullOrBlank()) {
+            _userError.postValue(CloudError.NoKey().userMessage())
+            return
+        }
+        val model = source.model.ifBlank {
+            _userError.postValue(app.getString(com.druk.lmplayground.R.string.cloud_model_required))
+            return
+        }
+        if (_isGenerating.value == true) return
+
+        val userMessage = message
+        Snapshot.withMutableSnapshot {
+            uiState.addMessage(userMessage)
+            uiState.addMessage(
+                Message(
+                    "Assistant",
+                    "",
+                    responseStartTimeMs = System.currentTimeMillis(),
+                )
+            )
+        }
+        val ourMessageId = uiState.messages.lastOrNull()?.id ?: -1L
+        _isGenerating.postValue(true)
+        cloudStreamJob?.cancel()
+        cloudStreamJob = viewModelScope.launch {
+            try {
+                val sessionId = ensureSession(userMessage)
+                sessionStore.persistMessage(sessionId, userMessage)
+
+                val history = uiState.messages.dropLast(1).map {
+                    CloudChatMessage(
+                        role = if (it.author == "User") "user" else "assistant",
+                        content = it.content,
+                    )
+                }
+                var usage: CloudUsage? = null
+                appRef.cloudClient.streamChat(
+                    source.provider.baseUrl,
+                    key,
+                    model,
+                    history,
+                ).collect { event ->
+                    when (event) {
+                        is CloudStreamEvent.Delta -> {
+                            Snapshot.withMutableSnapshot {
+                                val last = uiState.messages.lastOrNull()
+                                if (last != null && last.id == ourMessageId) {
+                                    uiState.updateLastMessage(
+                                        last.content + event.text,
+                                        thinkingTokens = last.thinkingTokens,
+                                        responseTokens = last.responseTokens,
+                                    )
+                                }
+                            }
+                        }
+                        is CloudStreamEvent.Finished -> usage = event.usage
+                    }
+                }
+
+                Snapshot.withMutableSnapshot {
+                    val last = uiState.messages.lastOrNull()
+                    if (last != null && last.id == ourMessageId) {
+                        uiState.finalizeLastMessage()
+                    }
+                }
+                val assistantMessage = uiState.messages.lastOrNull()
+                if (assistantMessage != null && assistantMessage.author == "Assistant") {
+                    sessionStore.persistMessage(
+                        sessionId,
+                        assistantMessage.copy(
+                            responseTokens = usage?.completionTokens
+                                ?: assistantMessage.responseTokens,
+                        ),
+                    )
+                    sessionStore.touchSessionTimestamp(sessionId)
+                    try {
+                        appRef.usageRepository.record(
+                            UsageEventEntity(
+                                createdAt = System.currentTimeMillis(),
+                                route = UsageRoute.CLOUD,
+                                provider = source.provider.name,
+                                model = model,
+                                promptTokens = usage?.promptTokens,
+                                completionTokens = usage?.completionTokens,
+                                costMicros = usage?.costUsd?.let { UsageAggregator.usdToMicros(it) },
+                                estimated = false,
+                                sessionId = sessionId,
+                            ),
+                        )
+                    } catch (_: Throwable) { /* best-effort */ }
+                }
+            } catch (e: CloudClientException) {
+                _userError.postValue(e.error.userMessage())
+                Snapshot.withMutableSnapshot {
+                    val last = uiState.messages.lastOrNull()
+                    if (last != null && last.id == ourMessageId && last.content.isEmpty()) {
+                        uiState.removeLastMessage()
+                    }
+                }
+            } catch (e: Exception) {
+                _userError.postValue(
+                    e.message ?: app.getString(com.druk.lmplayground.R.string.cloud_stream_failed),
+                )
+                Snapshot.withMutableSnapshot {
+                    val last = uiState.messages.lastOrNull()
+                    if (last != null && last.id == ourMessageId && last.content.isEmpty()) {
+                        uiState.removeLastMessage()
+                    }
+                }
+            } finally {
+                _isGenerating.postValue(false)
+            }
+        }
+    }
+
     private suspend fun ensureSession(firstUserMessage: Message): String {
         val existing = _currentSessionId.value
         if (existing != null) return existing
 
-        val id = sessionStore.createSession(
-            firstUserMessage,
-            _loadedModel.value,
-            _generationParams.value ?: GenerationParams(),
-            _systemPrompt.value.orEmpty(),
-        )
+        val cloud = _activeCloudSource.value
+        val id = if (cloud != null) {
+            sessionStore.createSession(
+                firstUserMessage,
+                cloud.displayModelInfo(),
+                _generationParams.value ?: GenerationParams(),
+                _systemPrompt.value.orEmpty(),
+                route = ChatRoute.CLOUD,
+                cloudProviderId = cloud.provider.id,
+                cloudModel = cloud.model,
+            )
+        } else {
+            sessionStore.createSession(
+                firstUserMessage,
+                _loadedModel.value,
+                _generationParams.value ?: GenerationParams(),
+                _systemPrompt.value.orEmpty(),
+            )
+        }
         _currentSessionId.postValue(id)
         return id
     }
@@ -754,6 +983,11 @@ class ConversationViewModel(val app: Application) : AndroidViewModel(app) {
             val uiMessages = sessionStore.loadSessionMessages(sessionId) ?: return@launch
             val sessionEntity = sessionStore.getSession(sessionId)
 
+            if (sessionEntity?.route == ChatRoute.CLOUD) {
+                loadCloudSession(sessionId, sessionEntity, uiMessages)
+                return@launch
+            }
+
             // Pre-flight the saved chat against the AIDL payload cap
             // BEFORE switching any UI state. If a persisted message
             // (or the session's saved system prompt) is too large for
@@ -766,6 +1000,7 @@ class ConversationViewModel(val app: Application) : AndroidViewModel(app) {
                 return@launch
             }
 
+            clearCloudSource()
             _currentSessionId.value = sessionId
 
             // Drop the previous conversation's web_search references; the loaded
@@ -828,9 +1063,56 @@ class ConversationViewModel(val app: Application) : AndroidViewModel(app) {
         }
     }
 
+    private suspend fun loadCloudSession(
+        sessionId: String,
+        sessionEntity: ChatSessionEntity,
+        uiMessages: List<Message>,
+    ) {
+        cloudStreamJob?.cancel()
+        cloudStreamJob = null
+        runtime.cancelAndJoinGeneration()
+
+        if (runtime.hasNativeHandles()) {
+            runtime.unloadNative()
+        }
+        _loadedModel.postValue(null)
+        _isModelReady.postValue(false)
+        _supportsThinking.postValue(false)
+        _supportsVision.postValue(false)
+        _supportsToolCalling.postValue(false)
+        _toolEnabledStates.postValue(emptyMap())
+        NodeInferenceHub.clear()
+
+        val appRef = app as? App
+        val providerId = sessionEntity.cloudProviderId
+        val provider = if (providerId != null && appRef != null) {
+            appRef.cloudProviderRepository.getById(providerId)
+        } else {
+            null
+        }
+        val model = sessionEntity.cloudModel.orEmpty().ifBlank { sessionEntity.modelFilename }
+        if (provider != null) {
+            _activeCloudSource.postValue(ActiveCloudSource(provider, model))
+            _loadedModelStatus.postValue(model)
+        } else {
+            _activeCloudSource.postValue(null)
+            _userError.postValue(
+                app.getString(com.druk.lmplayground.R.string.cloud_provider_not_found),
+            )
+            _loadedModelStatus.postValue(sessionEntity.modelName)
+        }
+
+        _currentSessionId.postValue(sessionId)
+        _sessionModelHint.postValue(null)
+        toolRegistry.webLinkStore.clear()
+        uiState.setMessages(uiMessages)
+    }
+
     @MainThread
     fun newConversation() {
         viewModelScope.launch {
+            cloudStreamJob?.cancel()
+            cloudStreamJob = null
             runtime.cancelAndJoinGeneration()
 
             _currentSessionId.value = null
@@ -839,11 +1121,14 @@ class ConversationViewModel(val app: Application) : AndroidViewModel(app) {
             // Fresh conversation starts with no web_search references.
             toolRegistry.webLinkStore.clear()
 
-            // Recreate native session with clean KV cache
-            runtime.resetSessionDestroyFirst(
-                _generationParams.value ?: GenerationParams(),
-                _systemPrompt.value.orEmpty(),
-            )
+            // Keep active cloud source (same as keeping a loaded GGUF).
+            // Only recreate native session when a local model is loaded.
+            if (_activeCloudSource.value == null) {
+                runtime.resetSessionDestroyFirst(
+                    _generationParams.value ?: GenerationParams(),
+                    _systemPrompt.value.orEmpty(),
+                )
+            }
         }
     }
 
@@ -972,6 +1257,8 @@ class ConversationViewModel(val app: Application) : AndroidViewModel(app) {
 
     @MainThread
     fun cancelGeneration() {
+        cloudStreamJob?.cancel()
+        cloudStreamJob = null
         runtime.generatingJob?.cancel()
     }
 

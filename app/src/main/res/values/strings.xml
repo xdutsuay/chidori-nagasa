@@ -78,6 +78,12 @@
     <string name="chidori_desktop_subtitle">Pair with a chidori desktop instance</string>
     <string name="chidori_desktop_intro">Pair with a chidori desktop instance on your network to check on it and chat through its models. Everything here stays on your local network — see Privacy Policy §4b.</string>
 
+    <string name="cloud_picker_section">Remote keys</string>
+    <string name="cloud_picker_row">Remote · %1$s</string>
+    <string name="cloud_picker_row_model">Remote · %1$s · %2$s</string>
+    <string name="cloud_picker_manage">Manage cloud APIs…</string>
+    <string name="cloud_picker_subtitle">Uses your saved API key — messages leave this phone</string>
+
     <string name="cloud_apis">Cloud APIs</string>
     <string name="cloud_apis_subtitle">OpenRouter and other OpenAI-compatible keys</string>
     <string name="cloud_apis_intro">Paste an API key to chat through a cloud provider. Messages on that route leave your phone. Keys are stored in Android\'s encrypted preferences, not in chat history.</string>
@@ -99,13 +105,19 @@
     <string name="cloud_apis_open_chat">Open chat</string>
     <string name="cloud_apis_delete">Delete</string>
     <string name="cloud_apis_clear_form">Clear form</string>
+    <string name="cloud_apis_status_saved">Saved</string>
+    <string name="cloud_apis_status_deleted">Deleted</string>
+    <string name="cloud_apis_status_paste_key">Paste an API key</string>
+    <string name="cloud_apis_status_not_found">Provider not found</string>
+    <string name="cloud_apis_status_save_failed">Save failed</string>
+    <string name="cloud_apis_status_test_ok">OK — %1$d models</string>
+    <string name="cloud_apis_status_test_failed">Test failed</string>
+    <string name="cloud_provider_not_found">Cloud provider not found</string>
+    <string name="cloud_model_required">Set a default model for this provider in Cloud APIs</string>
+    <string name="cloud_stream_failed">Cloud stream failed</string>
+    <string name="cloud_session_remote">Remote</string>
 
-    <string name="cloud_chat_title">Cloud chat</string>
     <string name="cloud_chat_banner">Sent to %1$s. This text leaves the phone.</string>
-    <string name="cloud_chat_model">Model</string>
-    <string name="cloud_chat_empty">Pick a model and send a message. Replies stream from the provider you configured.</string>
-    <string name="cloud_chat_hint">Message the cloud model…</string>
-    <string name="cloud_chat_replying">Waiting for reply…</string>
     <string name="route_on_device">On device — chat stays on this phone</string>
 
     <string name="usage_title">Usage</string>
@@ -123,7 +135,7 @@
     <string name="usage_breakdown_line">%1$d requests · %2$d in · %3$d out</string>
 
     <string name="privacy_policy_s4c_title">4c. Cloud API chat</string>
-    <string name="privacy_policy_s4c_body">If you add a cloud provider in Settings → Cloud APIs and open a cloud chat, messages on that route are sent to the host in the base URL you saved (for example OpenRouter or OpenAI). That text leaves your phone. API keys are stored in Android\'s encrypted preferences on the device. Usage totals for those chats are kept locally and are not uploaded by the app.</string>
+    <string name="privacy_policy_s4c_body">If you add a cloud provider in Settings → Cloud APIs and select it from the model picker, messages on that route are sent to the host in the base URL you saved (for example OpenRouter or OpenAI). That text leaves your phone. API keys are stored in Android\'s encrypted preferences on the device. Usage totals for those chats are kept locally and are not uploaded by the app.</string>
     <string name="chidori_paired_section">Paired</string>
     <string name="chidori_discovered_section">Nearby on this network</string>
     <string name="chidori_discovering">Looking for chidori instances on this network…</string>

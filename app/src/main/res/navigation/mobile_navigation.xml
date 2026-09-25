@@ -19,6 +19,9 @@
         <action
             android:id="@+id/action_home_to_models"
             app:destination="@id/nav_models" />
+        <action
+            android:id="@+id/action_home_to_cloud_apis"
+            app:destination="@id/nav_cloud_apis" />
     </fragment>
 
     <fragment
@@ -68,20 +71,7 @@
     <fragment
         android:id="@+id/nav_cloud_apis"
         android:name="com.druk.lmplayground.cloud.CloudApisFragment"
-        android:label="@string/cloud_apis">
-        <action
-            android:id="@+id/action_cloud_apis_to_cloud_chat"
-            app:destination="@id/nav_cloud_chat" />
-    </fragment>
-
-    <fragment
-        android:id="@+id/nav_cloud_chat"
-        android:name="com.druk.lmplayground.cloud.CloudChatFragment"
-        android:label="@string/cloud_chat_title">
-        <argument
-            android:name="provider_id"
-            app:argType="string" />
-    </fragment>
+        android:label="@string/cloud_apis" />
 
     <fragment
         android:id="@+id/nav_usage"

@@ -48,6 +48,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.druk.lmplayground.R
+import com.druk.lmplayground.data.ChatRoute
 import com.druk.lmplayground.data.ChatSessionEntity
 
 @Composable
@@ -216,13 +217,22 @@ private fun SessionListContent(
                             modifier = Modifier.padding(horizontal = 12.dp, vertical = 12.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(
-                                text = session.title,
-                                style = MaterialTheme.typography.bodyMedium,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.weight(1f)
-                            )
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = session.title,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                                if (session.route == ChatRoute.CLOUD) {
+                                    Text(
+                                        text = stringResource(R.string.cloud_session_remote),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        maxLines = 1,
+                                    )
+                                }
+                            }
                             if (session.pinned) {
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Icon(

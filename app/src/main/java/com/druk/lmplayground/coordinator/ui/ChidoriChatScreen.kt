@@ -40,8 +40,11 @@ import com.druk.lmplayground.coordinator.model.RemoteChatMessage
  * Remote chat surface (PRD.md §6.4) — routed through the paired desktop's
  * coordinator. Bubbles reuse the on-device [Message] composable so replies
  * render like native LMPlayground chat (markdown, selection, share/copy).
- * The persistent "via &lt;desktop&gt;" banner stays — privacy provenance
- * (PRD §7) must remain visible even when the bubble chrome matches local chat.
+ *
+ * TODO(unify-transports): Same class of mistake as the former CloudChat
+ * screen — this is a second list/input/banner instead of a DESKTOP source
+ * on ConversationFragment. Follow-up: route through Conversation, drop
+ * [ConnectionBanner], extend ChatRoute + UsageRoute.DESKTOP recording.
  *
  * Streamed reply frames are coalesced in [ChidoriViewModel] (KMA-127) so
  * word-sized deltas do not each get their own bubble + action row.

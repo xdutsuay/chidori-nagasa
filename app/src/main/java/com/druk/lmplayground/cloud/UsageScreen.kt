@@ -54,52 +54,65 @@ fun UsageScreen(
             )
         },
     ) { padding ->
-        Column(
+        UsageContent(
+            state = state,
+            onRangeSelected = onRangeSelected,
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-        ) {
-            Row {
-                for (range in UsageRange.entries) {
-                    FilterChip(
-                        selected = state.range == range,
-                        onClick = { onRangeSelected(range) },
-                        label = { Text(range.label) },
-                        modifier = Modifier.padding(end = 8.dp),
-                    )
-                }
+                .padding(padding),
+        )
+    }
+}
+
+@Composable
+fun UsageContent(
+    state: UsageUiState,
+    onRangeSelected: (UsageRange) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier
+            .verticalScroll(rememberScrollState())
+            .padding(16.dp),
+    ) {
+        Row {
+            for (range in UsageRange.entries) {
+                FilterChip(
+                    selected = state.range == range,
+                    onClick = { onRangeSelected(range) },
+                    label = { Text(range.label) },
+                    modifier = Modifier.padding(end = 8.dp),
+                )
             }
-            Spacer(Modifier.height(16.dp))
-            Text(stringResource(R.string.usage_requests, state.totals.requests))
-            Text(stringResource(R.string.usage_tokens_in, state.totals.promptTokens))
-            Text(stringResource(R.string.usage_tokens_out, state.totals.completionTokens))
-            Text(
-                if (state.totals.costMicros != null) {
-                    stringResource(
-                        R.string.usage_cost_known,
-                        String.format(Locale.US, "%.4f", state.totals.costMicros / 1_000_000.0),
-                    )
-                } else {
-                    stringResource(R.string.usage_cost_unknown)
-                },
-            )
-            Text(
-                stringResource(R.string.usage_cost_caption),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Spacer(Modifier.height(16.dp))
-            Text(stringResource(R.string.usage_per_day), style = MaterialTheme.typography.titleMedium)
-            RequestsBarChart(state.perDay, MaterialTheme.colorScheme.primary)
-            Spacer(Modifier.height(16.dp))
-            Text(stringResource(R.string.usage_by_route), style = MaterialTheme.typography.titleMedium)
-            BreakdownTable(state.byRoute)
-            Spacer(Modifier.height(12.dp))
-            Text(stringResource(R.string.usage_by_model), style = MaterialTheme.typography.titleMedium)
-            BreakdownTable(state.byModel)
         }
+        Spacer(Modifier.height(16.dp))
+        Text(stringResource(R.string.usage_requests, state.totals.requests))
+        Text(stringResource(R.string.usage_tokens_in, state.totals.promptTokens))
+        Text(stringResource(R.string.usage_tokens_out, state.totals.completionTokens))
+        Text(
+            if (state.totals.costMicros != null) {
+                stringResource(
+                    R.string.usage_cost_known,
+                    String.format(Locale.US, "%.4f", state.totals.costMicros / 1_000_000.0),
+                )
+            } else {
+                stringResource(R.string.usage_cost_unknown)
+            },
+        )
+        Text(
+            stringResource(R.string.usage_cost_caption),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.height(16.dp))
+        Text(stringResource(R.string.usage_per_day), style = MaterialTheme.typography.titleMedium)
+        RequestsBarChart(state.perDay, MaterialTheme.colorScheme.primary)
+        Spacer(Modifier.height(16.dp))
+        Text(stringResource(R.string.usage_by_route), style = MaterialTheme.typography.titleMedium)
+        BreakdownTable(state.byRoute)
+        Spacer(Modifier.height(12.dp))
+        Text(stringResource(R.string.usage_by_model), style = MaterialTheme.typography.titleMedium)
+        BreakdownTable(state.byModel)
     }
 }
 

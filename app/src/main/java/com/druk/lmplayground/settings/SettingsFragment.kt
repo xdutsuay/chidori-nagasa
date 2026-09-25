@@ -56,6 +56,8 @@ class SettingsFragment : Fragment() {
     private val toolsViewModel: ToolsViewModel by viewModels()
     private val soundHapticViewModel: SoundHapticViewModel by viewModels()
     private val advancedViewModel: AdvancedViewModel by viewModels()
+    private val cloudApisViewModel: com.druk.lmplayground.cloud.CloudApisViewModel by viewModels()
+    private val usageViewModel: com.druk.lmplayground.cloud.UsageViewModel by viewModels()
 
     // Action deferred across the notification-permission request (a download
     // started only after the user answers the permission dialog).
@@ -269,6 +271,12 @@ class SettingsFragment : Fragment() {
                     advancedDetailContent = if (twoPane) {
                         { AdvancedDetailPane() }
                     } else null,
+                    cloudApisDetailContent = if (twoPane) {
+                        { CloudApisDetailPane() }
+                    } else null,
+                    usageDetailContent = if (twoPane) {
+                        { UsageDetailPane() }
+                    } else null,
                     initialDetailKey = openDetail,
                     masterWidth = masterWidth,
                     appVersion = BuildConfig.VERSION_NAME,
@@ -401,6 +409,45 @@ class SettingsFragment : Fragment() {
         AdvancedContent(
             repackEnabled = repackEnabled,
             onRepackEnabledChanged = { advancedViewModel.setRepackEnabled(it) },
+        )
+    }
+
+    @androidx.compose.runtime.Composable
+    private fun CloudApisDetailPane() {
+        val providers by cloudApisViewModel.providers.observeAsState(emptyList())
+        val status by cloudApisViewModel.status.observeAsState()
+        val testing by cloudApisViewModel.testing.observeAsState(false)
+        com.druk.lmplayground.cloud.CloudApisContent(
+            providers = providers,
+            status = status,
+            testing = testing == true,
+            hasKey = { cloudApisViewModel.hasKey(it) },
+            onSave = { presetId, name, baseUrl, apiKey, allowHttp, existingId ->
+                cloudApisViewModel.save(presetId, name, baseUrl, apiKey, allowHttp, existingId)
+            },
+            onDelete = { cloudApisViewModel.delete(it) },
+            onTest = { cloudApisViewModel.testConnection(it) },
+            onOpenChat = { id ->
+                parentFragmentManager.setFragmentResult(
+                    com.druk.lmplayground.conversation.ConversationFragment.REQUEST_OPEN_CLOUD_PROVIDER,
+                    androidx.core.os.bundleOf(
+                        com.druk.lmplayground.conversation.ConversationFragment.KEY_CLOUD_PROVIDER_ID to id,
+                    ),
+                )
+                findNavController().popBackStack(R.id.nav_home, false)
+            },
+            onClearStatus = { cloudApisViewModel.clearStatus() },
+        )
+    }
+
+    @androidx.compose.runtime.Composable
+    private fun UsageDetailPane() {
+        val state by usageViewModel.state.observeAsState(
+            com.druk.lmplayground.cloud.UsageUiState(),
+        )
+        com.druk.lmplayground.cloud.UsageContent(
+            state = state,
+            onRangeSelected = { usageViewModel.load(it) },
         )
     }
 

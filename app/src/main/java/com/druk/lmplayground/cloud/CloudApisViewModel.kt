@@ -6,6 +6,7 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import com.druk.lmplayground.App
+import com.druk.lmplayground.R
 import kotlinx.coroutines.launch
 import java.util.UUID
 
@@ -39,7 +40,7 @@ class CloudApisViewModel(app: Application) : AndroidViewModel(app) {
             return
         }
         if (apiKey.isBlank() && (existingId == null || !repo.hasKey(existingId))) {
-            _status.value = "Paste an API key"
+            _status.value = getApplication<Application>().getString(R.string.cloud_apis_status_paste_key)
             return
         }
         viewModelScope.launch {
@@ -55,11 +56,12 @@ class CloudApisViewModel(app: Application) : AndroidViewModel(app) {
                     updatedAt = System.currentTimeMillis(),
                 )
                 repo.saveProvider(entity, apiKey.takeIf { it.isNotBlank() })
-                _status.value = "Saved"
+                _status.value = getApplication<Application>().getString(R.string.cloud_apis_status_saved)
             } catch (e: CloudKeyStoreException) {
                 _status.value = e.message
             } catch (e: Exception) {
-                _status.value = e.message ?: "Save failed"
+                _status.value = e.message
+                    ?: getApplication<Application>().getString(R.string.cloud_apis_status_save_failed)
             }
         }
     }
@@ -67,7 +69,7 @@ class CloudApisViewModel(app: Application) : AndroidViewModel(app) {
     fun delete(id: String) {
         viewModelScope.launch {
             repo.deleteProvider(id)
-            _status.value = "Deleted"
+            _status.value = getApplication<Application>().getString(R.string.cloud_apis_status_deleted)
         }
     }
 
@@ -77,7 +79,8 @@ class CloudApisViewModel(app: Application) : AndroidViewModel(app) {
             try {
                 val provider = repo.getById(id)
                 if (provider == null) {
-                    _status.value = "Provider not found"
+                    _status.value = getApplication<Application>()
+                        .getString(R.string.cloud_apis_status_not_found)
                     return@launch
                 }
                 val key = repo.getKey(id)
@@ -88,7 +91,10 @@ class CloudApisViewModel(app: Application) : AndroidViewModel(app) {
                 val result = client.listModels(provider.baseUrl, key)
                 result.fold(
                     onSuccess = { models ->
-                        _status.value = "OK — ${models.size} models"
+                        _status.value = getApplication<Application>().getString(
+                            R.string.cloud_apis_status_test_ok,
+                            models.size,
+                        )
                         if (provider.defaultModel.isBlank() && models.isNotEmpty()) {
                             repo.saveProvider(
                                 provider.copy(defaultModel = models.first().id),
@@ -98,7 +104,9 @@ class CloudApisViewModel(app: Application) : AndroidViewModel(app) {
                     },
                     onFailure = { e ->
                         val msg = (e as? CloudClientException)?.error?.userMessage()
-                            ?: (e.message ?: "Test failed")
+                            ?: (e.message
+                                ?: getApplication<Application>()
+                                    .getString(R.string.cloud_apis_status_test_failed))
                         _status.value = msg
                     },
                 )

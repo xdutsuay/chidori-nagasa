@@ -67,10 +67,11 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.core.os.bundleOf
 import androidx.navigation.fragment.findNavController
-import com.druk.lmplayground.settings.SettingsFragment
+import com.druk.lmplayground.App
 import com.druk.lmplayground.MainActivity
 import com.druk.lmplayground.R
 import com.druk.lmplayground.models.SelectModelDialog
+import com.druk.lmplayground.settings.SettingsFragment
 import com.druk.lmplayground.storage.StorageViewModel
 import com.druk.lmplayground.theme.PlaygroundTheme
 import dev.chrisbanes.haze.HazeStyle
@@ -166,6 +167,20 @@ class ConversationFragment : Fragment() {
         pendingCaptureFile?.let { outState.putString(KEY_PENDING_CAPTURE_FILE, it.absolutePath) }
     }
 
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        // Listen with Fragment lifecycle (not viewLifecycleOwner) so the
+        // result still arrives while this fragment is on the back stack
+        // with its view destroyed after navigating to Cloud APIs.
+        parentFragmentManager.setFragmentResultListener(
+            REQUEST_OPEN_CLOUD_PROVIDER,
+            this,
+        ) { _, bundle ->
+            val id = bundle.getString(KEY_CLOUD_PROVIDER_ID) ?: return@setFragmentResultListener
+            viewModel.selectCloudProviderById(id)
+        }
+    }
+
     override fun onResume() {
         super.onResume()
         // After returning from the Tools screen (which marks the flag), hide the
@@ -200,6 +215,7 @@ class ConversationFragment : Fragment() {
             val progress by viewModel.modelLoadingProgress.observeAsState(0f)
             val modelInfo by viewModel.loadedModel.observeAsState()
             val modelStatus by viewModel.loadedModelStatus.observeAsState()
+            val cloudSource by viewModel.activeCloudSource.observeAsState()
             val supportsThinking by viewModel.supportsThinking.observeAsState(false)
             val supportsToolCalling by viewModel.supportsToolCalling.observeAsState(false)
             val showToolsSetup by viewModel.showToolsSetup.observeAsState(false)
@@ -209,6 +225,8 @@ class ConversationFragment : Fragment() {
             val currentImageUri by attachedImageUri
             val isModelReady by viewModel.isModelReady.observeAsState(false)
             val models by viewModel.models.observeAsState(emptyList())
+            val app = requireActivity().application as App
+            val cloudProviders by app.cloudProviderRepository.observeAll().observeAsState(emptyList())
             val sessions by viewModel.sessions.observeAsState(emptyList())
             val currentSessionId by viewModel.currentSessionId.observeAsState()
             val generationParams by viewModel.generationParams.observeAsState(GenerationParams())
@@ -528,7 +546,7 @@ class ConversationFragment : Fragment() {
                         // ---- Background (haze source): full-bleed content the
                         // frosted bars blur. Content padding keeps the first and
                         // last messages clear of the floating chrome.
-                        if (modelInfo == null && messages.isEmpty()) {
+                        if (modelInfo == null && cloudSource == null && messages.isEmpty()) {
                             Box(
                                 modifier = Modifier
                                     .fillMaxSize()
@@ -604,42 +622,56 @@ class ConversationFragment : Fragment() {
                             )
                         }
 
-                        // ---- Frosted top bar, floating over the content ----
-                        ConversationBar(
-                            modelInfo = modelInfo,
-                            modelStatus = modelStatus,
-                            showNavIcon = !showPermanent,
-                            compact = showPermanent,
-                            onNavIconPressed = {
-                                scope.launch { drawerState.open() }
-                            },
-                            colors = topBarColors,
-                            onModelNamePressed = {
-                                viewModel.loadModelList()
-                            },
-                            onNewSessionPressed = {
-                                viewModel.newConversation()
-                            },
+                        // ---- Frosted top bar + optional cloud provenance ----
+                        val activeCloud = cloudSource
+                        Column(
                             modifier = Modifier
                                 .align(Alignment.TopCenter)
                                 .onSizeChanged { topBarHeightPx = it.height }
-                                // Fade the frost in as content scrolls under the
-                                // bar; flush (no tint/elevation) at the top.
-                                .hazeEffect(hazeState, hazeStyle) { alpha = topBarFrost }
-                                .drawWithContent {
-                                    drawContent()
-                                    // Model-loading progress hairline along the
-                                    // bar's bottom edge.
-                                    val strokeWidth = 2.dp.toPx()
-                                    val y = size.height - strokeWidth / 2f
-                                    drawLine(
-                                        colorScheme.primary,
-                                        start = Offset(0f, y),
-                                        end = Offset(size.width * progress, y),
-                                        strokeWidth = strokeWidth
-                                    )
-                                }
-                        )
+                        ) {
+                            ConversationBar(
+                                modelInfo = activeCloud?.displayModelInfo() ?: modelInfo,
+                                modelStatus = if (activeCloud != null) {
+                                    activeCloud.model
+                                } else {
+                                    modelStatus
+                                },
+                                showNavIcon = !showPermanent,
+                                compact = showPermanent,
+                                onNavIconPressed = {
+                                    scope.launch { drawerState.open() }
+                                },
+                                colors = topBarColors,
+                                onModelNamePressed = {
+                                    viewModel.loadModelList()
+                                },
+                                onNewSessionPressed = {
+                                    viewModel.newConversation()
+                                },
+                                modifier = Modifier
+                                    .hazeEffect(hazeState, hazeStyle) { alpha = topBarFrost }
+                                    .drawWithContent {
+                                        drawContent()
+                                        val strokeWidth = 2.dp.toPx()
+                                        val y = size.height - strokeWidth / 2f
+                                        drawLine(
+                                            colorScheme.primary,
+                                            start = Offset(0f, y),
+                                            end = Offset(size.width * progress, y),
+                                            strokeWidth = strokeWidth
+                                        )
+                                    }
+                            )
+                            if (activeCloud != null) {
+                                RouteProvenanceBanner(
+                                    text = stringResource(
+                                        R.string.cloud_chat_banner,
+                                        activeCloud.provider.name,
+                                    ),
+                                    leavesDevice = true,
+                                )
+                            }
+                        }
 
                         // ---- Bottom dock (picker + frosted input) ----
                         Column(
@@ -677,16 +709,16 @@ class ConversationFragment : Fragment() {
                                     .navigationBarsPadding()
                                     .imePadding(),
                                 focusRequester = inputFocusRequester,
-                                status = if (modelInfo == null || !isModelReady)
-                                    UserInputStatus.NOT_LOADED
-                                else if (isGenerating == true)
-                                    UserInputStatus.GENERATING
-                                else
-                                    UserInputStatus.IDLE,
-                                supportsThinking = supportsThinking,
+                                status = when {
+                                    isGenerating == true -> UserInputStatus.GENERATING
+                                    cloudSource != null -> UserInputStatus.IDLE
+                                    modelInfo == null || !isModelReady -> UserInputStatus.NOT_LOADED
+                                    else -> UserInputStatus.IDLE
+                                },
+                                supportsThinking = supportsThinking && cloudSource == null,
                                 thinkingEnabled = thinkingEnabled,
                                 onThinkingToggle = { viewModel.toggleThinking() },
-                                supportsVision = supportsVision,
+                                supportsVision = supportsVision && cloudSource == null,
                                 cameraAvailable = cameraAvailable,
                                 attachedImageUri = currentImageUri,
                                 onAttachImage = {
@@ -735,7 +767,7 @@ class ConversationFragment : Fragment() {
                         JumpToBottom(
                             enabled = jumpEnabled &&
                                 sessionModelHint == null &&
-                                (modelInfo != null || messages.isNotEmpty()),
+                                (modelInfo != null || cloudSource != null || messages.isNotEmpty()),
                             onClicked = {
                                 scope.launch {
                                     val last = scrollState.layoutInfo.totalItemsCount - 1
@@ -750,19 +782,30 @@ class ConversationFragment : Fragment() {
                             hazeStyle = hazeStyle
                         )
 
-                        // Frosted model picker — kept inside the chat Box (and
-                        // drawn last) so its glass blurs the message list behind
-                        // it. A separate Dialog window couldn't be blurred by
-                        // Haze. The overlay already fills the chat pane, so no
-                        // chatPaneStartOffset is needed.
-                        if (models.isNotEmpty() && models.any { it.isDownloaded }) {
+                        // Frosted model picker — only while the user asked for
+                        // the list (models non-empty via loadModelList). Remote
+                        // keys ride along in that same sheet; they must not keep
+                        // the overlay open on their own.
+                        if (models.isNotEmpty() &&
+                            (models.any { it.isDownloaded } || cloudProviders.isNotEmpty())
+                        ) {
                             SelectModelDialog(
                                 models = models,
+                                cloudProviders = cloudProviders,
                                 isModelLoaded = modelInfo != null,
                                 hazeState = hazeState,
                                 hazeStyle = hazeStyle,
                                 onLoadModel = { model ->
                                     viewModel.loadModel(model)
+                                },
+                                onOpenCloudProvider = { provider ->
+                                    viewModel.selectCloudProvider(provider)
+                                },
+                                onManageCloudApis = {
+                                    val nav = findNavController()
+                                    if (nav.currentDestination?.id == R.id.nav_home) {
+                                        nav.navigate(R.id.action_home_to_cloud_apis)
+                                    }
                                 },
                                 onUnloadModel = {
                                     viewModel.unloadModel()
@@ -771,9 +814,6 @@ class ConversationFragment : Fragment() {
                                     showParamsSheet = true
                                 },
                                 onBrowseModels = {
-                                    // Guard against NavController throwing IllegalArgumentException
-                                    // when the user double-taps or another navigation moved us
-                                    // off nav_home before this callback fired.
                                     val nav = findNavController()
                                     if (nav.currentDestination?.id == R.id.nav_home) {
                                         nav.navigate(R.id.action_home_to_models)
@@ -787,13 +827,11 @@ class ConversationFragment : Fragment() {
                     }
                     }
 
-                    // Models exist but none are downloaded → jump straight to the
-                    // Models screen. (When some are downloaded, the frosted picker
-                    // overlay inside the chat Box above handles it.) The
-                    // session-info dialog stays a plain platform dialog.
+                    // Models exist but none are downloaded and no remote keys →
+                    // jump straight to the Models screen. With cloud providers the
+                    // frosted picker above stays up. Session-info stays a platform dialog.
                     if (models.isNotEmpty()) {
-                        if (models.none { it.isDownloaded }) {
-                            // No downloaded models - go directly to Models screen
+                        if (models.none { it.isDownloaded } && cloudProviders.isEmpty()) {
                             LaunchedEffect(Unit) {
                                 viewModel.resetModelList()
                                 if (findNavController().currentDestination?.id == R.id.nav_home) {
@@ -890,5 +928,7 @@ class ConversationFragment : Fragment() {
 
     companion object {
         private const val KEY_PENDING_CAPTURE_FILE = "pending_capture_file"
+        const val REQUEST_OPEN_CLOUD_PROVIDER = "open_cloud_provider"
+        const val KEY_CLOUD_PROVIDER_ID = "cloud_provider_id"
     }
 }

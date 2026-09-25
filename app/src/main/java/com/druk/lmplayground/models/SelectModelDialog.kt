@@ -21,6 +21,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AutoAwesome
+import androidx.compose.material.icons.outlined.Cloud
 import androidx.compose.material.icons.outlined.Eject
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Tune
@@ -47,6 +48,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.druk.lmplayground.R
+import com.druk.lmplayground.cloud.CloudProviderEntity
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.HazeStyle
 import dev.chrisbanes.haze.hazeEffect
@@ -54,6 +56,7 @@ import dev.chrisbanes.haze.hazeEffect
 @Composable
 fun SelectModelDialog(
     models: List<ModelWithStatus>,
+    cloudProviders: List<CloudProviderEntity> = emptyList(),
     isModelLoaded: Boolean = false,
     /**
      * When > 0, the dialog Card is centered inside the chat pane rather than
@@ -65,6 +68,8 @@ fun SelectModelDialog(
     hazeState: HazeState? = null,
     hazeStyle: HazeStyle = HazeStyle.Unspecified,
     onLoadModel: (ModelInfo) -> Unit,
+    onOpenCloudProvider: (CloudProviderEntity) -> Unit = {},
+    onManageCloudApis: () -> Unit = {},
     onUnloadModel: () -> Unit = {},
     onGenerationParams: () -> Unit = {},
     onBrowseModels: () -> Unit,
@@ -115,7 +120,7 @@ fun SelectModelDialog(
                 } else Modifier
             ) {
             LazyColumn {
-                if (downloadedModels.isEmpty()) {
+                if (downloadedModels.isEmpty() && cloudProviders.isEmpty()) {
                     item {
                         Text(
                             text = stringResource(R.string.no_downloaded_models),
@@ -142,6 +147,30 @@ fun SelectModelDialog(
                     }
                 }
 
+                if (cloudProviders.isNotEmpty()) {
+                    item {
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp))
+                        Text(
+                            text = stringResource(R.string.cloud_picker_section),
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        )
+                    }
+                    items(
+                        items = cloudProviders,
+                        key = { "cloud-" + it.id },
+                    ) { provider ->
+                        CloudProviderRow(
+                            provider = provider,
+                            onClick = {
+                                onDismissRequest()
+                                onOpenCloudProvider(provider)
+                            },
+                        )
+                    }
+                }
+
                 item {
                     HorizontalDivider(modifier = Modifier.padding(horizontal = 8.dp))
                     Spacer(modifier = Modifier.height(8.dp))
@@ -160,6 +189,22 @@ fun SelectModelDialog(
                             modifier = Modifier.padding(end = 8.dp)
                         )
                         Text(stringResource(R.string.browse_more_models))
+                    }
+                    TextButton(
+                        onClick = {
+                            onDismissRequest()
+                            onManageCloudApis()
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Cloud,
+                            contentDescription = null,
+                            modifier = Modifier.padding(end = 8.dp)
+                        )
+                        Text(stringResource(R.string.cloud_picker_manage))
                     }
                     if (isModelLoaded) {
                         TextButton(
@@ -200,6 +245,57 @@ fun SelectModelDialog(
             }
         }
         }
+    }
+}
+
+@Composable
+private fun CloudProviderRow(
+    provider: CloudProviderEntity,
+    onClick: () -> Unit,
+) {
+    val title = if (provider.defaultModel.isNotBlank()) {
+        stringResource(R.string.cloud_picker_row_model, provider.name, provider.defaultModel)
+    } else {
+        stringResource(R.string.cloud_picker_row, provider.name)
+    }
+    Button(
+        onClick = onClick,
+        colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.weight(1f),
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.Cloud,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(28.dp),
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    textAlign = TextAlign.Start,
+                    maxLines = 1,
+                )
+                Text(
+                    text = stringResource(R.string.cloud_picker_subtitle),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Start,
+                    maxLines = 1,
+                )
+            }
+        }
+        Icon(
+            imageVector = Icons.Outlined.AutoAwesome,
+            modifier = Modifier.padding(4.dp),
+            tint = MaterialTheme.colorScheme.onSurface,
+            contentDescription = null,
+        )
     }
 }
 

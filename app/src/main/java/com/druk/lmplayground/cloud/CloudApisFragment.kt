@@ -12,8 +12,10 @@ import androidx.compose.ui.platform.ComposeView
 import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.fragment.app.setFragmentResult
 import androidx.navigation.fragment.findNavController
 import com.druk.lmplayground.R
+import com.druk.lmplayground.conversation.ConversationFragment
 import com.druk.lmplayground.theme.PlaygroundTheme
 
 class CloudApisFragment : Fragment() {
@@ -42,12 +44,11 @@ class CloudApisFragment : Fragment() {
                     onDelete = { viewModel.delete(it) },
                     onTest = { viewModel.testConnection(it) },
                     onOpenChat = { id ->
-                        if (findNavController().currentDestination?.id == R.id.nav_cloud_apis) {
-                            findNavController().navigate(
-                                R.id.action_cloud_apis_to_cloud_chat,
-                                bundleOf(CloudChatFragment.ARG_PROVIDER_ID to id),
-                            )
-                        }
+                        setFragmentResult(
+                            ConversationFragment.REQUEST_OPEN_CLOUD_PROVIDER,
+                            bundleOf(ConversationFragment.KEY_CLOUD_PROVIDER_ID to id),
+                        )
+                        findNavController().popBackStack(R.id.nav_home, false)
                     },
                     onClearStatus = { viewModel.clearStatus() },
                 )

@@ -114,6 +114,14 @@ fun SettingsScreen(
      */
     advancedDetailContent: (@Composable () -> Unit)? = null,
     /**
+     * Tablet-only: Cloud APIs settings content.
+     */
+    cloudApisDetailContent: (@Composable () -> Unit)? = null,
+    /**
+     * Tablet-only: Usage totals content.
+     */
+    usageDetailContent: (@Composable () -> Unit)? = null,
+    /**
      * Optional deep-link target: when "tools", the screen opens directly on the
      * Tools detail (tablet). Used by the What's New "Set up tools" button.
      */
@@ -241,8 +249,20 @@ fun SettingsScreen(
                         onPrivacyPolicyClick = { detail = SettingsDetail.PrivacyPolicy },
                         onFaqClick = { detail = SettingsDetail.Faq },
                         onChidoriClick = { detail = SettingsDetail.Chidori },
-                        onCloudApisClick = { onCloudApisClick() },
-                        onUsageClick = { onUsageClick() },
+                        onCloudApisClick = {
+                            if (cloudApisDetailContent != null) {
+                                detail = SettingsDetail.CloudApis
+                            } else {
+                                onCloudApisClick()
+                            }
+                        },
+                        onUsageClick = {
+                            if (usageDetailContent != null) {
+                                detail = SettingsDetail.Usage
+                            } else {
+                                onUsageClick()
+                            }
+                        },
                         onCrashEngineClick = onCrashEngineClick
                     )
                 }
@@ -279,11 +299,8 @@ fun SettingsScreen(
                     when (detail) {
                         SettingsDetail.Models -> modelsDetailContent?.invoke()
                         SettingsDetail.Prompts -> promptsDetailContent?.invoke()
-                        SettingsDetail.CloudApis, SettingsDetail.Usage -> {
-                            // Phone-style full screens; tablet navigates via the
-                            // master-list callbacks rather than embedding here.
-                            Unit
-                        }
+                        SettingsDetail.CloudApis -> cloudApisDetailContent?.invoke()
+                        SettingsDetail.Usage -> usageDetailContent?.invoke()
                         SettingsDetail.Language -> languageDetailContent?.invoke()
                         SettingsDetail.Tools -> toolsDetailContent?.invoke()
                         SettingsDetail.SoundHaptic -> soundHapticDetailContent?.invoke()

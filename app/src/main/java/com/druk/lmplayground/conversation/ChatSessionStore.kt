@@ -4,6 +4,7 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import com.druk.lmplayground.data.ChatMessageEntity
 import com.druk.lmplayground.data.ChatRepository
+import com.druk.lmplayground.data.ChatRoute
 import com.druk.lmplayground.data.ChatSessionEntity
 import com.druk.lmplayground.data.ConversationMetadata
 import com.druk.lmplayground.data.SystemPromptEntity
@@ -40,24 +41,36 @@ class ChatSessionStore(
 
     /**
      * Create and persist a new session row titled after [firstUserMessage],
-     * carrying the loaded model's identity, the active generation params and
-     * system prompt. Returns the new session id.
+     * carrying the loaded model's identity (or cloud provider/model), the
+     * active generation params and system prompt. Returns the new session id.
      */
     suspend fun createSession(
         firstUserMessage: Message,
         modelInfo: ModelInfo?,
         params: GenerationParams,
         systemPrompt: String,
+        route: String = ChatRoute.LOCAL,
+        cloudProviderId: String? = null,
+        cloudModel: String? = null,
     ): String {
         val id = UUID.randomUUID().toString()
         val title = firstUserMessage.content.take(50)
         val now = System.currentTimeMillis()
+        val isCloud = route == ChatRoute.CLOUD
         chatRepository?.insertSession(
             ChatSessionEntity(
                 id = id,
                 title = title,
-                modelFilename = modelInfo?.filename ?: "",
-                modelName = modelInfo?.name ?: "Unknown",
+                modelFilename = if (isCloud) {
+                    cloudModel.orEmpty()
+                } else {
+                    modelInfo?.filename.orEmpty()
+                },
+                modelName = if (isCloud) {
+                    modelInfo?.name ?: cloudModel ?: "Cloud"
+                } else {
+                    modelInfo?.name ?: "Unknown"
+                },
                 createdAt = now,
                 updatedAt = now,
                 contextSize = params.contextSize,
@@ -68,7 +81,10 @@ class ChatSessionStore(
                 minP = params.minP,
                 seed = params.seed,
                 thinkingBudget = params.thinkingBudget,
-                systemPrompt = systemPrompt
+                systemPrompt = systemPrompt,
+                route = route,
+                cloudProviderId = cloudProviderId,
+                cloudModel = cloudModel,
             )
         )
         return id
