@@ -17,9 +17,15 @@ COMPANION (chidori desktop)
 • Remote chat through the desktop's attached models
 • Opt-in phone-as-inference-node (foreground service)
 
+CLOUD APIS (optional)
+
+• Paste your own OpenAI-compatible API keys (OpenRouter, OpenAI, Groq, …)
+• Chat through those providers from the main Conversation screen
+• Local usage history for on-device and cloud requests
+
 PRIVACY
 
-No accounts, ads, or analytics. Model catalog downloads use Hugging Face. Optional tools reach the internet only when you enable them. Companion traffic stays on your LAN (cleartext HTTP in v1).
+No accounts, ads, or analytics. Model catalog downloads use Hugging Face. Optional tools and cloud APIs reach the internet only when you enable them and supply keys. Companion traffic stays on your LAN (cleartext HTTP in v1).
 
 OPEN SOURCE
 

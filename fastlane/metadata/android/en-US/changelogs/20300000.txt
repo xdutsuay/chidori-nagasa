@@ -1,0 +1,4 @@
+- Cloud APIs: paste OpenAI-compatible keys, chat via OpenRouter/OpenAI/Groq
+- Usage dashboard for on-device and cloud request history
+- Remote API chat unified into the main Conversation screen
+- F-Droid: stable version metadata, cleaner Gradle settings for scanners
