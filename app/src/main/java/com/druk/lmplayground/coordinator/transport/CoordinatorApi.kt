@@ -5,6 +5,8 @@ import com.druk.lmplayground.coordinator.model.AgentMode
 import com.druk.lmplayground.coordinator.model.AgentRunDetail
 import com.druk.lmplayground.coordinator.model.AgentRunState
 import com.druk.lmplayground.coordinator.model.AgentRunSummary
+import com.druk.lmplayground.coordinator.model.ApplyEditsRequest
+import com.druk.lmplayground.coordinator.model.ApplyEditsResult
 import com.druk.lmplayground.coordinator.model.CompanionNotificationEvent
 import com.druk.lmplayground.coordinator.model.CoordinatorConnectionState
 import com.druk.lmplayground.coordinator.model.CoordinatorStatus
@@ -12,7 +14,9 @@ import com.druk.lmplayground.coordinator.model.CoordinatorStatusInfo
 import com.druk.lmplayground.coordinator.model.InstanceId
 import com.druk.lmplayground.coordinator.model.NotificationsPage
 import com.druk.lmplayground.coordinator.model.ProtocolVersion
+import com.druk.lmplayground.coordinator.model.ProposedEdit
 import com.druk.lmplayground.coordinator.model.RemoteChatMessage
+import com.druk.lmplayground.coordinator.model.RunPR
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
@@ -111,6 +115,35 @@ interface CoordinatorApi {
 
     /** POST /runs/{run_id}/messages — inject a follow-up prompt (KMA-129). */
     suspend fun injectRunMessage(instanceId: InstanceId, runId: String, text: String): String
+
+    /**
+     * POST /runs/{run_id}/approve — resume a paused workflow gate (KMA-288).
+     * Body carries [workflowRunId] (separate namespace from companion [runId]).
+     * HTTP 200 and 202 are both success (completed vs still paused).
+     */
+    suspend fun approveRun(instanceId: InstanceId, runId: String, workflowRunId: String)
+
+    /**
+     * POST /runs/{run_id}/reject — explicit gate reject ack (KMA-288).
+     * Never resumes the workflow run; body still carries [workflowRunId] for audit.
+     */
+    suspend fun rejectRun(instanceId: InstanceId, runId: String, workflowRunId: String)
+
+    /**
+     * POST /runs/{run_id}/edits/accept — apply a proposed edit set (KMA-288).
+     * Wire shape matches IDE POST /api/agent/apply-edits.
+     */
+    suspend fun acceptRunEdits(
+        instanceId: InstanceId,
+        runId: String,
+        request: ApplyEditsRequest,
+    ): ApplyEditsResult
+
+    /**
+     * POST /runs/{run_id}/edits/reject — drop a proposed edit set (KMA-288).
+     * Explicit ack only; nothing is written to disk.
+     */
+    suspend fun rejectRunEdits(instanceId: InstanceId, runId: String, request: ApplyEditsRequest)
 
     fun observeRemoteChat(instanceId: InstanceId): Flow<RemoteChatMessage>
 
@@ -449,6 +482,79 @@ class OkHttpCoordinatorApi(
         }
     }
 
+    override suspend fun approveRun(instanceId: InstanceId, runId: String, workflowRunId: String) {
+        val body = JSONObject().put("workflow_run_id", workflowRunId).toString()
+        val request = authedRequest(instanceId, "/runs/$runId/approve")
+            ?.post(body.toRequestBody(JSON_MEDIA_TYPE.toMediaType()))
+            ?.build()
+            ?: throw IOException("No known endpoint for ${instanceId.value}")
+        onIo {
+            client.newCall(request).execute().use { response ->
+                // 200 = completed, 202 = still paused — both are success for
+                // the phone (mirrors IDE approve / companion contract).
+                if (response.code != 200 && response.code != 202) {
+                    throw IOException("POST /runs/$runId/approve → HTTP ${response.code}")
+                }
+            }
+        }
+    }
+
+    override suspend fun rejectRun(instanceId: InstanceId, runId: String, workflowRunId: String) {
+        val body = JSONObject().put("workflow_run_id", workflowRunId).toString()
+        val request = authedRequest(instanceId, "/runs/$runId/reject")
+            ?.post(body.toRequestBody(JSON_MEDIA_TYPE.toMediaType()))
+            ?.build()
+            ?: throw IOException("No known endpoint for ${instanceId.value}")
+        onIo {
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) {
+                    throw IOException("POST /runs/$runId/reject → HTTP ${response.code}")
+                }
+            }
+        }
+    }
+
+    override suspend fun acceptRunEdits(
+        instanceId: InstanceId,
+        runId: String,
+        request: ApplyEditsRequest,
+    ): ApplyEditsResult {
+        val httpRequest = authedRequest(instanceId, "/runs/$runId/edits/accept")
+            ?.post(request.toJsonBody().toRequestBody(JSON_MEDIA_TYPE.toMediaType()))
+            ?.build()
+            ?: throw IOException("No known endpoint for ${instanceId.value}")
+        return onIo {
+            client.newCall(httpRequest).execute().use { response ->
+                if (!response.isSuccessful) {
+                    throw IOException("POST /runs/$runId/edits/accept → HTTP ${response.code}")
+                }
+                val json = JSONObject(response.body?.string() ?: "{}")
+                ApplyEditsResult(
+                    applied = json.stringList("applied"),
+                    failed = json.stringList("failed"),
+                )
+            }
+        }
+    }
+
+    override suspend fun rejectRunEdits(
+        instanceId: InstanceId,
+        runId: String,
+        request: ApplyEditsRequest,
+    ) {
+        val httpRequest = authedRequest(instanceId, "/runs/$runId/edits/reject")
+            ?.post(request.toJsonBody().toRequestBody(JSON_MEDIA_TYPE.toMediaType()))
+            ?.build()
+            ?: throw IOException("No known endpoint for ${instanceId.value}")
+        onIo {
+            client.newCall(httpRequest).execute().use { response ->
+                if (!response.isSuccessful) {
+                    throw IOException("POST /runs/$runId/edits/reject → HTTP ${response.code}")
+                }
+            }
+        }
+    }
+
     private fun JSONObject.toAgentRunSummary() = AgentRunSummary(
         runId = getString("run_id"),
         mode = when (optString("mode")) {
@@ -467,7 +573,45 @@ class OkHttpCoordinatorApi(
             else -> AgentRunState.RUNNING
         },
         currentStep = optString("current_step").takeIf { it.isNotBlank() },
+        reason = optString("reason").takeIf { it.isNotBlank() },
+        branch = optString("branch").takeIf { it.isNotBlank() },
+        pr = optJSONObject("pr")?.toRunPR(),
     )
+
+    private fun JSONObject.toRunPR() = RunPR(
+        state = optString("state"),
+        number = if (has("number") && !isNull("number")) getInt("number") else null,
+        url = optString("url").takeIf { it.isNotBlank() },
+        checksStatus = optString("checks_status").takeIf { it.isNotBlank() },
+        checksUrl = optString("checks_url").takeIf { it.isNotBlank() },
+    )
+
+    private fun ApplyEditsRequest.toJsonBody(): String {
+        val json = JSONObject()
+        sessionId?.takeIf { it.isNotBlank() }?.let { json.put("session_id", it) }
+        val editsArray = org.json.JSONArray()
+        for (edit in edits) {
+            editsArray.put(edit.toJson())
+        }
+        json.put("edits", editsArray)
+        return json.toString()
+    }
+
+    private fun ProposedEdit.toJson(): JSONObject {
+        val json = JSONObject()
+            .put("path", path)
+            .put("kind", kind)
+            .put("after", after)
+        if (before.isNotEmpty()) json.put("before", before)
+        id?.takeIf { it.isNotBlank() }?.let { json.put("id", it) }
+        summary?.takeIf { it.isNotBlank() }?.let { json.put("summary", it) }
+        return json
+    }
+
+    private fun JSONObject.stringList(key: String): List<String> {
+        val arr = optJSONArray(key) ?: return emptyList()
+        return (0 until arr.length()).map { arr.getString(it) }
+    }
 
     // One live chat socket per instance ("one logical stream per paired
     // instance" — WIRE_CONTRACT.md). Owned by observeRemoteChat's collector:

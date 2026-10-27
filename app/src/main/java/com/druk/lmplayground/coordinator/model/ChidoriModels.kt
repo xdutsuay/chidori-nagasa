@@ -103,6 +103,18 @@ enum class AgentRunState {
     NEEDS_YOU,
 }
 
+/**
+ * PR-axis snapshot on a run summary (KMA-288). Independent of lifecycle
+ * state. [state] is the wire token: none|draft|open|merged|closed.
+ */
+data class RunPR(
+    val state: String,
+    val number: Int? = null,
+    val url: String? = null,
+    val checksStatus: String? = null,
+    val checksUrl: String? = null,
+)
+
 data class AgentRunSummary(
     val runId: String,
     val mode: AgentMode,
@@ -110,6 +122,12 @@ data class AgentRunSummary(
     val state: AgentRunState,
     /** Live step when state is RUNNING (optional wire field). */
     val currentStep: String? = null,
+    /** Why the run ended this way (e.g. needs_you reason); omitted → null. */
+    val reason: String? = null,
+    /** Git branch label when the desktop sets one (KMA-288); omitted → null. */
+    val branch: String? = null,
+    /** PR-axis snapshot when present on the wire (KMA-288); omitted → null. */
+    val pr: RunPR? = null,
 )
 
 data class AgentRunDetail(
@@ -117,6 +135,28 @@ data class AgentRunDetail(
     val currentStep: String?,
     /** Tail of the run's log output — read-only, protocol §2.4 (v1 has no control actions). */
     val logTail: List<String>,
+)
+
+/** One proposed file edit — matches desktop `agent.ProposedEdit` / ApplyEditsRequest. */
+data class ProposedEdit(
+    val path: String,
+    val kind: String = "write_file",
+    val after: String = "",
+    val before: String = "",
+    val id: String? = null,
+    val summary: String? = null,
+)
+
+/** Body for POST /runs/{id}/edits/accept|reject (IDE ApplyEditsRequest shape). */
+data class ApplyEditsRequest(
+    val edits: List<ProposedEdit>,
+    val sessionId: String? = null,
+)
+
+/** Response from POST /runs/{id}/edits/accept. */
+data class ApplyEditsResult(
+    val applied: List<String>,
+    val failed: List<String>,
 )
 
 /** One run-state event from GET /notifications (KMA-288). [state] carries

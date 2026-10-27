@@ -5,6 +5,8 @@ import com.druk.lmplayground.coordinator.discovery.InstanceDiscovery
 import com.druk.lmplayground.coordinator.discovery.NsdInstanceDiscovery
 import com.druk.lmplayground.coordinator.model.AgentRunDetail
 import com.druk.lmplayground.coordinator.model.AgentRunSummary
+import com.druk.lmplayground.coordinator.model.ApplyEditsRequest
+import com.druk.lmplayground.coordinator.model.ApplyEditsResult
 import com.druk.lmplayground.coordinator.model.CoordinatorConnectionState
 import com.druk.lmplayground.coordinator.model.CoordinatorStatusInfo
 import com.druk.lmplayground.coordinator.model.DiscoveredInstance
@@ -102,6 +104,28 @@ class CoordinatorRepository(context: Context) {
 
     suspend fun injectRunMessage(instanceId: InstanceId, runId: String, text: String): String =
         api.injectRunMessage(instanceId, runId, text)
+
+    /** POST /runs/{id}/approve — workflow gate (KMA-288). */
+    suspend fun approveRun(instanceId: InstanceId, runId: String, workflowRunId: String) =
+        api.approveRun(instanceId, runId, workflowRunId)
+
+    /** POST /runs/{id}/reject — workflow gate ack (KMA-288). */
+    suspend fun rejectRun(instanceId: InstanceId, runId: String, workflowRunId: String) =
+        api.rejectRun(instanceId, runId, workflowRunId)
+
+    /** POST /runs/{id}/edits/accept (KMA-288). */
+    suspend fun acceptRunEdits(
+        instanceId: InstanceId,
+        runId: String,
+        request: ApplyEditsRequest,
+    ): ApplyEditsResult = api.acceptRunEdits(instanceId, runId, request)
+
+    /** POST /runs/{id}/edits/reject (KMA-288). */
+    suspend fun rejectRunEdits(
+        instanceId: InstanceId,
+        runId: String,
+        request: ApplyEditsRequest,
+    ) = api.rejectRunEdits(instanceId, runId, request)
 
     // Remote chat (protocol §2.4, PRD.md §6.4). The flow opens the chat
     // socket on collect and closes it on cancel; send throws IOException
