@@ -128,6 +128,12 @@ data class AgentRunSummary(
     val branch: String? = null,
     /** PR-axis snapshot when present on the wire (KMA-288); omitted → null. */
     val pr: RunPR? = null,
+    /**
+     * Workflow-engine run id when this companion run is tied to a paused
+     * approval_gate (KMA-288). Distinct from [runId]; gate approve/reject
+     * must send this as `workflow_run_id`. Omitted → null.
+     */
+    val workflowRunId: String? = null,
 )
 
 data class AgentRunDetail(

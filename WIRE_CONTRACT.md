@@ -90,6 +90,7 @@ GET /runs?limit=50
                     "state": "running"|"completed"|"failed"|"needs_you",
                     "reason": string?,
                     "branch": string?,
+                    "workflow_run_id": string?,
                     "pr": { "state": "none"|"draft"|"open"|"merged"|"closed",
                             "number": int?, "url": string?,
                             "checks_status": "pending"|"pass"|"fail"?,
@@ -106,8 +107,8 @@ WS /runs/{run_id}/stream
 No `POST /runs` to *start* a new run from the phone (protocol §2.4's
 explicit v1 non-goal). A `needs_you` state (KMA-288) means the desktop is
 blocked waiting on the user; the phone must never render it as merely
-`running`. Optional `pr` / `reason` / `branch` are omitted when unset so
-older summaries stay wire-compatible.
+`running`. Optional `pr` / `reason` / `branch` / `workflow_run_id` are
+omitted when unset so older summaries stay wire-compatible.
 
 ## Run gate + edit actions (KMA-288)
 
@@ -139,8 +140,10 @@ POST /runs/{run_id}/edits/reject
   (explicit ack only — nothing written to disk)
 ```
 
-Until the desktop summary carries an explicit `workflow_run_id`, the phone
-may send the companion `run_id` as `workflow_run_id` for gate actions.
+`GET /runs` / `GET /runs/{id}` may include optional `workflow_run_id` on the
+summary when the run is tied to a paused `approval_gate`. The phone must
+prefer that value for gate approve/reject bodies; falling back to companion
+`run_id` is only for older desktops that omit the field.
 
 ## Run notifications (KMA-288)
 

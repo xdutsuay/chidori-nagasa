@@ -489,20 +489,36 @@ class ChidoriViewModel(
 
     /**
      * Approve a paused workflow gate for the open run detail (KMA-288).
-     * Until the desktop puts `workflow_run_id` on the companion summary, the
-     * phone sends the companion [runId] as the workflow run id.
+     * Prefer summary.workflowRunId (workflow-engine namespace); fall back to
+     * companion runId only when the desktop has not yet linked the gate.
      */
     fun approveRunGate() {
         runGateAction { instanceId, runId ->
-            coordinatorRepository.approveRun(instanceId, runId, workflowRunId = runId)
+            val wfRunId = workflowRunIdForGate(runId)
+            coordinatorRepository.approveRun(instanceId, runId, workflowRunId = wfRunId)
         }
     }
 
     /** Reject a paused workflow gate (explicit ack; never resumes) — KMA-288. */
     fun rejectRunGate() {
         runGateAction { instanceId, runId ->
-            coordinatorRepository.rejectRun(instanceId, runId, workflowRunId = runId)
+            val wfRunId = workflowRunIdForGate(runId)
+            coordinatorRepository.rejectRun(instanceId, runId, workflowRunId = wfRunId)
         }
+    }
+
+    /** Workflow-engine id from open detail / list row; else companion runId. */
+    private fun workflowRunIdForGate(runId: String): String {
+        val fromDetail = _monitorRunDetail.value?.summary
+            ?.takeIf { it.runId == runId }
+            ?.workflowRunId
+            ?.takeIf { it.isNotBlank() }
+        if (fromDetail != null) return fromDetail
+        val fromList = _monitorRuns.value
+            .firstOrNull { it.runId == runId }
+            ?.workflowRunId
+            ?.takeIf { it.isNotBlank() }
+        return fromList ?: runId
     }
 
     /**

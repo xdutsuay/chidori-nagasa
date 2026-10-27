@@ -576,6 +576,7 @@ class OkHttpCoordinatorApi(
         reason = optString("reason").takeIf { it.isNotBlank() },
         branch = optString("branch").takeIf { it.isNotBlank() },
         pr = optJSONObject("pr")?.toRunPR(),
+        workflowRunId = optString("workflow_run_id").takeIf { it.isNotBlank() },
     )
 
     private fun JSONObject.toRunPR() = RunPR(

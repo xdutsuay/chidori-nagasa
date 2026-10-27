@@ -64,11 +64,11 @@ import java.io.IOException
  *
  * 3. ViewModel/UI (thin, not covered here): when a run is NEEDS_YOU, expose
  *    approve/reject gate + accept/reject edits actions; surface `pr` on the
- *    monitor row when non-null. Until desktop puts `workflow_run_id` on the
- *    summary, the UI may pass the companion `run_id` as `workflowRunId`.
+ *    monitor row when non-null. Prefer summary `workflow_run_id` for gate
+ *    bodies; fall back to companion `run_id` only when the field is absent.
  *
  * 4. Amend WIRE_CONTRACT.md with the four routes + optional `pr`/`reason`/
- *    `branch` on run summary.
+ *    `branch`/`workflow_run_id` on run summary.
  */
 class ChidoriApproveApiTest {
 
@@ -234,7 +234,7 @@ class ChidoriApproveApiTest {
     // ---- summary pr / reason / branch mapping ----------------------------
 
     @Test
-    fun `listRuns maps optional reason branch and pr from the wire`() = runTest {
+    fun `listRuns maps optional reason branch pr and workflow_run_id from the wire`() = runTest {
         val responseJson = """
             {"runs":[{
               "run_id":"r-pr",
@@ -243,6 +243,7 @@ class ChidoriApproveApiTest {
               "state":"needs_you",
               "reason":"awaiting clarification",
               "branch":"feat/kma-288",
+              "workflow_run_id":"wf-engine-7",
               "pr":{
                 "state":"open",
                 "number":42,
@@ -261,6 +262,7 @@ class ChidoriApproveApiTest {
         assertEquals(AgentRunState.NEEDS_YOU, run.state)
         assertEquals("awaiting clarification", run.reason)
         assertEquals("feat/kma-288", run.branch)
+        assertEquals("wf-engine-7", run.workflowRunId)
         val pr = run.pr
         assertNotNull(pr)
         assertEquals("open", pr!!.state)
@@ -271,7 +273,7 @@ class ChidoriApproveApiTest {
     }
 
     @Test
-    fun `listRuns leaves reason branch pr null when omitted on the wire`() = runTest {
+    fun `listRuns leaves reason branch pr workflow_run_id null when omitted on the wire`() = runTest {
         val responseJson =
             """{"runs":[{"run_id":"r1","mode":"ask","started_at":1,"state":"running"}]}"""
         server.enqueue(MockResponse().setResponseCode(200).setBody(responseJson))
@@ -281,6 +283,7 @@ class ChidoriApproveApiTest {
         assertNull(run.reason)
         assertNull(run.branch)
         assertNull(run.pr)
+        assertNull(run.workflowRunId)
     }
 
     @Test
