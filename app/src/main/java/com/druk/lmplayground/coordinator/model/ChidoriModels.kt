@@ -95,6 +95,12 @@ enum class AgentRunState {
     RUNNING,
     COMPLETED,
     FAILED,
+    /**
+     * Desktop is blocked waiting on the user (KMA-288) — a needs_you run
+     * must never render as merely RUNNING (desktop board made the same
+     * distinction).
+     */
+    NEEDS_YOU,
 }
 
 data class AgentRunSummary(
@@ -111,6 +117,25 @@ data class AgentRunDetail(
     val currentStep: String?,
     /** Tail of the run's log output — read-only, protocol §2.4 (v1 has no control actions). */
     val logTail: List<String>,
+)
+
+/** One run-state event from GET /notifications (KMA-288). [state] carries
+ * the raw wire token ("running"|"completed"|"failed"|"needs_you" —
+ * internal/api/chidori_contract.go), not a mapped enum. */
+data class CompanionNotificationEvent(
+    val id: Long,
+    val runId: String,
+    val state: String,
+    val reason: String,
+    val ts: Long,
+)
+
+/** One page of GET /notifications (KMA-288). [cursor] is the new since-cursor:
+ * the highest delivered event id, unchanged when the page is empty — so
+ * callers may blindly assign `since = cursor` after every response. */
+data class NotificationsPage(
+    val events: List<CompanionNotificationEvent>,
+    val cursor: Long,
 )
 
 /** One message in a chat routed through the desktop's attached local/remote LLM (protocol §2.4). */

@@ -16,6 +16,8 @@ import com.druk.lmplayground.coordinator.model.PairedInstance
 import com.druk.lmplayground.coordinator.model.PairingState
 import com.druk.lmplayground.coordinator.model.ProtocolVersion
 import com.druk.lmplayground.coordinator.model.RemoteChatMessage
+import com.druk.lmplayground.coordinator.notifications.NeedsYouNotification
+import com.druk.lmplayground.coordinator.notifications.dispatchNeedsYou
 import com.druk.lmplayground.coordinator.node.NodeInferenceHub
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -27,6 +29,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlin.coroutines.cancellation.CancellationException
 
 /**
  * Backs the Settings -> Chidori Desktop screen (PRD.md §6.2/§6.3/§6.4,
@@ -107,6 +110,11 @@ class ChidoriViewModel(
     private var monitorJob: Job? = null
     private var detailRunId: String? = null
     private var consecutivePollFailures = 0
+
+    // Background needs_you long-poll (KMA-288) — runs while the monitor is
+    // open, independent of the status/runs poll interval.
+    private var notifyJob: Job? = null
+    private var notifySince = 0L
 
     init {
         viewModelScope.launch {
@@ -283,6 +291,7 @@ class ChidoriViewModel(
                 delay(POLL_INTERVAL_MILLIS)
             }
         }
+        startNeedsYouLoop(instance.instanceId)
     }
 
     private suspend fun pollMonitorOnce(instanceId: InstanceId) {
@@ -354,6 +363,39 @@ class ChidoriViewModel(
         _monitorRunningSteps.value = steps
     }
 
+    /**
+     * Background long-poll for needs_you run events (KMA-288). Advances
+     * `since = page.cursor` after every response (an empty page keeps the
+     * cursor, so blind assignment is correct) and dispatches only
+     * needs_you events to the system-notification poster. wait_ms stays
+     * well inside the desktop's 30 s long-poll clamp, and the API derives
+     * a per-call read timeout above wait_ms (KMA-288 contract item 4).
+     * Any failure (stale token, desktop gone) backs off and retries.
+     */
+    private fun startNeedsYouLoop(instanceId: InstanceId) {
+        notifyJob?.cancel()
+        notifySince = 0L
+        notifyJob = viewModelScope.launch {
+            while (isActive) {
+                try {
+                    val page = coordinatorRepository.pollNotifications(
+                        instanceId,
+                        notifySince,
+                        NEEDS_YOU_WAIT_MS,
+                    )
+                    notifySince = page.cursor
+                    dispatchNeedsYou(page.events, notifier = { runId, reason ->
+                        NeedsYouNotification.post(getApplication(), runId, reason)
+                    })
+                } catch (cancelled: CancellationException) {
+                    throw cancelled
+                } catch (failure: Exception) {
+                    delay(NEEDS_YOU_RETRY_DELAY_MS)
+                }
+            }
+        }
+    }
+
     fun closeMonitor() {
         val offered = _monitoredInstance.value
         if (_nodeOffering.value && offered != null) {
@@ -365,6 +407,8 @@ class ChidoriViewModel(
         closeChat()
         monitorJob?.cancel()
         monitorJob = null
+        notifyJob?.cancel()
+        notifyJob = null
         detailRunId = null
         consecutivePollFailures = 0
         _monitoredInstance.value = null
@@ -540,5 +584,11 @@ class ChidoriViewModel(
         const val POLL_FAILURES_BEFORE_DISCONNECT = 2
         const val MAX_RUNNING_STEP_FETCHES = 3
         const val KEY_MONITORED_INSTANCE_ID = "monitored-instance-id"
+
+        // KMA-288 long-poll wait: inside the desktop's 30 s clamp with head
+        // room for the round trip, so an idle desktop answers before the
+        // client's derived read timeout (wait_ms + margin) elapses.
+        const val NEEDS_YOU_WAIT_MS = 20_000L
+        const val NEEDS_YOU_RETRY_DELAY_MS = 5_000L
     }
 }

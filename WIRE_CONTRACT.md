@@ -87,7 +87,7 @@ WS /coordinator/status/stream
 GET /runs?limit=50
   -> { "runs": [ { "run_id": "...", "mode": "ask"|"agent"|"plan"|"debug",
                     "started_at": <epoch millis>,
-                    "state": "running"|"completed"|"failed" } ] }
+                    "state": "running"|"completed"|"failed"|"needs_you" } ] }
 
 GET /runs/{run_id}
   -> { "summary": {...as above}, "current_step": string?,
@@ -98,7 +98,33 @@ WS /runs/{run_id}/stream
 ```
 
 All of the above are read-only in v1 — no `POST /runs` to start a new run
-from the phone (protocol §2.4's explicit v1 non-goal).
+from the phone (protocol §2.4's explicit v1 non-goal). A `needs_you` state
+(KMA-288) means the desktop is blocked waiting on the user; the phone must
+never render it as merely `running`.
+
+## Run notifications (KMA-288)
+
+```
+GET /notifications?since=<cursor>&wait_ms=<ms>   (bearer-authenticated like the REST calls)
+  -> 200 { "events": [ { "id": <int>, "run_id": "...",
+                          "state": "running"|"completed"|"failed"|"needs_you",
+                          "reason": string,
+                          "ts": <epoch millis> } ],
+           "cursor": <int> }
+  -> 401 on missing/malformed/invalid bearer
+```
+
+- `since` is a monotonic event-id cursor; each response contains the
+  buffered events with `id > since` and `cursor` == the highest delivered
+  id. An empty page keeps the incoming cursor, so a client may blindly
+  assign `since = cursor` after every response.
+- `wait_ms > 0` long-polls: the request blocks until an event beyond
+  `since` exists or the wait elapses. The desktop clamps `wait_ms` at
+  **30000**; clients must keep their per-call read timeout **above**
+  `wait_ms` (a shared 30 s client read timeout races the clamp) and are
+  expected to send both `since` and `wait_ms` explicitly on every call.
+- Events are buffered server-side (bounded) so a run that ends before the
+  phone's first poll is still replayed via the cursor.
 
 ## Remote chat (protocol §2.4)
 
