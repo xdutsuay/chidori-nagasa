@@ -173,6 +173,14 @@
     <string name="chidori_run_completed">Completed</string>
     <string name="chidori_run_failed">Failed</string>
     <string name="chidori_run_needs_you">Needs you</string>
+    <string name="chidori_run_pr_numbered">PR %1$s · %2$s</string>
+    <string name="chidori_run_pr_state">PR · %1$s</string>
+    <string name="chidori_run_gate_actions">Workflow gate</string>
+    <string name="chidori_run_edits_actions">Proposed edits</string>
+    <string name="chidori_run_approve">Approve</string>
+    <string name="chidori_run_reject">Reject</string>
+    <string name="chidori_run_accept_edits">Accept edits</string>
+    <string name="chidori_run_reject_edits">Reject edits</string>
     <string name="chidori_view_run">View</string>
     <string name="chidori_run_detail_title">Run detail</string>
     <string name="chidori_no_log">No log output.</string>

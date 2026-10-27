@@ -8,6 +8,7 @@ import com.druk.lmplayground.App
 import com.druk.lmplayground.coordinator.model.AgentRunState
 import com.druk.lmplayground.coordinator.model.AgentRunDetail
 import com.druk.lmplayground.coordinator.model.AgentRunSummary
+import com.druk.lmplayground.coordinator.model.ApplyEditsRequest
 import com.druk.lmplayground.coordinator.model.CoordinatorConnectionState
 import com.druk.lmplayground.coordinator.model.CoordinatorStatus
 import com.druk.lmplayground.coordinator.model.DiscoveredInstance
@@ -480,6 +481,59 @@ class ChidoriViewModel(
                 .onSuccess {
                     _runInjectInput.value = ""
                     refreshRunDetail(instanceId, runId)
+                }
+                .onFailure { e -> _monitorStatusMessage.value = describePollThrowable(e) }
+            _runControlInProgress.value = false
+        }
+    }
+
+    /**
+     * Approve a paused workflow gate for the open run detail (KMA-288).
+     * Until the desktop puts `workflow_run_id` on the companion summary, the
+     * phone sends the companion [runId] as the workflow run id.
+     */
+    fun approveRunGate() {
+        runGateAction { instanceId, runId ->
+            coordinatorRepository.approveRun(instanceId, runId, workflowRunId = runId)
+        }
+    }
+
+    /** Reject a paused workflow gate (explicit ack; never resumes) — KMA-288. */
+    fun rejectRunGate() {
+        runGateAction { instanceId, runId ->
+            coordinatorRepository.rejectRun(instanceId, runId, workflowRunId = runId)
+        }
+    }
+
+    /**
+     * Accept a proposed edit set for the open run (KMA-288). Companion detail
+     * does not yet carry the edit list, so this posts an empty ApplyEditsRequest
+     * (desktop applies nothing) until the wire grows an edits payload — still
+     * exercises the authenticated accept route from the phone.
+     */
+    fun acceptRunEdits() {
+        runGateAction { instanceId, runId ->
+            coordinatorRepository.acceptRunEdits(instanceId, runId, ApplyEditsRequest(edits = emptyList()))
+        }
+    }
+
+    /** Reject / drop a proposed edit set (KMA-288). */
+    fun rejectRunEdits() {
+        runGateAction { instanceId, runId ->
+            coordinatorRepository.rejectRunEdits(instanceId, runId, ApplyEditsRequest(edits = emptyList()))
+        }
+    }
+
+    private fun runGateAction(block: suspend (InstanceId, String) -> Unit) {
+        val instanceId = _monitoredInstance.value?.instanceId ?: return
+        val runId = detailRunId ?: return
+        if (_runControlInProgress.value) return
+        viewModelScope.launch {
+            _runControlInProgress.value = true
+            runCatching { block(instanceId, runId) }
+                .onSuccess {
+                    refreshRunDetail(instanceId, runId)
+                    pollMonitorOnce(instanceId)
                 }
                 .onFailure { e -> _monitorStatusMessage.value = describePollThrowable(e) }
             _runControlInProgress.value = false

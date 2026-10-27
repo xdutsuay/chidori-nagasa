@@ -41,6 +41,7 @@ import com.druk.lmplayground.coordinator.model.AgentRunDetail
 import com.druk.lmplayground.coordinator.model.AgentRunState
 import com.druk.lmplayground.coordinator.model.AgentRunSummary
 import com.druk.lmplayground.coordinator.model.CoordinatorStatus
+import com.druk.lmplayground.coordinator.model.RunPR
 import java.text.DateFormat
 import java.util.Date
 
@@ -82,6 +83,10 @@ fun ChidoriMonitorContent(
     onRunInjectInputChanged: (String) -> Unit = {},
     onStopRun: () -> Unit = {},
     onInjectRunMessage: () -> Unit = {},
+    onApproveRunGate: () -> Unit = {},
+    onRejectRunGate: () -> Unit = {},
+    onAcceptRunEdits: () -> Unit = {},
+    onRejectRunEdits: () -> Unit = {},
     onOpenChatClick: () -> Unit,
     onNodeOfferingChange: (Boolean) -> Unit,
     onClose: () -> Unit,
@@ -181,6 +186,10 @@ fun ChidoriMonitorContent(
             onInjectInputChanged = onRunInjectInputChanged,
             onStop = onStopRun,
             onInject = onInjectRunMessage,
+            onApproveGate = onApproveRunGate,
+            onRejectGate = onRejectRunGate,
+            onAcceptEdits = onAcceptRunEdits,
+            onRejectEdits = onRejectRunEdits,
             onDismiss = onDismissRunDetail,
         )
     }
@@ -285,10 +294,16 @@ private fun MonitorDisconnectBanner(displayName: String, detailMessage: String?)
 private fun RunRow(run: AgentRunSummary, currentStep: String?, onClick: () -> Unit) {
     val timeFormat = remember { DateFormat.getTimeInstance(DateFormat.SHORT) }
     val isRunning = run.state == AgentRunState.RUNNING
-    val cardColors = if (isRunning) {
-        CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
-    } else {
-        CardDefaults.cardColors()
+    val needsYou = run.state == AgentRunState.NEEDS_YOU
+    val cardColors = when {
+        needsYou -> CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer)
+        isRunning -> CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+        else -> CardDefaults.cardColors()
+    }
+    val borderColor = when {
+        needsYou -> MaterialTheme.colorScheme.tertiary
+        isRunning -> MaterialTheme.colorScheme.primary
+        else -> null
     }
     Card(
         onClick = onClick,
@@ -296,10 +311,10 @@ private fun RunRow(run: AgentRunSummary, currentStep: String?, onClick: () -> Un
         modifier = Modifier
             .fillMaxWidth()
             .then(
-                if (isRunning) {
+                if (borderColor != null) {
                     Modifier.border(
                         width = 1.dp,
-                        color = MaterialTheme.colorScheme.primary,
+                        color = borderColor,
                         shape = CardDefaults.shape,
                     )
                 } else {
@@ -339,17 +354,49 @@ private fun RunRow(run: AgentRunSummary, currentStep: String?, onClick: () -> Un
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                if (!run.reason.isNullOrBlank()) {
+                    Text(
+                        text = run.reason,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 2.dp),
+                    )
+                }
                 if (!currentStep.isNullOrBlank()) {
                     Text(
                         text = currentStep,
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        color = if (needsYou) {
+                            MaterialTheme.colorScheme.onTertiaryContainer
+                        } else {
+                            MaterialTheme.colorScheme.onPrimaryContainer
+                        },
+                        modifier = Modifier.padding(top = 4.dp),
+                    )
+                }
+                run.pr?.let { pr ->
+                    Text(
+                        text = formatRunPrLabel(pr),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.secondary,
                         modifier = Modifier.padding(top = 4.dp),
                     )
                 }
             }
             TextButton(onClick = onClick) { Text(stringResource(R.string.chidori_view_run)) }
         }
+    }
+}
+
+@Composable
+private fun formatRunPrLabel(pr: RunPR): String {
+    val numberPart = pr.number?.let { "#$it" }
+    val statePart = pr.state.ifBlank { "pr" }
+    val checksPart = pr.checksStatus?.takeIf { it.isNotBlank() }?.let { " · $it" }.orEmpty()
+    return if (numberPart != null) {
+        stringResource(R.string.chidori_run_pr_numbered, numberPart, statePart) + checksPart
+    } else {
+        stringResource(R.string.chidori_run_pr_state, statePart) + checksPart
     }
 }
 
@@ -361,14 +408,80 @@ private fun RunDetailDialog(
     onInjectInputChanged: (String) -> Unit,
     onStop: () -> Unit,
     onInject: () -> Unit,
+    onApproveGate: () -> Unit,
+    onRejectGate: () -> Unit,
+    onAcceptEdits: () -> Unit,
+    onRejectEdits: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     val isRunning = detail.summary.state == AgentRunState.RUNNING
+    val needsYou = detail.summary.state == AgentRunState.NEEDS_YOU
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(detail.currentStep ?: stringResource(R.string.chidori_run_detail_title)) },
         text = {
             Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                if (needsYou) {
+                    Text(
+                        text = stringResource(R.string.chidori_run_needs_you),
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.tertiary,
+                    )
+                    if (!detail.summary.reason.isNullOrBlank()) {
+                        Text(
+                            text = detail.summary.reason,
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.padding(top = 4.dp, bottom = 8.dp),
+                        )
+                    } else {
+                        Spacer(Modifier.height(8.dp))
+                    }
+                    detail.summary.pr?.let { pr ->
+                        Text(
+                            text = formatRunPrLabel(pr),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.secondary,
+                            modifier = Modifier.padding(bottom = 8.dp),
+                        )
+                    }
+                    Text(
+                        text = stringResource(R.string.chidori_run_gate_actions),
+                        style = MaterialTheme.typography.labelMedium,
+                    )
+                    Row(modifier = Modifier.padding(top = 4.dp)) {
+                        TextButton(
+                            onClick = onApproveGate,
+                            enabled = !controlInProgress,
+                        ) {
+                            Text(stringResource(R.string.chidori_run_approve))
+                        }
+                        TextButton(
+                            onClick = onRejectGate,
+                            enabled = !controlInProgress,
+                        ) {
+                            Text(stringResource(R.string.chidori_run_reject))
+                        }
+                    }
+                    Text(
+                        text = stringResource(R.string.chidori_run_edits_actions),
+                        style = MaterialTheme.typography.labelMedium,
+                        modifier = Modifier.padding(top = 8.dp),
+                    )
+                    Row(modifier = Modifier.padding(top = 4.dp, bottom = 8.dp)) {
+                        TextButton(
+                            onClick = onAcceptEdits,
+                            enabled = !controlInProgress,
+                        ) {
+                            Text(stringResource(R.string.chidori_run_accept_edits))
+                        }
+                        TextButton(
+                            onClick = onRejectEdits,
+                            enabled = !controlInProgress,
+                        ) {
+                            Text(stringResource(R.string.chidori_run_reject_edits))
+                        }
+                    }
+                }
                 if (detail.logTail.isEmpty()) {
                     Text(stringResource(R.string.chidori_no_log))
                 } else {

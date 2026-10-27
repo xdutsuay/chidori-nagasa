@@ -87,7 +87,13 @@ WS /coordinator/status/stream
 GET /runs?limit=50
   -> { "runs": [ { "run_id": "...", "mode": "ask"|"agent"|"plan"|"debug",
                     "started_at": <epoch millis>,
-                    "state": "running"|"completed"|"failed"|"needs_you" } ] }
+                    "state": "running"|"completed"|"failed"|"needs_you",
+                    "reason": string?,
+                    "branch": string?,
+                    "pr": { "state": "none"|"draft"|"open"|"merged"|"closed",
+                            "number": int?, "url": string?,
+                            "checks_status": "pending"|"pass"|"fail"?,
+                            "checks_url": string? }? } ] }
 
 GET /runs/{run_id}
   -> { "summary": {...as above}, "current_step": string?,
@@ -97,10 +103,44 @@ WS /runs/{run_id}/stream
   -> pushes log_tail/current_step updates while the run is "running"
 ```
 
-All of the above are read-only in v1 — no `POST /runs` to start a new run
-from the phone (protocol §2.4's explicit v1 non-goal). A `needs_you` state
-(KMA-288) means the desktop is blocked waiting on the user; the phone must
-never render it as merely `running`.
+No `POST /runs` to *start* a new run from the phone (protocol §2.4's
+explicit v1 non-goal). A `needs_you` state (KMA-288) means the desktop is
+blocked waiting on the user; the phone must never render it as merely
+`running`. Optional `pr` / `reason` / `branch` are omitted when unset so
+older summaries stay wire-compatible.
+
+## Run gate + edit actions (KMA-288)
+
+Companion-only (bearer-authenticated), path `{run_id}` is the companion
+correlation id. Gate bodies carry the workflow engine run id separately —
+the two namespaces are not the same.
+
+```
+POST /runs/{run_id}/approve
+  body: { "workflow_run_id": "<wf run id>" }
+  -> 200 execution state (gate completed) | 202 (paused again)
+  -> 400 when workflow_run_id missing; 401 without bearer
+
+POST /runs/{run_id}/reject
+  body: { "workflow_run_id": "<wf run id>" }
+  -> 200 { "run_id": "...", "status": "rejected" }
+  (explicit ack only — never resumes the paused workflow)
+
+POST /runs/{run_id}/edits/accept
+  body: ApplyEditsRequest { "session_id"?: string, "edits": [
+          { "path": string, "kind": string, "after": string, ... }
+        ] }
+  -> 200 { "applied": [path...], "failed": [path: reason...] }
+  (same disk semantics as IDE POST /api/agent/apply-edits)
+
+POST /runs/{run_id}/edits/reject
+  body: ApplyEditsRequest (content ignored)
+  -> 200 { "run_id": "...", "status": "rejected" }
+  (explicit ack only — nothing written to disk)
+```
+
+Until the desktop summary carries an explicit `workflow_run_id`, the phone
+may send the companion `run_id` as `workflow_run_id` for gate actions.
 
 ## Run notifications (KMA-288)
 
