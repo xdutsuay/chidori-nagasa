@@ -9,6 +9,7 @@ import com.druk.lmplayground.coordinator.model.CoordinatorConnectionState
 import com.druk.lmplayground.coordinator.model.CoordinatorStatusInfo
 import com.druk.lmplayground.coordinator.model.DiscoveredInstance
 import com.druk.lmplayground.coordinator.model.InstanceId
+import com.druk.lmplayground.coordinator.model.NotificationsPage
 import com.druk.lmplayground.coordinator.model.ManualEndpoint
 import com.druk.lmplayground.coordinator.model.PairedInstance
 import com.druk.lmplayground.coordinator.model.RemoteChatMessage
@@ -87,6 +88,11 @@ class CoordinatorRepository(context: Context) {
     suspend fun getStatus(instanceId: InstanceId): CoordinatorStatusInfo = api.getStatus(instanceId)
 
     suspend fun listRuns(instanceId: InstanceId): List<AgentRunSummary> = api.listRuns(instanceId)
+
+    /** Companion long-poll for run-state events (KMA-288). Plain suspend
+     * pass-through to CoordinatorApi, like the monitor calls above. */
+    suspend fun pollNotifications(instanceId: InstanceId, since: Long, waitMs: Long): NotificationsPage =
+        api.pollNotifications(instanceId, since, waitMs)
 
     suspend fun getRunDetail(instanceId: InstanceId, runId: String): AgentRunDetail =
         api.getRunDetail(instanceId, runId)

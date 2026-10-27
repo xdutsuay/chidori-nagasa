@@ -172,6 +172,7 @@
     <string name="chidori_run_running">Running</string>
     <string name="chidori_run_completed">Completed</string>
     <string name="chidori_run_failed">Failed</string>
+    <string name="chidori_run_needs_you">Needs you</string>
     <string name="chidori_view_run">View</string>
     <string name="chidori_run_detail_title">Run detail</string>
     <string name="chidori_no_log">No log output.</string>
@@ -187,6 +188,11 @@
     <string name="node_notification_channel_description">Keeps this phone available as a LAN inference worker for a paired desktop.</string>
     <string name="node_notification_title" translatable="false">chidori-nagasa</string>
     <string name="node_notification_text">Offering on-device model as inference node</string>
+    <string name="needs_you_notification_channel_name">Runs needing you</string>
+    <string name="needs_you_notification_channel_description">Alerts when a desktop run is blocked waiting on you.</string>
+    <string name="needs_you_notification_title" translatable="false">chidori-nagasa</string>
+    <string name="needs_you_notification_text">Run %1$s needs you: %2$s</string>
+    <string name="needs_you_notification_default_text">run is blocked waiting on you</string>
     <string name="chidori_chat_input_hint">Message the desktop\'s model…</string>
     <string name="chidori_chat_send">Send</string>
     <string name="chidori_chat_empty">Messages are routed via %1$s. Replies from the desktop\'s model appear here.</string>

@@ -5,10 +5,12 @@ import com.druk.lmplayground.coordinator.model.AgentMode
 import com.druk.lmplayground.coordinator.model.AgentRunDetail
 import com.druk.lmplayground.coordinator.model.AgentRunState
 import com.druk.lmplayground.coordinator.model.AgentRunSummary
+import com.druk.lmplayground.coordinator.model.CompanionNotificationEvent
 import com.druk.lmplayground.coordinator.model.CoordinatorConnectionState
 import com.druk.lmplayground.coordinator.model.CoordinatorStatus
 import com.druk.lmplayground.coordinator.model.CoordinatorStatusInfo
 import com.druk.lmplayground.coordinator.model.InstanceId
+import com.druk.lmplayground.coordinator.model.NotificationsPage
 import com.druk.lmplayground.coordinator.model.ProtocolVersion
 import com.druk.lmplayground.coordinator.model.RemoteChatMessage
 import kotlinx.coroutines.Dispatchers
@@ -95,6 +97,12 @@ interface CoordinatorApi {
     suspend fun getStatus(instanceId: InstanceId): CoordinatorStatusInfo
 
     suspend fun listRuns(instanceId: InstanceId): List<AgentRunSummary>
+
+    /** GET /notifications?since=<cursor>&wait_ms=<ms> — companion long-poll
+     * for run-state events (KMA-288). Always sends BOTH query params
+     * (explicitly, even when zero). HTTP errors surface as IOException,
+     * same posture as [listRuns]. */
+    suspend fun pollNotifications(instanceId: InstanceId, since: Long, waitMs: Long): NotificationsPage
 
     suspend fun getRunDetail(instanceId: InstanceId, runId: String): AgentRunDetail
 
@@ -351,6 +359,47 @@ class OkHttpCoordinatorApi(
         }
     }
 
+    override suspend fun pollNotifications(instanceId: InstanceId, since: Long, waitMs: Long): NotificationsPage {
+        val request = authedRequest(instanceId, "/notifications?since=$since&wait_ms=$waitMs")?.build()
+            ?: throw IOException("No known endpoint for ${instanceId.value}")
+        // Per-call read timeout (KMA-288): the shared client's default read
+        // timeout (30 s) EQUALS the desktop's own long-poll clamp (30 s), so
+        // a max-budget poll races the socket read and dies with
+        // SocketTimeoutException before the server answers. Derive this
+        // call's timeout from wait_ms plus a 5 s margin for connect /
+        // headers / server handling so the socket always outlives the
+        // server-side hold. waitMs == 0 is an ordinary poll — shared client
+        // is fine.
+        val callClient = if (waitMs > 0) {
+            client.newBuilder()
+                .readTimeout(waitMs + POLL_READ_TIMEOUT_MARGIN_MS, TimeUnit.MILLISECONDS)
+                .build()
+        } else {
+            client
+        }
+        return onIo {
+            callClient.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) {
+                    throw IOException("GET /notifications → HTTP ${response.code}")
+                }
+                val json = JSONObject(response.body?.string() ?: "{}")
+                val events = json.optJSONArray("events")?.let { arr ->
+                    (0 until arr.length()).map { i ->
+                        val event = arr.getJSONObject(i)
+                        CompanionNotificationEvent(
+                            id = event.getLong("id"),
+                            runId = event.getString("run_id"),
+                            state = event.getString("state"),
+                            reason = event.optString("reason"),
+                            ts = event.getLong("ts"),
+                        )
+                    }
+                } ?: emptyList()
+                NotificationsPage(events = events, cursor = json.optLong("cursor", since))
+            }
+        }
+    }
+
     override suspend fun getRunDetail(instanceId: InstanceId, runId: String): AgentRunDetail {
         val request = authedRequest(instanceId, "/runs/$runId")?.build()
             ?: throw IOException("No known endpoint for $instanceId")
@@ -412,6 +461,9 @@ class OkHttpCoordinatorApi(
         state = when (optString("state")) {
             "completed" -> AgentRunState.COMPLETED
             "failed" -> AgentRunState.FAILED
+            // needs_you must never degrade to RUNNING (KMA-288) — the phone
+            // would hide a blocked-on-user run behind an ordinary spinner.
+            "needs_you" -> AgentRunState.NEEDS_YOU
             else -> AgentRunState.RUNNING
         },
         currentStep = optString("current_step").takeIf { it.isNotBlank() },
@@ -548,6 +600,10 @@ class OkHttpCoordinatorApi(
 
     private companion object {
         const val NORMAL_CLOSURE = 1000
+
+        /** Slack added on top of a long-poll's wait_ms when deriving the
+         * per-call read timeout (see [pollNotifications]). */
+        const val POLL_READ_TIMEOUT_MARGIN_MS = 5_000L
     }
 }
 

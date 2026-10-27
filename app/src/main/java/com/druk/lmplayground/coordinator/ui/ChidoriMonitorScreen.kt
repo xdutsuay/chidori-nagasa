@@ -327,6 +327,7 @@ private fun RunRow(run: AgentRunSummary, currentStep: String?, onClick: () -> Un
                     AgentRunState.RUNNING -> stringResource(R.string.chidori_run_running)
                     AgentRunState.COMPLETED -> stringResource(R.string.chidori_run_completed)
                     AgentRunState.FAILED -> stringResource(R.string.chidori_run_failed)
+                    AgentRunState.NEEDS_YOU -> stringResource(R.string.chidori_run_needs_you)
                 }
                 val started = if (run.startedAtEpochMillis > 0L) {
                     timeFormat.format(Date(run.startedAtEpochMillis))
