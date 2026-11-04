@@ -67,7 +67,9 @@ object ProotCommand {
      * Full host argv: `libproot.so <flags> -r <rootfs> <binds> -w <cwd> /usr/bin/env -i <GUEST_ENV> <guestArgv>`.
      *
      * Flags (mirrors proot-distro / UserLAnd):
-     * - `--kill-on-exit`: kill the whole guest tree when proot dies (timeout / Stop)
+     * - `--kill-on-exit`: when the initial guest process exits, kill the rest of the guest
+     *   tree (stray background jobs). It does NOT fire if proot itself is killed; timeout /
+     *   Stop go through [ProotTerminator] (SIGQUIT, then force kill).
      * - `--link2symlink`: emulate hard links (Android FS denies link(); apk needs it)
      * - `-0`: fake uid 0 so `apk` can chown
      * - `-L`: Termux extension, fix lstat on symlinks

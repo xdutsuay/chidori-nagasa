@@ -235,7 +235,7 @@ class LocalComputerRuntimeProotTest {
         assertTrue(b.text().length <= 10 + 200)
     }
 
-    private companion object {
+    internal companion object {
         val FAKE_PROOT = """
             #!/bin/sh
             d="${'$'}(dirname "${'$'}0")"
@@ -252,6 +252,18 @@ class LocalComputerRuntimeProotTest {
             echo "ENV:LD_LIBRARY_PATH=${'$'}LD_LIBRARY_PATH"
             echo "ENV:PROOT_NO_SECCOMP=${'$'}PROOT_NO_SECCOMP"
             echo "ENV:LD_PRELOAD=${'$'}LD_PRELOAD"
+            if [ -f "${'$'}d/hang" ]; then
+              # Simulates proot's SIGQUIT handler (kill_all_tracees) unless told to ignore it.
+              if [ -f "${'$'}d/ignore_quit" ]; then
+                trap '' QUIT
+              else
+                trap 'echo QUIT >> "${'$'}d/events"; kill -9 ${'$'}c 2>/dev/null; exit 131' QUIT
+              fi
+              sleep 300 >/dev/null 2>&1 &
+              c=${'$'}!
+              echo ${'$'}c > "${'$'}d/child.pid"
+              wait ${'$'}c
+            fi
             exit 0
         """.trimIndent() + "\n"
     }

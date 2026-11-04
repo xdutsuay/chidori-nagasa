@@ -22,8 +22,14 @@ import java.util.concurrent.atomic.AtomicReference
  *   wrapped by [ProotCommand.buildArgv] / [ProotCommand.buildEnv]. If proot fails with
  *   the seccomp/EPERM signature it is retried once with `PROOT_NO_SECCOMP=1`, which is
  *   then persisted ([ComputerFlagStore.isProotNoSeccomp]) and logged under tag `COS`.
- * - Limits: [CosConstants.EXEC_TIMEOUT_MS] (exit 124, proot killed; `--kill-on-exit`
- *   takes the guest tree with it) and [CosConstants.EXEC_OUTPUT_CAP_CHARS] per stream.
+ * - Limits: [CosConstants.EXEC_TIMEOUT_MS] (exit 124) and [CosConstants.EXEC_OUTPUT_CAP_CHARS]
+ *   per stream.
+ * - Timeout / [stop]: proot is never SIGKILLed first. `--kill-on-exit` only kills the
+ *   remaining tracees when the *initial* tracee exits; it does nothing if proot itself is
+ *   SIGKILLed (no PTRACE_O_EXITKILL), which would orphan guest processes outside proot's
+ *   path translation. [ProotTerminator] sends SIGQUIT (proot's `kill_all_tracees`
+ *   handler), waits ~2 s, then `destroyForcibly()`, then SIGKILLs any surviving
+ *   descendant found in `/proc` before the signal.
  *
  * Used by the Computer screen terminal, [CosAgentBridge] (`cos_exec`) and
  * [CosComputerService] alike.
@@ -36,7 +42,12 @@ class LocalComputerRuntime(
     private val bootstrap: CosRootfsBootstrap = CosRootfsBootstrap(),
     private val nativeLibDirOverride: String? = null,
     private val log: (String) -> Unit = { msg -> runCatching { Log.i(LOG_TAG, msg) } },
+    private val execTimeoutMs: Long = CosConstants.EXEC_TIMEOUT_MS,
+    killGraceMs: Long = ProotTerminator.DEFAULT_GRACE_MS,
+    sendSignal: (pid: Int, signal: Int) -> Unit = { pid, sig -> android.os.Process.sendSignal(pid, sig) },
 ) : ComputerRuntime {
+
+    private val terminator = ProotTerminator(sendSignal, killGraceMs, log)
 
     private val running = AtomicBoolean(false)
     private val activeProcess = AtomicReference<Process?>(null)
@@ -285,12 +296,13 @@ class LocalComputerRuntime(
                     }
                 }
             }.also { it.start() }
-            val finished = proc.waitFor(CosConstants.EXEC_TIMEOUT_MS, TimeUnit.MILLISECONDS)
+            val finished = proc.waitFor(execTimeoutMs, TimeUnit.MILLISECONDS)
             if (!finished) {
-                proc.destroyForcibly()
+                activeProcess.compareAndSet(proc, null)
+                terminator.terminate(proc, "timeout")
                 stdoutThread.join(5_000)
                 stderrThread.join(5_000)
-                val msg = "exec timed out after ${CosConstants.EXEC_TIMEOUT_MS}ms"
+                val msg = "exec timed out after ${execTimeoutMs}ms"
                 onLine("[err] $msg")
                 errBuf.appendLine(msg)
                 return ComputerExecResult(124, outBuf.text(), errBuf.text())
@@ -299,7 +311,7 @@ class LocalComputerRuntime(
             stderrThread.join(5_000)
             return ComputerExecResult(proc.exitValue(), outBuf.text(), errBuf.text())
         } catch (t: Throwable) {
-            activeProcess.getAndSet(null)?.destroyForcibly()
+            activeProcess.getAndSet(null)?.let { terminator.terminate(it, "error") }
             return ComputerExecResult(1, "", "proot exec failed: ${t.message ?: t.javaClass.simpleName}")
         } finally {
             activeProcess.set(null)
@@ -307,9 +319,14 @@ class LocalComputerRuntime(
         }
     }
 
+    /**
+     * Stops the running command via [ProotTerminator] (SIGQUIT → ~2 s grace →
+     * destroyForcibly → sweep). Runs off the caller's thread (the UI calls this).
+     * `running` is cleared by [runProot] once the process is really gone.
+     */
     override fun stop() {
-        activeProcess.getAndSet(null)?.destroyForcibly()
-        running.set(false)
+        val proc = activeProcess.getAndSet(null) ?: return
+        Thread({ terminator.terminate(proc, "stop") }, "cos-stop").apply { isDaemon = true }.start()
     }
 
     fun pruneIfNeeded(): List<String> {

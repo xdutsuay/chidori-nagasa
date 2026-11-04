@@ -1,0 +1,190 @@
+package com.druk.lmplayground.computer
+
+import android.content.Context
+import androidx.test.core.app.ApplicationProvider
+import kotlinx.coroutines.runBlocking
+import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import java.io.File
+import java.nio.file.Files
+import java.security.MessageDigest
+import java.util.Collections
+
+/**
+ * Review B10: timeout / Stop must not SIGKILL proot first (that orphans guest
+ * processes outside proot). Uses the fake `libproot.so` from
+ * [LocalComputerRuntimeProotTest] in "hang" mode: it forks a background `sleep 300`
+ * (the "guest") and either honours SIGQUIT like proot's kill_all_tracees, or ignores it.
+ */
+@RunWith(RobolectricTestRunner::class)
+class ProotTerminationTest {
+    private lateinit var context: Context
+    private lateinit var flags: ComputerFlagStore
+    private lateinit var tmp: File
+    private lateinit var libDir: File
+    private val events: MutableList<String> = Collections.synchronizedList(mutableListOf())
+    private val signals: MutableList<Pair<Int, Int>> = Collections.synchronizedList(mutableListOf())
+    private val payload = "fake alpine 3.24.3 tarball".toByteArray()
+    private val payloadSha = MessageDigest.getInstance("SHA-256").digest(payload)
+        .joinToString("") { "%02x".format(it) }
+
+    @Before
+    fun setUp() {
+        context = ApplicationProvider.getApplicationContext()
+        val prefs = context.getSharedPreferences(CosConstants.PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().clear().commit()
+        flags = ComputerFlagStore.fromSharedPreferences(prefs)
+        flags.setComputerEnabled(true)
+        CosFiles.deleteTree(File(context.filesDir, CosConstants.COS_DIR))
+        tmp = Files.createTempDirectory("fakelib-kill").toFile()
+        libDir = File(tmp, "lib/x86_64").apply { mkdirs() }
+        ProotCommand.REQUIRED_LIBS.forEach { File(libDir, it).writeText("") }
+        File(libDir, ProotCommand.PROOT_LIB).apply {
+            writeText(LocalComputerRuntimeProotTest.FAKE_PROOT)
+            setExecutable(true)
+        }
+        File(libDir, "hang").writeText("1")
+    }
+
+    @After
+    fun tearDown() {
+        childPid()?.let { if (alive(it)) ProcessBuilder("kill", "-9", "$it").start().waitFor() }
+        CosFiles.deleteTree(tmp)
+        CosFiles.deleteTree(File(context.filesDir, CosConstants.COS_DIR))
+    }
+
+    private fun runtime(timeoutMs: Long) = LocalComputerRuntime(
+        context = context,
+        flags = flags,
+        bootstrap = CosRootfsBootstrap(
+            fetch = { _, dest, _ -> dest.writeBytes(payload); CosProvisioning.Outcome(true, "ok") },
+            extract = { _, dest ->
+                File(dest, "bin").mkdirs()
+                File(dest, "etc").mkdirs()
+                CosProvisioning.Outcome(true, "extracted")
+            },
+            expectedSha256For = { payloadSha },
+        ),
+        nativeLibDirOverride = libDir.absolutePath,
+        log = { events += "log:$it" },
+        execTimeoutMs = timeoutMs,
+        killGraceMs = GRACE_MS,
+        sendSignal = { pid, sig ->
+            signals += pid to sig
+            events += "signal:$sig"
+            ProcessBuilder("kill", "-$sig", "$pid").start().waitFor()
+        },
+    )
+
+    private fun childPid(): Int? =
+        File(libDir, "child.pid").takeIf { it.isFile }?.readText()?.trim()?.toIntOrNull()
+
+    private fun alive(pid: Int): Boolean {
+        val stat = ProcTree.read(File("/proc"), pid) ?: return false
+        return stat.state != 'Z' && stat.state != 'X'
+    }
+
+    private fun idx(prefix: String) = events.indexOfFirst { it.startsWith(prefix) }
+
+    @Test
+    fun `timeout sends SIGQUIT first and proot's handler takes the guest down`() = runBlocking {
+        val rt = runtime(timeoutMs = 1_500)
+        rt.ensureRootfs()
+        val r = rt.execStreaming(listOf("/bin/sh", "-c", "sleep 300 &"), "root") {}
+        assertEquals(124, r.exitCode)
+        assertEquals("events=$events", ProotTerminator.SIGQUIT, signals.firstOrNull()?.second)
+        assertTrue(events.any { it.contains("proot exited after SIGQUIT") })
+        assertFalse(events.any { it.contains("destroyForcibly") })
+        assertTrue(File(libDir, "events").readText().contains("QUIT"))
+        val child = childPid()!!
+        assertFalse("guest child $child survived", alive(child))
+    }
+
+    @Test
+    fun `proot ignoring SIGQUIT escalates to destroyForcibly after grace then sweeps orphans`() = runBlocking {
+        File(libDir, "ignore_quit").writeText("1")
+        val rt = runtime(timeoutMs = 1_500)
+        rt.ensureRootfs()
+        val started = System.currentTimeMillis()
+        val r = rt.execStreaming(listOf("/bin/sh", "-c", "sleep 300 &"), "root") {}
+        val elapsed = System.currentTimeMillis() - started
+        assertEquals(124, r.exitCode)
+        val child = childPid()!!
+        assertTrue("events=$events", signals.isNotEmpty())
+        val prootPid = signals.first().first
+        // Order: SIGQUIT to proot -> grace expired/destroyForcibly -> SIGKILL to orphaned guest.
+        assertEquals(prootPid to ProotTerminator.SIGQUIT, signals[0])
+        val quit = idx("signal:3")
+        val force = idx("log:terminate[timeout]: grace ${GRACE_MS}ms expired; destroyForcibly")
+        val sweep = idx("signal:9")
+        assertTrue("events=$events", quit in 0 until force)
+        assertTrue("events=$events", force < sweep)
+        assertTrue(signals.contains(child to ProotTerminator.SIGKILL))
+        assertNotEquals(prootPid, child)
+        assertTrue(elapsed >= 1_500 + GRACE_MS)
+        Thread.sleep(200)
+        assertFalse("guest child $child survived", alive(child))
+    }
+
+    @Test
+    fun `stop uses the same SIGQUIT-first escalation`() = runBlocking {
+        val rt = runtime(timeoutMs = 60_000)
+        rt.ensureRootfs()
+        var result: ComputerExecResult? = null
+        val t = Thread {
+            result = runBlocking { rt.execStreaming(listOf("/bin/sh", "-c", "sleep 300"), "root") {} }
+        }.also { it.start() }
+        val deadline = System.currentTimeMillis() + 10_000
+        while (childPid() == null && System.currentTimeMillis() < deadline) Thread.sleep(50)
+        Thread.sleep(200)
+        rt.stop()
+        t.join(15_000)
+        assertFalse(t.isAlive)
+        assertNotEquals(124, result!!.exitCode)
+        assertEquals("events=$events", ProotTerminator.SIGQUIT, signals.firstOrNull()?.second)
+        assertTrue(events.any { it.startsWith("log:terminate[stop]: SIGQUIT") })
+        assertFalse(events.any { it.contains("destroyForcibly") })
+        assertFalse(alive(childPid()!!))
+        assertFalse(rt.status() == ComputerStatus.Running)
+    }
+
+    @Test
+    fun `pid fallback via proc scan when reflection fails`() {
+        val proc = ProcessBuilder(File(libDir, ProotCommand.PROOT_LIB).absolutePath, "-r", "x")
+            .redirectErrorStream(true).start()
+        val deadline = System.currentTimeMillis() + 10_000
+        while (childPid() == null && System.currentTimeMillis() < deadline) Thread.sleep(50)
+        val sent = Collections.synchronizedList(mutableListOf<Pair<Int, Int>>())
+        val logs = Collections.synchronizedList(mutableListOf<String>())
+        ProotTerminator(
+            sendSignal = { pid, sig -> sent += pid to sig; ProcessBuilder("kill", "-$sig", "$pid").start().waitFor() },
+            graceMs = GRACE_MS,
+            log = { logs += it },
+            resolvePid = { -1 },
+        ).terminate(proc, "test")
+        assertTrue("logs=$logs", logs.any { it.contains("pid via /proc scan") })
+        assertEquals("logs=$logs", ProotTerminator.SIGQUIT, sent.firstOrNull()?.second)
+        assertFalse(proc.isAlive)
+        Thread.sleep(200)
+        assertFalse(alive(childPid()!!))
+    }
+
+    @Test
+    fun `proc stat parsing handles spaces and parens in comm`() {
+        val p = ProcTree.parseStat(42, "42 (we ird) (x)) S 7 42 42 0 -1 4194304 1 0 0 0 0 0 0 0 20 0 1 0 98765 0 0")!!
+        assertEquals(7, p.ppid)
+        assertEquals('S', p.state)
+        assertEquals(98765L, p.startTime)
+    }
+
+    private companion object {
+        const val GRACE_MS = 600L
+    }
+}
