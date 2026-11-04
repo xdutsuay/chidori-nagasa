@@ -1,6 +1,7 @@
 package com.druk.lmplayground.computer
 
 import android.content.Context
+import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.BufferedReader
@@ -11,9 +12,21 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 
 /**
- * On-device COS runtime: provisions Alpine minirootfs (download + tar) with
- * offline stub fallback; runs commands with cwd in the COS rootfs; supports
- * line-streamed output for the live terminal.
+ * On-device COS runtime: provisions the pinned, sha256-verified Alpine minirootfs
+ * and runs every command INSIDE it through proot (`libproot.so` shipped in jniLibs).
+ *
+ * - Provisioning: [CosRootfsBootstrap] + [CosProvisioning]. An install from another
+ *   Alpine version (or the legacy offline stub) is wiped and re-provisioned.
+ *   Failures surface as [ComputerStatus.Error]; there is no host-shell fallback.
+ * - Exec: guest argv (normally `/bin/sh -c <line>` from [CosShellLexer.toArgv]) is
+ *   wrapped by [ProotCommand.buildArgv] / [ProotCommand.buildEnv]. If proot fails with
+ *   the seccomp/EPERM signature it is retried once with `PROOT_NO_SECCOMP=1`, which is
+ *   then persisted ([ComputerFlagStore.isProotNoSeccomp]) and logged under tag `COS`.
+ * - Limits: [CosConstants.EXEC_TIMEOUT_MS] (exit 124, proot killed; `--kill-on-exit`
+ *   takes the guest tree with it) and [CosConstants.EXEC_OUTPUT_CAP_CHARS] per stream.
+ *
+ * Used by the Computer screen terminal, [CosAgentBridge] (`cos_exec`) and
+ * [CosComputerService] alike.
  */
 class LocalComputerRuntime(
     private val context: Context,
@@ -21,6 +34,8 @@ class LocalComputerRuntime(
     private val batteryPercent: () -> Int = { 100 },
     private val thermalStatus: () -> Int = { 0 },
     private val bootstrap: CosRootfsBootstrap = CosRootfsBootstrap(),
+    private val nativeLibDirOverride: String? = null,
+    private val log: (String) -> Unit = { msg -> runCatching { Log.i(LOG_TAG, msg) } },
 ) : ComputerRuntime {
 
     private val running = AtomicBoolean(false)
@@ -30,19 +45,32 @@ class LocalComputerRuntime(
     private val cosDir: File get() = File(context.filesDir, CosConstants.COS_DIR)
     private val rootfsDir: File get() = File(cosDir, "rootfs")
     private val cacheDir: File get() = File(cosDir, "cache")
+    private val l2sDir: File get() = File(cosDir, "l2s")
+    private val prootTmpDir: File get() = File(context.cacheDir, "proot-tmp")
     private val readyMarker: File get() = File(rootfsDir, CosConstants.READY_MARKER)
 
-    fun rootfsPresent(): Boolean = readyMarker.isFile
+    /** `ApplicationInfo.nativeLibraryDir` – the only exec-able location for app binaries. */
+    val nativeLibDir: String
+        get() = nativeLibDirOverride ?: context.applicationInfo.nativeLibraryDir.orEmpty()
 
-    fun usedBytes(): Long = cosDir.walkTopDown().filter { it.isFile }.sumOf { it.length() }
+    /** Alpine arch for the ABI this APK was installed with, or null if unsupported. */
+    fun alpineArch(): String? =
+        ProotCommand.alpineArchForAbi(ProotCommand.abiForNativeLibDir(nativeLibDir))
+
+    private fun markerTextOrNull(): String? =
+        if (readyMarker.isFile) runCatching { readyMarker.readText() }.getOrNull() else null
+
+    /** True when a verified Alpine install of the pinned version is present. */
+    fun rootfsPresent(): Boolean {
+        val marker = markerTextOrNull() ?: return false
+        return !CosProvisioning.needsReprovision(marker, CosConstants.ALPINE_VERSION, alpineArch())
+    }
+
+    fun usedBytes(): Long = CosFiles.usedBytes(cosDir)
 
     /** Mode from `.cos_ready` plus used bytes under `cos/` (prefs untouched). */
     fun rootfsSnapshot(): CosRootfsSnapshot {
-        val mode = if (readyMarker.isFile) {
-            runCatching { CosRootfsInfo.parseMode(readyMarker.readText()) }.getOrNull()
-        } else {
-            null
-        }
+        val mode = markerTextOrNull()?.let { CosRootfsInfo.parseMode(it) }
         return CosRootfsSnapshot(
             mode = mode,
             usedBytes = usedBytes(),
@@ -50,11 +78,10 @@ class LocalComputerRuntime(
         )
     }
 
-    /** Deletes rootfs tree only; SharedPreferences / session id stay. */
+    /** Deletes rootfs tree only (symlink-safe); SharedPreferences / session id stay. */
     fun deleteRootfsKeepPrefs() {
-        if (rootfsDir.exists()) {
-            rootfsDir.deleteRecursively()
-        }
+        CosFiles.deleteTree(rootfsDir)
+        CosFiles.deleteTree(CosProvisioning.partialDirFor(rootfsDir))
     }
 
     suspend fun reinstallRootfsStreaming(onProgress: (String) -> Unit): ComputerStatus =
@@ -82,50 +109,54 @@ class LocalComputerRuntime(
             ensureRootfsInternal(onProgress)
         }
 
+    private fun fail(msg: String, onProgress: (String) -> Unit): ComputerStatus {
+        lastError = msg
+        onProgress(msg)
+        log("provision failed: $msg")
+        return ComputerStatus.Error(msg)
+    }
+
     private fun ensureRootfsInternal(onProgress: (String) -> Unit): ComputerStatus {
         if (!flags.isComputerEnabled()) return ComputerStatus.Disabled
         val block = ComputerResourceGates.blockReason(batteryPercent(), thermalStatus())
-        if (block != null) {
-            lastError = block
-            return ComputerStatus.Error(block)
+        if (block != null) return fail(block, onProgress)
+        val arch = alpineArch()
+            ?: return fail("Unsupported ABI for COS (${File(nativeLibDir).name}); needs arm64-v8a or x86_64", onProgress)
+        val marker = markerTextOrNull()
+        if (marker != null && CosProvisioning.needsReprovision(marker, CosConstants.ALPINE_VERSION, arch)) {
+            val old = CosProvisioning.markerValue(marker, "version")
+                ?: CosRootfsInfo.parseMode(marker) ?: "unknown"
+            onProgress("Existing rootfs ($old) != Alpine ${CosConstants.ALPINE_VERSION}; deleting and re-provisioning…")
+            log("reprovision: $old -> ${CosConstants.ALPINE_VERSION}")
+            CosProvisioning.wipe(rootfsDir, cacheDir)
         }
         if (rootfsPresent()) {
             lastError = null
-            onProgress("Rootfs already present")
+            onProgress("Rootfs already present (Alpine ${CosConstants.ALPINE_VERSION})")
             return ComputerStatus.Ready
         }
-        val incoming = CosConstants.ALPINE_DOWNLOAD_BUDGET_BYTES
-        if (ComputerStorageBudget.wouldExceed(usedBytes(), incoming)) {
-            val msg = "COS storage soft cap would be exceeded"
-            lastError = msg
-            return ComputerStatus.Error(msg)
+        CosFiles.deleteTree(CosProvisioning.partialDirFor(rootfsDir))
+        if (ComputerStorageBudget.wouldExceed(usedBytes(), CosConstants.ALPINE_DOWNLOAD_BUDGET_BYTES)) {
+            return fail("COS storage soft cap would be exceeded", onProgress)
         }
-        onProgress("Trying Alpine download (${bootstrap.alpineArch()})…")
-        val (ok, log) = bootstrap.downloadAndExtract(rootfsDir, cacheDir) { p ->
+        onProgress("Downloading Alpine ${CosConstants.ALPINE_VERSION} ($arch)…")
+        val (ok, msg) = bootstrap.downloadAndExtract(rootfsDir, cacheDir, arch) { p ->
             onProgress(
-                p.message + if (p.bytesRead > 0) {
-                    " (${CosRootfsInfo.formatBytes(p.bytesRead)})"
-                } else {
-                    ""
-                },
+                p.message + if (p.bytesRead > 0) " (${CosRootfsInfo.formatBytes(p.bytesRead)})" else "",
             )
         }
         if (ok && rootfsPresent()) {
             lastError = null
-            onProgress(log)
+            onProgress(msg)
             return ComputerStatus.Ready
         }
-        onProgress("Download/extract failed: $log — using offline stub")
-        val stubMsg = bootstrap.offlineStub(rootfsDir, cosDir)
-        lastError = null
-        onProgress(stubMsg)
-        return if (rootfsPresent()) ComputerStatus.Ready else ComputerStatus.Error("stub failed")
+        return fail(msg, onProgress)
     }
 
     override suspend fun exec(argv: List<String>): ComputerExecResult =
         execStreaming(argv) { }
 
-    /** Absolute directory for a rootfs-relative cwd, or null if outside / invalid. */
+    /** Absolute host directory for a rootfs-relative cwd, or null if outside / invalid. */
     fun workDirFor(cwdRelative: String): File? {
         val norm = CosCwd.normalizeOrNull(cwdRelative.ifBlank { CosCwd.DEFAULT }) ?: return null
         val dir = if (norm == CosCwd.DEFAULT) rootfsDir else File(rootfsDir, norm)
@@ -141,10 +172,9 @@ class LocalComputerRuntime(
     }
 
     /**
-     * Runs [argv]; invokes [onLine] for each stdout/stderr line as it arrives.
-     * [cwdRelative] is relative to the COS rootfs (default `.`).
-     * Bounded by [CosConstants.EXEC_TIMEOUT_MS]; timed-out processes are destroyed
-     * (exit 124). [stop] also destroys the active process mid-wait.
+     * Runs guest [argv] inside Alpine via proot; invokes [onLine] for each
+     * stdout/stderr line as it arrives. [cwdRelative] is relative to the rootfs
+     * (default `.` = guest `/`; the agent uses `root` = `/root`).
      */
     suspend fun execStreaming(
         argv: List<String>,
@@ -152,44 +182,107 @@ class LocalComputerRuntime(
         onLine: (String) -> Unit,
     ): ComputerExecResult = withContext(Dispatchers.IO) {
         if (!flags.isComputerEnabled()) {
-            return@withContext ComputerExecResult(127, "", "computer disabled")
+            return@withContext early(127, "computer disabled", onLine)
         }
         if (!rootfsPresent()) {
-            return@withContext ComputerExecResult(127, "", "COS rootfs missing — run ensureRootfs")
+            return@withContext early(127, "COS rootfs missing — set up Alpine on the Computer screen", onLine)
         }
         if (argv.isEmpty()) {
-            return@withContext ComputerExecResult(2, "", "empty argv")
+            return@withContext early(2, "empty argv", onLine)
         }
         val workDir = workDirFor(cwdRelative)
-            ?: return@withContext ComputerExecResult(1, "", "cwd outside COS rootfs")
+            ?: return@withContext early(1, "cwd outside COS rootfs", onLine)
         if (!workDir.isDirectory) {
-            return@withContext ComputerExecResult(1, "", "cwd not a directory: $cwdRelative")
+            return@withContext early(1, "cwd not a directory: $cwdRelative", onLine)
         }
         val block = ComputerResourceGates.blockReason(batteryPercent(), thermalStatus())
         if (block != null) {
-            return@withContext ComputerExecResult(1, "", block)
+            return@withContext early(1, block, onLine)
         }
+        val missing = ProotCommand.missingLibs(nativeLibDir)
+        if (missing.isNotEmpty()) {
+            // Never fall back to running on the Android host.
+            return@withContext early(127, "proot runtime missing from APK ($nativeLibDir: ${missing.joinToString()})", onLine)
+        }
+        prepareGuest()
+        val hostArgv = ProotCommand.buildArgv(
+            nativeLibDir = nativeLibDir,
+            rootfsPath = rootfsDir.absolutePath,
+            guestCwd = ProotCommand.guestCwd(cwdRelative),
+            guestArgv = argv,
+        )
+        val noSeccomp = flags.isProotNoSeccomp()
+        val first = runProot(hostArgv, noSeccomp, onLine)
+        if (!ProotCommand.shouldRetryWithoutSeccomp(first.exitCode, first.stderr, noSeccomp)) {
+            log("exec path=proot seccomp=${if (noSeccomp) "off" else "on"} exit=${first.exitCode}")
+            return@withContext first
+        }
+        log("proot failed with seccomp (exit ${first.exitCode}); retrying with PROOT_NO_SECCOMP=1")
+        onLine("[cos] retrying with PROOT_NO_SECCOMP=1")
+        val second = runProot(hostArgv, true, onLine)
+        if (ProotCommand.fallbackWorked(second.exitCode, second.stderr)) {
+            flags.setProotNoSeccomp(true)
+        }
+        log("exec path=proot seccomp=off(fallback) exit=${second.exitCode}")
+        second
+    }
+
+    /** Pre-exec refusal: surfaced on the live terminal too (it never reaches proot). */
+    private fun early(code: Int, msg: String, onLine: (String) -> Unit): ComputerExecResult {
+        onLine("[err] $msg")
+        return ComputerExecResult(code, "", msg)
+    }
+
+    /** Guest dirs proot binds / apk writes; resolv.conf re-written if missing. */
+    private fun prepareGuest() {
+        prootTmpDir.mkdirs()
+        l2sDir.mkdirs()
+        if (!File(rootfsDir, "etc/resolv.conf").isFile || !File(rootfsDir, "tmp").isDirectory ||
+            !File(rootfsDir, "root").isDirectory
+        ) {
+            CosProvisioning.writeGuestFiles(rootfsDir)
+        }
+    }
+
+    private fun runProot(
+        hostArgv: List<String>,
+        noSeccomp: Boolean,
+        onLine: (String) -> Unit,
+    ): ComputerExecResult {
         running.set(true)
-        val outBuf = StringBuilder()
-        val errBuf = StringBuilder()
+        val outBuf = CappedBuffer(CosConstants.EXEC_OUTPUT_CAP_CHARS)
+        val errBuf = CappedBuffer(CosConstants.EXEC_OUTPUT_CAP_CHARS)
         try {
-            val pb = ProcessBuilder(argv)
-                .directory(workDir)
+            val pb = ProcessBuilder(hostArgv)
+                .directory(rootfsDir)
                 .redirectErrorStream(false)
+            val env = pb.environment()
+            val built = ProotCommand.buildEnv(
+                nativeLibDir = nativeLibDir,
+                tmpDir = prootTmpDir.absolutePath,
+                l2sDir = l2sDir.absolutePath,
+                noSeccomp = noSeccomp,
+                hostEnv = HashMap(env),
+            )
+            env.clear()
+            env.putAll(built)
             val proc = pb.start()
+            proc.outputStream.close() // no stdin: commands must be non-interactive
             activeProcess.set(proc)
             val stdoutReader = BufferedReader(InputStreamReader(proc.inputStream))
             val stderrReader = BufferedReader(InputStreamReader(proc.errorStream))
             val stdoutThread = Thread {
-                stdoutReader.lineSequence().forEach { line ->
-                    synchronized(outBuf) { outBuf.appendLine(line) }
-                    onLine(line)
+                runCatching {
+                    stdoutReader.lineSequence().forEach { line ->
+                        if (outBuf.appendLine(line)) onLine(line)
+                    }
                 }
             }.also { it.start() }
             val stderrThread = Thread {
-                stderrReader.lineSequence().forEach { line ->
-                    synchronized(errBuf) { errBuf.appendLine(line) }
-                    onLine("[err] $line")
+                runCatching {
+                    stderrReader.lineSequence().forEach { line ->
+                        if (errBuf.appendLine(line)) onLine("[err] $line")
+                    }
                 }
             }.also { it.start() }
             val finished = proc.waitFor(CosConstants.EXEC_TIMEOUT_MS, TimeUnit.MILLISECONDS)
@@ -199,22 +292,15 @@ class LocalComputerRuntime(
                 stderrThread.join(5_000)
                 val msg = "exec timed out after ${CosConstants.EXEC_TIMEOUT_MS}ms"
                 onLine("[err] $msg")
-                return@withContext ComputerExecResult(
-                    124,
-                    synchronized(outBuf) { outBuf.toString() },
-                    synchronized(errBuf) { errBuf.appendLine(msg).toString() },
-                )
+                errBuf.appendLine(msg)
+                return ComputerExecResult(124, outBuf.text(), errBuf.text())
             }
             stdoutThread.join(5_000)
             stderrThread.join(5_000)
-            ComputerExecResult(
-                proc.exitValue(),
-                synchronized(outBuf) { outBuf.toString() },
-                synchronized(errBuf) { errBuf.toString() },
-            )
+            return ComputerExecResult(proc.exitValue(), outBuf.text(), errBuf.text())
         } catch (t: Throwable) {
             activeProcess.getAndSet(null)?.destroyForcibly()
-            ComputerExecResult(1, "", t.message ?: "exec failed")
+            return ComputerExecResult(1, "", "proot exec failed: ${t.message ?: t.javaClass.simpleName}")
         } finally {
             activeProcess.set(null)
             running.set(false)
@@ -227,24 +313,46 @@ class LocalComputerRuntime(
     }
 
     fun pruneIfNeeded(): List<String> {
-        val entries = cosDir.walkTopDown()
-            .filter { it.isFile }
-            .map {
-                ComputerPruner.Entry(
-                    relativePath = it.relativeTo(cosDir).path.replace('\\', '/'),
-                    bytes = it.length(),
-                    lastUsedEpochMs = it.lastModified(),
-                )
-            }
-            .toList()
-        val plan = ComputerPruner.planPrune(entries, usedBytes())
+        val entries = CosFiles.regularFiles(cosDir).map { (file, bytes) ->
+            ComputerPruner.Entry(
+                relativePath = file.relativeTo(cosDir).path.replace('\\', '/'),
+                bytes = bytes,
+                lastUsedEpochMs = file.lastModified(),
+            )
+        }
+        val plan = ComputerPruner.planPrune(entries, entries.sumOf { it.bytes })
         for (rel in plan) {
             File(cosDir, rel).delete()
         }
         return plan
     }
 
+    /** Thread-safe line buffer that stops growing at [cap] chars and notes the truncation once. */
+    internal class CappedBuffer(private val cap: Int) {
+        private val sb = StringBuilder()
+        private var truncated = false
+
+        /** @return false once the cap was hit (line dropped). */
+        @Synchronized
+        fun appendLine(line: String): Boolean {
+            if (truncated) return false
+            if (sb.length + line.length + 1 > cap) {
+                truncated = true
+                sb.append("…[output truncated at ").append(cap).append(" chars]\n")
+                return false
+            }
+            sb.append(line).append('\n')
+            return true
+        }
+
+        @Synchronized
+        fun text(): String = sb.toString()
+    }
+
     companion object {
+        /** Logcat tag for COS runtime decisions (exec path, seccomp fallback, provisioning). */
+        const val LOG_TAG = "COS"
+
         fun create(context: Context): LocalComputerRuntime {
             val prefs = context.getSharedPreferences(CosConstants.PREFS_NAME, Context.MODE_PRIVATE)
             return LocalComputerRuntime(

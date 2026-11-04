@@ -16,16 +16,16 @@ class CosShellLexerTest {
     }
 
     @Test
-    fun `pipes use sh -c`() {
+    fun `pipes use guest sh -c`() {
         assertEquals(
-            listOf("/system/bin/sh", "-c", "ls | wc -l"),
+            listOf("/bin/sh", "-c", "ls | wc -l"),
             CosShellLexer.toArgv("ls | wc -l"),
         )
     }
 
     @Test
-    fun `plain line stays argv`() {
-        assertEquals(listOf("uname", "-a"), CosShellLexer.toArgv("uname -a"))
+    fun `plain line also goes through guest sh -c`() {
+        assertEquals(listOf("/bin/sh", "-c", "uname -a"), CosShellLexer.toArgv("uname -a"))
     }
 
     @Test
@@ -70,19 +70,19 @@ class CosShellLexerTest {
     @Test
     fun `toArgv uses sh -c for and-or metacharacters`() {
         assertEquals(
-            listOf("/system/bin/sh", "-c", "true && echo ok"),
+            listOf("/bin/sh", "-c", "true && echo ok"),
             CosShellLexer.toArgv("true && echo ok"),
         )
         assertEquals(
-            listOf("/system/bin/sh", "-c", "false || echo fail"),
+            listOf("/bin/sh", "-c", "false || echo fail"),
             CosShellLexer.toArgv("false || echo fail"),
         )
     }
 
     @Test
-    fun `toArgv quoted plain line stays tokens`() {
-        val argv = CosShellLexer.toArgv("echo 'a b'")
-        assertEquals(listOf("echo", "a b"), argv)
+    fun `toArgv keeps quotes for the guest shell and never uses Android sh`() {
+        val argv = CosShellLexer.toArgv("  echo 'a b'  ")
+        assertEquals(listOf("/bin/sh", "-c", "echo 'a b'"), argv)
         assertTrue(argv.none { it == "/system/bin/sh" })
     }
 }

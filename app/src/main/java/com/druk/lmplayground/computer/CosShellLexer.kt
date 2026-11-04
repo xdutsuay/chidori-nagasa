@@ -37,16 +37,16 @@ object CosShellLexer {
         return out
     }
 
-    /** Prefer `sh -c` for lines with shell metacharacters. */
+    /**
+     * Guest argv for a COS command line: always Alpine's `/bin/sh -c <line>` with the
+     * whole trimmed line as ONE argument (pipes, `&&`, quotes, globs and `;` are
+     * interpreted by the guest shell inside proot, never by Android's /system/bin/sh).
+     * [LocalComputerRuntime.execStreaming] wraps this with [ProotCommand.buildArgv].
+     * Returns empty for a blank line.
+     */
     fun toArgv(line: String): List<String> {
         val t = line.trim()
         if (t.isEmpty()) return emptyList()
-        val needsShell = t.any { it in "|&;<>*(){}[]$?`\n" } || t.contains("&&") || t.contains("||")
-        return if (needsShell) {
-            listOf("/system/bin/sh", "-c", t)
-        } else {
-            val tokens = tokenize(t)
-            if (tokens.isEmpty()) emptyList() else tokens
-        }
+        return ProotCommand.guestShellArgv(t)
     }
 }

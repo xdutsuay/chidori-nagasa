@@ -9,6 +9,9 @@ object ComputerPrefs {
     const val KEY_HISTORY = "computer.history"
     const val DEFAULT_ENABLED = false
 
+    /** Set once proot needed `PROOT_NO_SECCOMP=1` on this device; later runs start there. */
+    const val KEY_PROOT_NO_SECCOMP = "computer.proot_no_seccomp"
+
     fun isComputerEnabled(prefs: SharedPreferences): Boolean =
         prefs.getBoolean(KEY_COMPUTER_ENABLED, DEFAULT_ENABLED)
 
@@ -60,6 +63,11 @@ class ComputerFlagStore(private val backend: ComputerFlagBackend) {
 
     fun setComputerEnabled(enabled: Boolean) =
         backend.putBoolean(ComputerPrefs.KEY_COMPUTER_ENABLED, enabled)
+
+    /** True once proot fell back to `PROOT_NO_SECCOMP=1` on this device. */
+    fun isProotNoSeccomp(): Boolean = backend.getBoolean(ComputerPrefs.KEY_PROOT_NO_SECCOMP, false)
+
+    fun setProotNoSeccomp(value: Boolean) = backend.putBoolean(ComputerPrefs.KEY_PROOT_NO_SECCOMP, value)
 
     companion object {
         /** Factory backed by real SharedPreferences. */
