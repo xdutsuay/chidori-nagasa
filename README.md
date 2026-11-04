@@ -129,14 +129,13 @@ the chat history the next turn sees, and the tool row shows a **Stopped** chip.
 <img src="docs/images/cos/07-cos-computer-off.png" width="270" alt="Computer (COS) screen with the toggle off, status Off"/>
 </p>
 <p>
-<img src="docs/images/cos/06-chat-stop-cos-exec.png" width="270" alt="Chat: a sleep 60 cos_exec stopped after 27 s"/>
+<img src="docs/images/cos/06-chat-stop-cos-exec.png" width="270" alt="Chat: cos_exec sleep 60 stopped after 17 s, tool row shows a red Stopped chip"/>
 </p>
 
 *Top left: Stop on the Computer screen with background and `setsid` sleeps running
 (`^C stopped`). Top right: Computer toggled off (status *Off*).
-Bottom: chat Stop during `cos_exec sleep 60` (row “Run COS command · 27s”; the run
-above it finished normally after 1m 0s). This shot was taken before the **Stopped**
-chip was added.*
+Bottom: chat Stop during `cos_exec sleep 60`; the tool row reads “Run COS command ·
+17s” with the red **Stopped** chip.*
 
 **Licences**
 
