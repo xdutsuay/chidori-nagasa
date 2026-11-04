@@ -156,7 +156,10 @@ class GenerationCoordinator(
             // info is unavailable. Pruning the cache directory is
             // best-effort; failures don't block generation.
             val modelSize = try { runtime.model?.getModelSize() ?: 0L } catch (_: Throwable) { 0L }
-            preambleCache.apply(llamaSession, modelFilename, modelSize, systemPrompt, toolsJson)
+            // Fingerprint the prompt the session was really created with
+            // (includes the COS note when Computer is enabled).
+            val effectivePrompt = runtime.systemPromptOf(llamaSession) ?: systemPrompt
+            preambleCache.apply(llamaSession, modelFilename, modelSize, effectivePrompt, toolsJson)
             // Hand the encoded image to the native layer before
             // addMessage so the multimodal preprocessor can fold it
             // into the prompt for this turn.

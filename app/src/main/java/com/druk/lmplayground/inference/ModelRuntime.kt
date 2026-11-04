@@ -12,6 +12,10 @@ import com.druk.llamacpp.LlamaModel
 import com.druk.llamacpp.LlamaProgressCallback
 import com.druk.llamacpp.PayloadTooLargeException
 import com.druk.lmplayground.R
+import com.druk.lmplayground.computer.ComputerPrefs
+import com.druk.lmplayground.computer.CosConstants
+import com.druk.lmplayground.computer.CosPromptNote
+import com.druk.lmplayground.computer.LocalComputerRuntime
 import com.druk.lmplayground.conversation.GenerationParams
 import com.druk.lmplayground.conversation.HistoryReplay
 import com.druk.lmplayground.conversation.InferenceNotificationUpdater
@@ -106,6 +110,23 @@ class ModelRuntime(
         private set
     var session: LlamaGenerationSession? = null
         private set
+
+    /** Effective system prompt per created chat session (weak keys; sessions are short-lived). */
+    private val sessionPrompts = java.util.Collections.synchronizedMap(
+        java.util.WeakHashMap<LlamaGenerationSession, String>(),
+    )
+
+    /**
+     * System prompt [session] was actually created with (user prompt + [CosPromptNote]
+     * when Computer is enabled), or null if unknown. The preamble cache fingerprints this.
+     */
+    fun systemPromptOf(session: LlamaGenerationSession): String? = sessionPrompts[session]
+
+    /**
+     * COS readiness for the prompt note; replaceable in tests. Reads only prefs and
+     * the rootfs ready marker (no network, no proot).
+     */
+    var cosStateProvider: () -> CosPromptNote.State = { CosPromptNote.stateFor(app) }
 
     /**
      * The in-flight generation coroutine. Owned here so every lifecycle
@@ -358,12 +379,23 @@ class ModelRuntime(
     /**
      * Create a session on [model] with [params], converting a dead-service
      * AIDL failure into a user-visible error instead of an app crash.
+     *
+     * This is the single local session-creation path, so it is where the COS note
+     * ([CosPromptNote]) joins the system prompt: once per session, in the stable
+     * prefix, for every chat session (fresh, loaded, replayed, params change) while
+     * Computer is enabled. [chat] = false (node-mode one-shots) skips the note.
      */
     fun createSessionWithParams(
         model: LlamaModel,
         params: GenerationParams,
         systemPrompt: String,
+        chat: Boolean = true,
     ): LlamaGenerationSession? {
+        val effectivePrompt = CosPromptNote.sessionSystemPrompt(
+            systemPrompt,
+            chat,
+            if (chat) cosStateProvider() else CosPromptNote.State.DISABLED,
+        )
         return try {
             model.createSession(
                 params.contextSize,
@@ -374,8 +406,8 @@ class ModelRuntime(
                 params.minP,
                 params.seed,
                 params.thinkingBudget,
-                systemPrompt
-            )
+                effectivePrompt
+            )?.also { if (chat) sessionPrompts[it] = effectivePrompt }
         } catch (e: InferenceUnavailableException) {
             // The :llama service died (or hasn't bound yet). Surface a
             // recoverable error to the UI rather than letting the AIDL
@@ -631,7 +663,7 @@ class ModelRuntime(
         if (generatingJob?.isActive == true) {
             return Result.failure(IllegalStateException("busy — on-device chat is generating"))
         }
-        val temp = createSessionWithParams(m, params, "")
+        val temp = createSessionWithParams(m, params, "", chat = false)
             ?: return Result.failure(IllegalStateException("could not create session"))
         val marker = Job()
         generatingJob = marker
