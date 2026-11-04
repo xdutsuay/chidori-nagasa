@@ -196,6 +196,16 @@ android {
     packaging {
         jniLibs {
             useLegacyPackaging = true
+            // COS (docs/COS.md): ship the prebuilt Termux proot/talloc/shmem
+            // .so files byte-for-byte. AGP's strip step would otherwise
+            // rewrite them, so the APK would no longer match the sha256 values
+            // published in assets/licenses/NOTICE (GPL/LGPL source offer).
+            keepDebugSymbols += setOf(
+                "**/libproot.so",
+                "**/libproot-loader.so",
+                "**/libtalloc.so",
+                "**/libandroid-shmem.so",
+            )
         }
     }
 

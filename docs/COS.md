@@ -22,6 +22,39 @@ or executed until the user enables **Computer**.
 | system-prompt note | `computer/CosPromptNote.kt`, injected in `ModelRuntime.createSessionWithParams` |
 | licenses | `app/src/main/assets/licenses/` (+ `NOTICE`) |
 
+## Native binaries: provenance and modifications
+
+The four `.so` files come from the Termux main apt repository (sha256 of each
+`.deb`, the source archives and the shipped files are in
+`app/src/main/assets/licenses/NOTICE`):
+
+| Shipped | From `.deb` path | Package / source |
+|---|---|---|
+| `libproot.so` | `usr/bin/proot` | `proot_5.1.107.102_{aarch64,x86_64}.deb` — source https://github.com/termux/proot/archive/v5.1.107.102.zip, recipe https://github.com/termux/termux-packages/blob/master/packages/proot/build.sh |
+| `libproot-loader.so` | `usr/libexec/proot/loader` | same package (`loader32` is not shipped) |
+| `libtalloc.so` | `usr/lib/libtalloc.so.2.5.0` | `libtalloc_2.5.0_{aarch64,x86_64}.deb` — source https://www.samba.org/ftp/talloc/talloc-2.5.0.tar.gz |
+| `libandroid-shmem.so` | `usr/lib/libandroid-shmem.so` | `libandroid-shmem_0.7_{aarch64,x86_64}.deb` — source https://github.com/termux/libandroid-shmem (v0.7) |
+
+Debs live at `https://packages.termux.dev/apt/termux-main/pool/main/{p/proot,libt/libtalloc,liba/libandroid-shmem}/`.
+
+Only the ELF dynamic section was edited (patchelf), on both ABIs:
+
+| File | Change |
+|---|---|
+| `libproot.so` | `RUNPATH` `/data/data/com.termux/files/usr/lib` → `$ORIGIN`; `DT_NEEDED` `libtalloc.so.2` → `libtalloc.so` |
+| `libtalloc.so` | `RUNPATH` → `$ORIGIN`; `DT_SONAME` `libtalloc.so.2` → `libtalloc.so` |
+| `libandroid-shmem.so` | `RUNPATH` removed (it only needs `liblog.so`, `libc.so`) |
+| `libproot-loader.so` | none (byte-identical to the `.deb` file) |
+
+Equivalent commands: `patchelf --set-rpath '$ORIGIN' --replace-needed libtalloc.so.2 libtalloc.so libproot.so`,
+`patchelf --set-rpath '$ORIGIN' --set-soname libtalloc.so libtalloc.so`, `patchelf --remove-rpath libandroid-shmem.so`.
+
+The `lib*.so` names are needed because Android only extracts `lib*.so` into
+`nativeLibraryDir`. `app/build.gradle.kts` lists all four in
+`packaging.jniLibs.keepDebugSymbols`, so AGP does not strip them and the
+packaged files keep the sha256 values published in NOTICE. Check an APK with
+`unzip -p app.apk lib/arm64-v8a/libproot.so | sha256sum`.
+
 ## Provisioning
 
 1. Arch comes from the installed ABI dir (`lib/arm64` → `aarch64`, `lib/x86_64` → `x86_64`).
@@ -75,6 +108,18 @@ Host environment for proot:
 stdin is closed, stdout/stderr are capped at 256 KiB each, timeout is 120 s
 (exit 124). The agent's working directory is guest `/root`.
 
+**Timeout / Stop** (`computer/ProotTerminator.kt`). Termux proot's
+`--kill-on-exit` only kills the remaining tracees when the *initial* tracee
+exits. It does nothing if proot itself is killed: proot sets no
+`PTRACE_O_EXITKILL` and ignores SIGTERM. SIGKILLing proot first would orphan
+the guest tree outside path translation. So proot gets **SIGQUIT** first (its
+handler kills every tracee and exits), then a 2 s grace period. Only after that
+is it `destroyForcibly()`'d. Any guest pid from a `/proc` snapshot taken before
+signalling (same pid *and* starttime, not a zombie) that is still alive is then
+SIGKILLed. Stop runs this off the UI thread. Covered by `ProotTerminationTest`
+(fake proot): SIGQUIT honoured, and SIGQUIT ignored → force kill + child
+SIGKILL.
+
 **Seccomp fallback.** If proot exits non-zero and its own stderr (`proot …`
 lines) reports `execve … EPERM / Operation not permitted` or suggests
 `PROOT_NO_SECCOMP`, the command is rerun once with `PROOT_NO_SECCOMP=1`,
@@ -97,6 +142,14 @@ Android host shell.
   yet). If Alpine is not installed the note tells the model to send the user
   to the Computer screen. Node-mode one-shots don't get it. Cloud/desktop
   routes are not covered yet.
+- The note's state is re-evaluated **every turn** in `GenerationCoordinator`
+  (Computer flag, rootfs installed, effective `cos_exec` toggle and tool-calling
+  support). If it changed since the session was last told, e.g. `cos_exec`
+  turned off mid-chat or Alpine finished installing, a one-off
+  `[System update: on-device computer (COS) changed]` block is prepended to that
+  turn's model input (not to the saved message). No chat restart is needed. With
+  `cos_exec` unavailable the note says not to offer or call it. A replayed
+  session gets the current state in its system prompt.
 
 ## Troubleshooting
 

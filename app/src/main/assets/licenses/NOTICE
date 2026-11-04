@@ -1,12 +1,23 @@
 Third-party native components bundled for the on-device computer (COS)
 ======================================================================
 
+Modified: 2026-11-04 (dynamic-section edits listed below; files shipped
+unstripped, byte-identical to the "Shipped .so sha256" list).
+
 The APK ships these unmodified-source, prebuilt Termux binaries in
 lib/<abi>/ (jniLibs, ABIs arm64-v8a and x86_64). They were taken from the
 Termux main apt repository, renamed to lib*.so so Android installs them into
-nativeLibraryDir (the only exec-able app location under W^X), and patchelf'd
-only to set RUNPATH=$ORIGIN and the libtalloc.so DT_NEEDED name. No code was
-changed. Corresponding sources are linked below (GPL-2.0 §3 / LGPL-3.0 §4).
+nativeLibraryDir (the only exec-able app location under W^X), and their ELF
+dynamic sections were edited with patchelf. No code was changed:
+  libproot.so (bin/proot)      RUNPATH /data/data/com.termux/files/usr/lib -> $ORIGIN
+                               DT_NEEDED libtalloc.so.2 -> libtalloc.so
+  libtalloc.so (libtalloc.so.2.5.0)
+                               RUNPATH /data/data/com.termux/files/usr/lib -> $ORIGIN
+                               DT_SONAME libtalloc.so.2 -> libtalloc.so
+  libandroid-shmem.so          RUNPATH /data/data/com.termux/files/usr/lib removed
+  libproot-loader.so           (libexec/proot/loader) byte-identical to the .deb
+The build keeps these files unstripped (packaging.jniLibs.keepDebugSymbols).
+Corresponding sources are linked below (GPL-2.0 §3 / LGPL-3.0 §4).
 
 PRoot 5.1.107.102 (Termux fork) — GPL-2.0-or-later — proot-GPL-2.0.txt
   lib/<abi>/libproot.so         (bin/proot)
