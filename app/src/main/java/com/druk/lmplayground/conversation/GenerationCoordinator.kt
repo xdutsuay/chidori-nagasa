@@ -6,14 +6,14 @@ import com.druk.llamacpp.InferenceUnavailableException
 import com.druk.llamacpp.LlamaGenerationCallback
 import com.druk.lmplayground.App
 import com.druk.lmplayground.R
+import com.druk.lmplayground.computer.CosPromptNote
 import com.druk.lmplayground.inference.ModelRuntime
 import com.druk.lmplayground.storage.StoragePreferences
+import com.druk.lmplayground.tools.CosToolDefaults
 import com.druk.lmplayground.tools.ToolRegistry
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
-import kotlinx.coroutines.async
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -146,6 +146,16 @@ class GenerationCoordinator(
 
         // Tools are active when model supports it and user has tools enabled
         val toolsActive = supportsToolCalling && toolRegistry.hasEnabledTools()
+
+        // COS note, re-evaluated every turn: if Computer/rootfs/cos_exec state changed
+        // since the session was told, prepend a one-off update to this turn's model
+        // input (the stored chat message is untouched). No chat restart needed.
+        val announcedCos = runtime.cosStateOf(llamaSession)
+        val cosUpdate = announcedCos?.let { announced ->
+            val cosExecAvailable = toolsActive && toolRegistry.isToolEnabled(CosToolDefaults.COS_EXEC)
+            val live = CosPromptNote.liveState(runtime.cosStateProvider(), cosExecAvailable)
+            CosPromptNote.turnUpdate(announced, live)?.let { it to live }
+        }
         try {
             val toolsJson = if (toolsActive) toolRegistry.toOpenAIToolsJson() else "[]"
             llamaSession.setTools(toolsJson)
@@ -156,14 +166,21 @@ class GenerationCoordinator(
             // info is unavailable. Pruning the cache directory is
             // best-effort; failures don't block generation.
             val modelSize = try { runtime.model?.getModelSize() ?: 0L } catch (_: Throwable) { 0L }
-            preambleCache.apply(llamaSession, modelFilename, modelSize, systemPrompt, toolsJson)
+            // Fingerprint the prompt the session was really created with
+            // (includes the COS note when Computer is enabled).
+            val effectivePrompt = runtime.systemPromptOf(llamaSession) ?: systemPrompt
+            preambleCache.apply(llamaSession, modelFilename, modelSize, effectivePrompt, toolsJson)
             // Hand the encoded image to the native layer before
             // addMessage so the multimodal preprocessor can fold it
             // into the prompt for this turn.
             if (imageBytes != null) {
                 llamaSession.setImageData(imageBytes)
             }
-            llamaSession.addMessage(content, enableThinking)
+            llamaSession.addMessage(CosPromptNote.withTurnUpdate(content, cosUpdate?.first), enableThinking)
+            cosUpdate?.let { (_, live) ->
+                runtime.markCosState(llamaSession, live)
+                Log.i(TAG, "COS prompt state $announcedCos -> $live (per-turn update)")
+            }
         } catch (e: InferenceUnavailableException) {
             Log.w(TAG, "addMessage failed: service unavailable", e)
             listener.onUserError(
@@ -265,6 +282,17 @@ class GenerationCoordinator(
             val maxToolRounds = 5
             while (true) {
                 val rc = llamaSession.generateAll(callback)
+                if (rc == 2 && (toolRounds >= maxToolRounds || !this.isActive)) {
+                    // Leaving with tool calls pending: record results (not run) so
+                    // the history doesn't end on an orphan tool call.
+                    val pending = llamaSession.getToolCallsJson()
+                    val reason: (String) -> String = if (this.isActive) {
+                        { StoppedToolRound.ROUND_LIMIT_ERROR }
+                    } else {
+                        StoppedToolRound::cancelledContentFor
+                    }
+                    recordUnansweredRound(llamaSession, pending, StoppedToolRound.complete(pending, null, reason), 0L)
+                }
                 if (rc != 2 || toolRounds >= maxToolRounds || !this.isActive) {
                     break
                 }
@@ -274,17 +302,16 @@ class GenerationCoordinator(
                 Log.d(TAG, "Tool calls (round $toolRounds): $toolCallsJson")
 
                 val toolStartTime = System.currentTimeMillis()
-                // Run the (blocking) tool execution on IO and await it so
-                // Stop can interrupt it: on cancel we abort in-flight
-                // network requests, which unblocks the call promptly.
-                val toolResults = withContext(Dispatchers.IO) {
-                    val exec = async { toolRegistry.executeToolCalls(toolCallsJson) }
-                    try {
-                        exec.await()
-                    } catch (e: CancellationException) {
-                        toolRegistry.cancelInFlight()
-                        throw e
-                    }
+                // Blocking tool execution on IO; Stop aborts in-flight tools
+                // (web requests, cos_exec -> proot terminated "chat-stop") and the
+                // cancelled results are still shown on the tool card.
+                // On Stop the cancelled results (cos_exec: exit_code 130, cancelled:true)
+                // go to the tool card AND into the session history before the
+                // CancellationException propagates, so the next turn sees them.
+                val toolResults = ToolCallRunner.run(toolRegistry, toolCallsJson) { cancelled ->
+                    recordUnansweredRound(
+                        llamaSession, toolCallsJson, cancelled, System.currentTimeMillis() - toolStartTime,
+                    )
                 }
                 val toolDurationMs = System.currentTimeMillis() - toolStartTime
                 Log.d(TAG, "Tool results (${toolDurationMs}ms): $toolResults")
@@ -345,6 +372,25 @@ class GenerationCoordinator(
                 listener.onTurnFinished(ourJob, messageId, sessionId, callback.totalTokens)
             }
         }
+    }
+
+    /**
+     * Show [results] on the tool card and record them in the session's history
+     * without generating (blocking binder call; safe from NonCancellable).
+     */
+    private fun recordUnansweredRound(
+        session: com.druk.llamacpp.LlamaGenerationSession,
+        toolCallsJson: String,
+        results: String,
+        durationMs: Long,
+    ) {
+        Log.i(TAG, "Recording results for an unanswered tool round: $results")
+        StoppedToolRound.record(
+            toolCallsJson, results, durationMs,
+            submit = { session.submitToolResults(it, false) },
+            show = { listener.onToolCalls(it) },
+            log = { Log.i(TAG, it) },
+        )
     }
 
     private companion object {

@@ -894,6 +894,7 @@ class TabletStoreScreenshots(
                                 onDeleteSession = {},
                                 onRenameSession = { _, _ -> },
                                 onPinSession = { _, _ -> },
+                                onDestinationSelected = {},
                                 onSettingsClicked = {},
                             )
                         },
@@ -964,6 +965,7 @@ class TabletStoreScreenshots(
                                 onDeleteSession = {},
                                 onRenameSession = { _, _ -> },
                                 onPinSession = { _, _ -> },
+                                onDestinationSelected = {},
                                 onSettingsClicked = {},
                             )
                         },

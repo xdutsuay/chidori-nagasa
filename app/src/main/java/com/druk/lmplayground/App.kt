@@ -11,6 +11,7 @@ import com.druk.lmplayground.cloud.CloudKeyStore
 import com.druk.lmplayground.cloud.CloudProviderRepository
 import com.druk.lmplayground.cloud.EncryptedCloudKeyStore
 import com.druk.lmplayground.coordinator.CoordinatorRepository
+import com.druk.lmplayground.coordinator.notifications.NeedsYouBadgePoller
 import com.druk.lmplayground.data.AppDatabase
 import com.druk.lmplayground.data.ChatRepository
 import com.druk.lmplayground.data.SystemPromptRepository
@@ -19,6 +20,9 @@ import com.druk.lmplayground.download.DownloadNotificationManager
 import com.druk.lmplayground.inference.LlamaService
 import com.druk.lmplayground.inference.ProcessUtils
 import com.druk.lmplayground.storage.LegacyDownloadCleanup
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlin.concurrent.thread
 
 class App : Application() {
@@ -46,6 +50,9 @@ class App : Application() {
     // stubs as of this first draft — see coordinator/README.md.
     lateinit var coordinatorRepository: CoordinatorRepository
         private set
+
+    private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private var needsYouBadgePoller: NeedsYouBadgePoller? = null
 
     /**
      * True while any activity is in the started..stopped window, i.e. the
@@ -113,5 +120,10 @@ class App : Application() {
         cloudClient = CloudClient()
 
         coordinatorRepository = CoordinatorRepository(this)
+        needsYouBadgePoller = NeedsYouBadgePoller(
+            coordinator = coordinatorRepository,
+            scope = appScope,
+            isAppInForeground = { isAppInForeground },
+        ).also { it.start() }
     }
 }

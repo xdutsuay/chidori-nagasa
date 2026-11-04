@@ -22,6 +22,18 @@
         <action
             android:id="@+id/action_home_to_cloud_apis"
             app:destination="@id/nav_cloud_apis" />
+        <action
+            android:id="@+id/action_home_to_chidori"
+            app:destination="@id/nav_chidori" />
+        <action
+            android:id="@+id/action_home_to_usage"
+            app:destination="@id/nav_usage" />
+        <action
+            android:id="@+id/action_home_to_needs_you"
+            app:destination="@id/nav_needs_you" />
+        <action
+            android:id="@+id/action_home_to_computer"
+            app:destination="@id/nav_computer" />
     </fragment>
 
     <fragment
@@ -66,6 +78,9 @@
         <action
             android:id="@+id/action_settings_to_usage"
             app:destination="@id/nav_usage" />
+        <action
+            android:id="@+id/action_settings_to_computer"
+            app:destination="@id/nav_computer" />
     </fragment>
 
     <fragment
@@ -122,5 +137,19 @@
         android:id="@+id/nav_chidori"
         android:name="com.druk.lmplayground.coordinator.ui.ChidoriFragment"
         android:label="@string/chidori_desktop" />
+
+    <fragment
+        android:id="@+id/nav_needs_you"
+        android:name="com.druk.lmplayground.coordinator.ui.NeedsYouInboxFragment"
+        android:label="@string/chidori_run_needs_you">
+        <action
+            android:id="@+id/action_needs_you_to_chidori"
+            app:destination="@id/nav_chidori" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/nav_computer"
+        android:name="com.druk.lmplayground.computer.ComputerFragment"
+        android:label="@string/cos_computer_title" />
 
 </navigation>

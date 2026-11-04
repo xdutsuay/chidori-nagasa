@@ -32,6 +32,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -233,6 +234,9 @@ fun ChidoriScreen(
 @Composable
 fun ChidoriDetailContent(modifier: Modifier = Modifier) {
     val viewModel: ChidoriViewModel = viewModel()
+    LaunchedEffect(Unit) {
+        viewModel.consumeNeedsYouPending()
+    }
     val discovered by viewModel.discoveredInstances.collectAsStateWithLifecycle()
     val paired by viewModel.pairedInstances.collectAsStateWithLifecycle()
     val manualHost by viewModel.manualHost.collectAsStateWithLifecycle()

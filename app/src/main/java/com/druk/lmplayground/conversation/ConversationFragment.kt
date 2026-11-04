@@ -15,6 +15,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.FileProvider
 import java.io.File
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -66,10 +67,14 @@ import androidx.compose.ui.unit.dp
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.core.os.bundleOf
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.fragment.findNavController
 import com.druk.lmplayground.App
 import com.druk.lmplayground.MainActivity
 import com.druk.lmplayground.R
+import com.druk.lmplayground.coordinator.notifications.NeedsYouBadgeStore
+import com.druk.lmplayground.coordinator.ui.ChidoriPendingOpen
+import com.druk.lmplayground.data.UsageAggregator
 import com.druk.lmplayground.models.SelectModelDialog
 import com.druk.lmplayground.settings.SettingsFragment
 import com.druk.lmplayground.storage.StorageViewModel
@@ -79,7 +84,10 @@ import dev.chrisbanes.haze.HazeTint
 import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.rememberHazeState
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.util.Calendar
 
 class ConversationFragment : Fragment() {
 
@@ -264,6 +272,47 @@ class ConversationFragment : Fragment() {
                 val scrollState = rememberLazyListState()
                 val scope = rememberCoroutineScope()
                 val drawerState = rememberDrawerState(DrawerValue.Closed)
+                var hubSessionFilter by remember { mutableStateOf(HubSessionFilter.ALL) }
+                var hubSearchQuery by remember { mutableStateOf("") }
+                var usageFooterText by remember { mutableStateOf<String?>(null) }
+                val needsYouBadgeCount by NeedsYouBadgeStore.count.collectAsStateWithLifecycle()
+
+                LaunchedEffect(Unit) {
+                    val app = requireContext().applicationContext as App
+                    val startOfDay = Calendar.getInstance().apply {
+                        set(Calendar.HOUR_OF_DAY, 0)
+                        set(Calendar.MINUTE, 0)
+                        set(Calendar.SECOND, 0)
+                        set(Calendar.MILLISECOND, 0)
+                    }.timeInMillis
+                    val events = withContext(Dispatchers.IO) {
+                        app.usageRepository.since(startOfDay)
+                    }
+                    val totals = UsageAggregator.totals(events)
+                    usageFooterText = formatUsageDrawerFooter(
+                        totals.requests,
+                        totals.promptTokens + totals.completionTokens,
+                    )
+                }
+
+                fun navigateHub(destination: HubDestination) {
+                    val nav = findNavController()
+                    if (nav.currentDestination?.id != R.id.nav_home) return
+                    when (destination) {
+                        HubDestination.CHATS -> { /* stay */ }
+                        HubDestination.CHIDORI_DESKTOP -> nav.navigate(R.id.action_home_to_chidori)
+                        HubDestination.ASK_DESKTOP -> {
+                            ChidoriPendingOpen.openRemoteChat = true
+                            nav.navigate(R.id.action_home_to_chidori)
+                        }
+                        HubDestination.NEEDS_YOU -> nav.navigate(R.id.action_home_to_needs_you)
+                        HubDestination.COMPUTER -> nav.navigate(R.id.action_home_to_computer)
+                        HubDestination.CLOUD_APIS -> nav.navigate(R.id.action_home_to_cloud_apis)
+                        HubDestination.USAGE -> nav.navigate(R.id.action_home_to_usage)
+                        HubDestination.MODELS -> nav.navigate(R.id.action_home_to_models)
+                        HubDestination.SETTINGS -> nav.navigate(R.id.action_home_to_settings)
+                    }
+                }
 
                 // "Follow the latest" flag for the message list. Hoisted here so
                 // the jump-to-bottom button (rendered at the root, above all
@@ -662,6 +711,27 @@ class ConversationFragment : Fragment() {
                                         )
                                     }
                             )
+                            if (needsYouBadgeCount > 0) {
+                                Surface(
+                                    color = MaterialTheme.colorScheme.tertiaryContainer,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable { navigateHub(HubDestination.NEEDS_YOU) },
+                                ) {
+                                    Text(
+                                        text = stringResource(
+                                            R.string.needs_you_home_banner,
+                                            needsYouBadgeCount,
+                                        ),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onTertiaryContainer,
+                                        modifier = Modifier.padding(
+                                            horizontal = 16.dp,
+                                            vertical = 10.dp,
+                                        ),
+                                    )
+                                }
+                            }
                             if (activeCloud != null) {
                                 RouteProvenanceBanner(
                                     text = stringResource(
@@ -868,6 +938,12 @@ class ConversationFragment : Fragment() {
                             PermanentSessionList(
                                 sessions = sessions,
                                 currentSessionId = currentSessionId,
+                                needsYouBadgeCount = needsYouBadgeCount,
+                                sessionFilter = hubSessionFilter,
+                                onSessionFilterChanged = { hubSessionFilter = it },
+                                searchQuery = hubSearchQuery,
+                                onSearchQueryChanged = { hubSearchQuery = it },
+                                usageFooterText = usageFooterText,
                                 width = sidebarWidth,
                                 onSessionSelected = { sessionId ->
                                     viewModel.loadSession(sessionId)
@@ -881,6 +957,7 @@ class ConversationFragment : Fragment() {
                                 onPinSession = { sessionId, pinned ->
                                     viewModel.pinSession(sessionId, pinned)
                                 },
+                                onDestinationSelected = { dest -> navigateHub(dest) },
                                 onSettingsClicked = {
                                     if (findNavController().currentDestination?.id == R.id.nav_home) {
                                         findNavController().navigate(R.id.action_home_to_settings)
@@ -896,6 +973,12 @@ class ConversationFragment : Fragment() {
                             SessionListDrawer(
                                 sessions = sessions,
                                 currentSessionId = currentSessionId,
+                                needsYouBadgeCount = needsYouBadgeCount,
+                                sessionFilter = hubSessionFilter,
+                                onSessionFilterChanged = { hubSessionFilter = it },
+                                searchQuery = hubSearchQuery,
+                                onSearchQueryChanged = { hubSearchQuery = it },
+                                usageFooterText = usageFooterText,
                                 onSessionSelected = { sessionId ->
                                     viewModel.loadSession(sessionId)
                                     scope.launch { drawerState.close() }
@@ -908,6 +991,12 @@ class ConversationFragment : Fragment() {
                                 },
                                 onPinSession = { sessionId, pinned ->
                                     viewModel.pinSession(sessionId, pinned)
+                                },
+                                onDestinationSelected = { dest ->
+                                    scope.launch {
+                                        drawerState.close()
+                                        navigateHub(dest)
+                                    }
                                 },
                                 onSettingsClicked = {
                                     scope.launch {

@@ -121,7 +121,10 @@ data class ToolCallInfo(
     // same round share the one preceding-thinking block).
     val precedingThinking: String = "",
     val precedingThinkingDurationSeconds: Int = 0,
-    val precedingThinkingTokens: Int = 0
+    val precedingThinkingTokens: Int = 0,
+    // The user pressed Stop while this call was pending or running (result has
+    // cancelled:true / "cancelled: ..."); the tool row shows a "Stopped" chip.
+    val stopped: Boolean = false
 )
 
 @Immutable

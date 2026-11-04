@@ -17,7 +17,9 @@ import com.druk.lmplayground.coordinator.model.PairedInstance
 import com.druk.lmplayground.coordinator.model.PairingState
 import com.druk.lmplayground.coordinator.model.ProtocolVersion
 import com.druk.lmplayground.coordinator.model.RemoteChatMessage
+import com.druk.lmplayground.coordinator.notifications.NeedsYouBadgeStore
 import com.druk.lmplayground.coordinator.notifications.NeedsYouNotification
+import com.druk.lmplayground.coordinator.notifications.NeedsYouPendingHold
 import com.druk.lmplayground.coordinator.notifications.dispatchNeedsYou
 import com.druk.lmplayground.coordinator.node.NodeInferenceHub
 import kotlinx.coroutines.Job
@@ -127,6 +129,8 @@ class ChidoriViewModel(
                 .collect { list ->
                     _pairedInstances.value = list
                     restoreMonitoredInstanceIfNeeded(list)
+                    tryOpenPendingNeedsYou(list)
+                    maybeOpenPendingRemoteChat(list)
                 }
         }
         coordinatorRepository.startDiscovery()
@@ -322,6 +326,9 @@ class ChidoriViewModel(
                 }
                 evaluation.runs?.let { runs ->
                     _monitorRuns.value = runs
+                    NeedsYouBadgeStore.setCount(
+                        runs.count { it.state == AgentRunState.NEEDS_YOU },
+                    )
                     val fromList = runningStepsFromRuns(runs)
                     _monitorRunningSteps.value = fromList
                     refreshRunningSteps(instanceId, runs.filter { it.currentStep.isNullOrBlank() })
@@ -385,9 +392,17 @@ class ChidoriViewModel(
                         NEEDS_YOU_WAIT_MS,
                     )
                     notifySince = page.cursor
-                    dispatchNeedsYou(page.events, notifier = { runId, reason ->
-                        NeedsYouNotification.post(getApplication(), runId, reason)
+                    val dispatched = dispatchNeedsYou(page.events, notifier = { runId, reason ->
+                        NeedsYouNotification.post(
+                            getApplication(),
+                            instanceId.value,
+                            runId,
+                            reason,
+                        )
                     })
+                    if (dispatched > 0) {
+                        NeedsYouBadgeStore.bump(dispatched)
+                    }
                 } catch (cancelled: CancellationException) {
                     throw cancelled
                 } catch (failure: Exception) {
@@ -445,6 +460,43 @@ class ChidoriViewModel(
                 .onSuccess { _monitorRunDetail.value = it }
                 .onFailure { e -> _monitorStatusMessage.value = describePollThrowable(e) }
         }
+    }
+
+    /**
+     * Re-check the process-wide needs_you deep-link slot (notification tap
+     * while already on this screen, or paired list arrived after the offer).
+     * Safe to call from Fragment/Compose onResume.
+     */
+    fun consumeNeedsYouPending() {
+        tryOpenPendingNeedsYou(_pairedInstances.value)
+        maybeOpenPendingRemoteChat(_pairedInstances.value)
+    }
+
+    /** Hub "Ask desktop" — open first paired monitor + remote chat. */
+    private fun maybeOpenPendingRemoteChat(paired: List<PairedInstance>) {
+        if (!ChidoriPendingOpen.takeOpenRemoteChat()) return
+        if (paired.isEmpty()) {
+            // Re-arm so a later pairing list emission can still open chat.
+            ChidoriPendingOpen.openRemoteChat = true
+            return
+        }
+        val target = _monitoredInstance.value ?: paired.first()
+        openMonitor(target)
+        openChat()
+    }
+
+    /**
+     * Open the paired monitor for [link] and select the run detail so
+     * approve/reject is one tap from the notification (KMA-288 follow-on).
+     * Does not touch pairing — only consumes an already-paired instance id.
+     */
+    private fun tryOpenPendingNeedsYou(paired: List<PairedInstance>) {
+        if (paired.isEmpty()) return
+        val ids = paired.mapTo(mutableSetOf()) { it.instanceId.value }
+        val link = NeedsYouPendingHold.takeIfResolved(ids) ?: return
+        val match = paired.firstOrNull { it.instanceId.value == link.instanceId } ?: return
+        openMonitor(match)
+        openRunDetail(link.runId)
     }
 
     fun dismissRunDetail() {

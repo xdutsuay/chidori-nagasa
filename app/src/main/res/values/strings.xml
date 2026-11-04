@@ -201,6 +201,45 @@
     <string name="needs_you_notification_title" translatable="false">chidori-nagasa</string>
     <string name="needs_you_notification_text">Run %1$s needs you: %2$s</string>
     <string name="needs_you_notification_default_text">run is blocked waiting on you</string>
+    <string name="needs_you_inbox_empty">No desktop runs need you right now. Pair with Chidori Desktop and keep the phone on the same network to see blocked agent runs here.</string>
+    <string name="needs_you_inbox_run_id">Run %1$s</string>
+    <string name="hub_filter_all">All</string>
+    <string name="hub_filter_on_device">On-device</string>
+    <string name="hub_filter_desktop">Desktop</string>
+    <string name="hub_filter_cloud">Cloud</string>
+    <string name="hub_sessions_empty">No conversations in this filter.</string>
+    <string name="hub_desktop_empty">Desktop chats run through a paired Chidori instance.</string>
+    <string name="hub_open_chidori_desktop">Open Chidori Desktop</string>
+    <string name="hub_search_chats">Search chats</string>
+    <string name="hub_ask_desktop">Ask desktop</string>
+    <string name="needs_you_home_banner">%1$s desktop run(s) need you — tap to review</string>
+    <string name="cos_computer_title">Computer (COS)</string>
+    <string name="cos_computer_blurb">Pocket Linux on this phone (COS). Live terminal below. Off by default. Tries Alpine download, falls back offline. Works without a paired desktop.</string>
+    <string name="cos_enable">Enable COS</string>
+    <string name="cos_status">Status: %1$s</string>
+    <string name="cos_session">Session %1$s…</string>
+    <string name="cos_ensure_rootfs">Install rootfs</string>
+    <string name="cos_reinstall_rootfs">Reinstall</string>
+    <string name="cos_reinstall_rootfs_confirm">Confirm reinstall</string>
+    <string name="cos_smoke_uname">Smoke: uname -a</string>
+    <string name="cos_prune">Prune storage</string>
+    <string name="cos_rotate_session">New session</string>
+    <string name="cos_recipes_title">Recipes</string>
+    <string name="cos_recipe_install">Install %1$s</string>
+    <string name="cos_recipe_installed">Installed: %1$s</string>
+    <string name="cos_output_empty">Terminal output will stream here. Type a command below.</string>
+    <string name="cos_terminal_title">Terminal</string>
+    <string name="cos_terminal_hint">Command (e.g. uname -a)</string>
+    <string name="cos_run">Run</string>
+    <string name="cos_stop">Stop</string>
+    <string name="cos_clear_terminal">Clear</string>
+    <string name="cos_more_actions">More actions</string>
+    <string name="cos_history_prev">Previous command</string>
+    <string name="cos_history_next">Next command</string>
+    <string name="cos_notification_title">COS Computer</string>
+    <string name="cos_notification_channel">COS Computer</string>
+    <string name="cos_notification_running">Running a COS command…</string>
+    <string name="hub_computer">Computer</string>
     <string name="chidori_chat_input_hint">Message the desktop\'s model…</string>
     <string name="chidori_chat_send">Send</string>
     <string name="chidori_chat_empty">Messages are routed via %1$s. Replies from the desktop\'s model appear here.</string>
@@ -454,6 +493,8 @@
     <!-- Tool-call detail in the chat bubble -->
     <string name="tool_call_input">Input</string>
     <string name="tool_call_output">Output</string>
+    <!-- Chip on a tool row when the user pressed Stop while the tool was pending or running -->
+    <string name="tool_call_stopped">Stopped</string>
     <!-- Model capability badges (content descriptions) -->
     <string name="cd_supports_tools">Supports tools</string>
     <string name="cd_supports_thinking">Supports thinking</string>
@@ -478,6 +519,9 @@
     <string name="tool_web_fetch_title">Fetch web page</string>
     <string name="tool_web_fetch_desc">Opens a link and reads its main content as text so the model can summarize or quote a page.</string>
     <string name="tool_web_fetch_example">\"Summarize the article at this link.\"</string>
+    <string name="tool_cos_exec_title">Run COS command</string>
+    <string name="tool_cos_exec_desc">Runs a shell command inside the on-device Computer (COS) environment and returns stdout, stderr, and exit code. Requires Computer (COS) enabled in Settings.</string>
+    <string name="tool_cos_exec_example">\"List files in the COS home directory.\"</string>
 
     <!-- Inference engine service notification (foreground service while a
          model is loaded so the OS does not evict the :llama process). -->

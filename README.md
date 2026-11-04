@@ -62,6 +62,7 @@ Sideload notes:
 - Background downloads with resume, SAF storage picker
 - ARM64 optimizations (KleidiAI / OpenMP)
 - Large-screen layout for tablets, foldables, Chromebooks
+- Opt-in **on-device computer (COS)**: Alpine Linux 3.24 via bundled proot; the `cos_exec` tool is on by default once Computer is enabled — see [On-device computer (COS)](#on-device-computer-cos) and [`docs/COS.md`](docs/COS.md)
 
 ### Companion (chidori-specific)
 
@@ -69,6 +70,81 @@ Sideload notes:
 - Monitor coordinator status and runs (read-only in v1)
 - Remote chat through the desktop's attached models
 - Opt-in **phone as inference node** (foreground service + notification)
+
+## On-device computer (COS)
+
+COS ("Computer") is an opt-in Linux userland on the phone: **Alpine Linux 3.24.3**
+(minirootfs) run through a **bundled proot** (no root, no extra app). The rootfs is
+downloaded from the Alpine CDN on first use and **sha256-verified before it is
+extracted**; a mismatch is shown on the Computer screen and nothing is installed.
+Full design notes: [`docs/COS.md`](docs/COS.md).
+
+**Enable it**
+
+1. Open the drawer (☰) → **Computer**, and switch the **Computer (COS)** toggle on.
+2. Tap **⋮ → Install rootfs**. The status line goes from *Not set up* to *Ready ·
+   Rootfs: alpine*.
+3. Type commands in the terminal at the bottom (`cos:/ $`), e.g. `cat /etc/os-release`
+   or `apk add curl`.
+
+<p>
+<img src="docs/images/cos/01-cos-not-set-up.png" width="270" alt="Computer (COS) screen, toggle on, status Not set up"/>
+<img src="docs/images/cos/02-cos-ready.png" width="270" alt="Computer (COS) screen after Install rootfs, status Ready, Rootfs alpine 16.4 MB, proot"/>
+</p>
+
+*Left: Computer switched on before the rootfs is installed (“Not set up”). Right:
+after ⋮ → Install rootfs (“Ready · Rootfs: alpine · 16.4 MB · proot”).*
+
+**The `cos_exec` chat tool**
+
+With Computer on, the `cos_exec` tool is **on by default** for tool-capable models,
+so a chat model can run a command in COS and read back `exit_code`, `stdout` and
+`stderr` (shown as a collapsible **Run COS command** row). It can be switched off per
+chat/model or globally in Settings → Tools, and that toggle is **enforced when the
+call runs**, not just hidden from the model: a call to a disabled `cos_exec` is
+rejected and never reaches the runtime. With Computer off, `cos_exec` is not
+offered, and any call the model still makes is refused the same way.
+
+<p>
+<img src="docs/images/cos/03-chat-cos-exec-os-release.png" width="270" alt="Chat: cos_exec runs cat /etc/os-release, model reports Alpine Linux 3.24.3"/>
+<img src="docs/images/cos/04-chat-cos-exec-apk-add-curl.png" width="270" alt="Chat: cos_exec runs apk add curl, output lists the nine packages installed"/>
+</p>
+
+*LFM2.5 350M using `cos_exec` on a phone: `cat /etc/os-release` (Alpine
+3.24.3), and `apk add curl` with the package list from apk’s output. The model writes
+the summary text and can get details wrong: “exit code is 13.5” is a model error, so
+expand the row to see the real result.*
+
+**Stop**
+
+Stop works the same from the Computer screen and from a chat (pressing Stop while
+`cos_exec` is running): proot gets **SIGQUIT**, then a **2 s** grace period, then a
+**force kill**, followed by a sweep for leftover processes (descendants and
+`TracerPid`, so backgrounded or `setsid` jobs are killed too). A stopped chat
+command returns `exit_code` 130 with `cancelled: true`. That result is recorded in
+the chat history the next turn sees, and the tool row shows a **Stopped** chip.
+
+<p>
+<img src="docs/images/cos/05-cos-terminal-stop.png" width="270" alt="Computer screen: sleep 777 &amp; (setsid sleep 888 &amp;) ; sleep 600, then ^C stopped"/>
+<img src="docs/images/cos/07-cos-computer-off.png" width="270" alt="Computer (COS) screen with the toggle off, status Off"/>
+</p>
+<p>
+<img src="docs/images/cos/06-chat-stop-cos-exec.png" width="270" alt="Chat: cos_exec sleep 60 stopped after 17 s, tool row shows a red Stopped chip"/>
+</p>
+
+*Top left: Stop on the Computer screen with background and `setsid` sleeps running
+(`^C stopped`). Top right: Computer toggled off (status *Off*).
+Bottom: chat Stop during `cos_exec sleep 60`; the tool row reads “Run COS command ·
+17s” with the red **Stopped** chip.*
+
+**Licences**
+
+COS ships three third-party native libraries, unmodified, from the Termux packages:
+**PRoot** (GPL-2.0-or-later; it also provides `libproot-loader.so`), **talloc**
+(LGPL-3.0-or-later) and **libandroid-shmem** (BSD-3-Clause). Licence texts, the
+source links and the sha256 of each packaged `.so` are in
+[`app/src/main/assets/licenses/`](app/src/main/assets/licenses/) (`NOTICE`). See
+[`docs/COS.md`](docs/COS.md) for how to check an APK against them.
 
 ## Supported models
 

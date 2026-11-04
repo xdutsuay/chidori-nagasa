@@ -233,6 +233,9 @@ class SettingsFragment : Fragment() {
                     onChidoriClick = {
                         findNavController().navigateFromSettings(R.id.action_settings_to_chidori)
                     },
+                    onComputerClick = {
+                        findNavController().navigateFromSettings(R.id.action_settings_to_computer)
+                    },
                     onCloudApisClick = {
                         findNavController().navigateFromSettings(R.id.action_settings_to_cloud_apis)
                     },

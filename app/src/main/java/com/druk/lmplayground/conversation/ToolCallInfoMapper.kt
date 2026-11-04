@@ -1,6 +1,7 @@
 package com.druk.lmplayground.conversation
 
 import org.json.JSONArray
+import org.json.JSONObject
 
 /**
  * Maps the native layer's tool-call / tool-result JSON payloads into the
@@ -29,8 +30,20 @@ object ToolCallInfoMapper {
                 name = call.getString("name"),
                 arguments = call.getString("arguments"),
                 result = resultMap[id] ?: "",
-                durationMs = perCallMs
+                durationMs = perCallMs,
+                stopped = isStoppedResult(resultMap[id]),
             )
         }
+    }
+
+    /**
+     * True when a tool result says the call was stopped by the user: `cancelled:
+     * true` (cos_exec) or an `error` starting with "cancelled:" (skipped calls).
+     */
+    fun isStoppedResult(result: String?): Boolean {
+        if (result.isNullOrBlank()) return false
+        val obj = runCatching { JSONObject(result) }.getOrNull() ?: return false
+        return obj.optBoolean("cancelled", false) ||
+            obj.optString("error").startsWith("cancelled:")
     }
 }

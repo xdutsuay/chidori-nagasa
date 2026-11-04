@@ -4,10 +4,14 @@ import android.content.Context
 import android.net.Uri
 import androidx.core.content.edit
 import androidx.core.net.toUri
+import com.druk.lmplayground.computer.ComputerPrefs
+import com.druk.lmplayground.computer.CosConstants
+import com.druk.lmplayground.tools.CosToolDefaults
 
 class StoragePreferences(context: Context) {
 
     private val prefs = context.getSharedPreferences("storage_prefs", Context.MODE_PRIVATE)
+    private val computerPrefs = context.getSharedPreferences(CosConstants.PREFS_NAME, Context.MODE_PRIVATE)
 
     companion object {
         private const val KEY_URI = "model_storage_uri"
@@ -80,11 +84,23 @@ class StoragePreferences(context: Context) {
     //
     // The global default (set in Settings → Tools) applies to every model; a
     // per-model override (set in a model's generation-params sheet) wins for
-    // that model only. Tools are OFF by default.
+    // that model only. Tools are OFF by default, except `cos_exec`, which is ON
+    // whenever Computer (COS) is enabled unless the user explicitly turned it off
+    // (see CosToolDefaults).
 
-    fun isToolEnabledDefault(toolName: String): Boolean {
-        return prefs.getBoolean("tool_enabled_$toolName", false)
+    /** Stored global default, or null if the user never touched it. */
+    fun storedToolDefault(toolName: String): Boolean? =
+        if (prefs.contains("tool_enabled_$toolName")) prefs.getBoolean("tool_enabled_$toolName", false) else null
+
+    /** Stored per-model override, or null if never set. */
+    fun storedToolOverride(filename: String, toolName: String): Boolean? {
+        val key = "tool_override_${filename}_$toolName"
+        return if (prefs.contains(key)) prefs.getBoolean(key, false) else null
     }
+
+    /** Global default as shown in Settings → Tools (ON for cos_exec until switched off). */
+    fun isToolEnabledDefault(toolName: String): Boolean =
+        CosToolDefaults.globalDisplay(toolName, storedToolDefault(toolName))
 
     fun setToolEnabledDefault(toolName: String, enabled: Boolean) {
         prefs.edit { putBoolean("tool_enabled_$toolName", enabled) }
@@ -98,14 +114,18 @@ class StoragePreferences(context: Context) {
         prefs.edit { putBoolean("tool_override_${filename}_$toolName", enabled) }
     }
 
-    /** Resolved enablement for a tool on a specific model: override if set, else global default. */
-    fun effectiveToolEnabled(filename: String, toolName: String): Boolean {
-        return if (hasToolOverride(filename, toolName)) {
-            prefs.getBoolean("tool_override_${filename}_$toolName", false)
-        } else {
-            isToolEnabledDefault(toolName)
-        }
-    }
+    /**
+     * Resolved enablement for a tool on a specific model: override if set, else
+     * global default; `cos_exec` defaults ON while Computer is enabled and is never
+     * offered while it is disabled ([CosToolDefaults.resolve]).
+     */
+    fun effectiveToolEnabled(filename: String, toolName: String): Boolean =
+        CosToolDefaults.resolve(
+            toolName = toolName,
+            override = storedToolOverride(filename, toolName),
+            globalDefault = storedToolDefault(toolName),
+            computerEnabled = ComputerPrefs.isComputerEnabled(computerPrefs),
+        )
 
     // --- Detected model capabilities cache ---
     //
