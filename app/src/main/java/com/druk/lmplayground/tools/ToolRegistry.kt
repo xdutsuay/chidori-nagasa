@@ -67,7 +67,15 @@ class ToolRegistry {
             val id = call.getString("id")
 
             val tool = getTool(name)
-            val content = tool?.execute(arguments) ?: """{"error":"Unknown tool: $name"}"""
+            // Enforce the per-chat toggle at execution time, not only in the advertised
+            // schema: a model can still emit a call to a tool it saw earlier (e.g.
+            // cos_exec after the user switched it off) while other tools keep the
+            // tool-call parser active. Disabled tools never run.
+            val content = when {
+                tool == null -> """{"error":"Unknown tool: $name"}"""
+                !isToolEnabled(name) -> disabledError(name)
+                else -> tool.execute(arguments)
+            }
 
             val result = JSONObject()
             result.put("id", id)
@@ -79,6 +87,10 @@ class ToolRegistry {
     }
 
     companion object {
+        /** Tool result returned for a call to a tool that is switched off. */
+        fun disabledError(name: String): String =
+            JSONObject().put("error", "$name is disabled in this chat; it was not run. Do not call it.").toString()
+
         fun createDefault(context: Context): ToolRegistry {
             return ToolRegistry().apply {
                 // Shared link store: web_search hands the model compact
