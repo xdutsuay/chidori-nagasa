@@ -24,6 +24,8 @@ data class ComputerUiState(
     /** Ready-marker mode (`alpine-tar` / `offline-stub`) or null if missing. */
     val rootfsMode: String? = null,
     val rootfsUsedBytes: Long = 0L,
+    /** True once proot fell back to `PROOT_NO_SECCOMP=1` on this device. */
+    val prootNoSeccomp: Boolean = false,
 )
 
 class ComputerViewModel(app: Application) : AndroidViewModel(app) {
@@ -58,6 +60,7 @@ class ComputerViewModel(app: Application) : AndroidViewModel(app) {
                 cwd = CosCwd.normalizeOrNull(ComputerPrefs.getCwd(prefs)) ?: CosCwd.DEFAULT,
                 rootfsMode = snap.mode,
                 rootfsUsedBytes = snap.usedBytes,
+                prootNoSeccomp = flags.isProotNoSeccomp(),
             )
         },
     )
@@ -72,6 +75,7 @@ class ComputerViewModel(app: Application) : AndroidViewModel(app) {
             installedRecipes = recipeStore.installed(),
             rootfsMode = snap.mode,
             rootfsUsedBytes = snap.usedBytes,
+            prootNoSeccomp = flags.isProotNoSeccomp(),
         )
     }
 
@@ -193,7 +197,11 @@ class ComputerViewModel(app: Application) : AndroidViewModel(app) {
                 // stderr already streamed with [err] prefix usually
             }
             appendTerminal("[exit ${result.exitCode}]\n")
-            _state.value = _state.value.copy(busy = false, status = runtime.status())
+            _state.value = _state.value.copy(
+                busy = false,
+                status = runtime.status(),
+                prootNoSeccomp = flags.isProotNoSeccomp(),
+            )
         }
     }
 

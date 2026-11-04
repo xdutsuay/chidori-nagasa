@@ -233,6 +233,9 @@
     <string name="cos_run">Run</string>
     <string name="cos_stop">Stop</string>
     <string name="cos_clear_terminal">Clear</string>
+    <string name="cos_more_actions">More actions</string>
+    <string name="cos_history_prev">Previous command</string>
+    <string name="cos_history_next">Next command</string>
     <string name="cos_notification_title">COS Computer</string>
     <string name="cos_notification_channel">COS Computer</string>
     <string name="cos_notification_running">Running a COS command…</string>
