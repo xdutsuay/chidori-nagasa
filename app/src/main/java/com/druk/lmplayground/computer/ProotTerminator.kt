@@ -11,8 +11,13 @@ import java.util.concurrent.TimeUnit
  * leaves its tracees detached, still running as the app uid, without path
  * translation (so they would see the real Android filesystem).
  *
+ * The pid is captured at [launch] (reflection, else a locked `/proc` children diff) and
+ * stored with the running command; a `/proc` scan at terminate time is the last resort.
+ * The path used is logged ("pid via launch" / "pid via reflection" / "pid via /proc scan").
+ *
  * Escalation (logged under tag `COS`):
- *  1. Snapshot proot's descendant tree from `/proc` (pid + start time).
+ *  1. Snapshot proot's descendant tree and its tracees (`TracerPid`) from `/proc`
+ *     (pid + start time), only while proot is still alive.
  *  2. SIGQUIT to proot: its handler runs `kill_all_tracees` (SIGKILL every tracee) and exits.
  *  3. Wait [graceMs] (default ~2 s) for proot to exit.
  *  4. Still alive → `destroyForcibly()` (SIGKILL) on proot.
@@ -27,31 +32,67 @@ internal class ProotTerminator(
     private val resolvePid: (Process) -> Int = ::pidOf,
 ) {
 
-    fun terminate(proc: Process, reason: String) {
-        val pid = resolvePid(proc).takeIf { it > 0 }
-            ?: soleProotChild()?.also { log("terminate[$reason]: pid via /proc scan: $it") }
-            ?: -1
+    /** A started proot plus the pid captured at launch (-1 if it could not be captured). */
+    class Handle(val proc: Process, val pid: Int)
+
+    /**
+     * Starts proot via [start] and captures its pid immediately, so termination never
+     * depends on a later `/proc` guess. First reflection on the Process (`pid()` /
+     * private `pid` field). If that fails, diff this app's `/proc` children before and
+     * after the start, under a process-wide lock so concurrent launches can't be confused.
+     */
+    fun launch(start: () -> Process): Handle = synchronized(LAUNCH_LOCK) {
+        val before = runCatching { childrenOfSelf() }.getOrDefault(emptySet())
+        val proc = start()
+        val reflected = runCatching { resolvePid(proc) }.getOrDefault(-1)
+        if (reflected > 0) {
+            log("proot started pid=$reflected (launch: reflection)")
+            return Handle(proc, reflected)
+        }
+        val fresh = runCatching { childrenOfSelf() - before }.getOrDefault(emptySet())
+            .map { it.first }
+            .filter { isProotCmdline(it) }
+        val pid = fresh.singleOrNull() ?: -1
+        log(
+            if (pid > 0) "proot started pid=$pid (launch: /proc diff)"
+            else "proot started, pid NOT captured (reflection failed, /proc diff found ${fresh.size})",
+        )
+        Handle(proc, pid)
+    }
+
+    fun terminate(handle: Handle, reason: String) {
+        val proc = handle.proc
+        val pid = when {
+            handle.pid > 0 -> handle.pid.also { log("terminate[$reason]: pid via launch: $it") }
+            else -> runCatching { resolvePid(proc) }.getOrDefault(-1).takeIf { it > 0 }
+                ?.also { log("terminate[$reason]: pid via reflection: $it") }
+                ?: soleProotChild()?.also { log("terminate[$reason]: pid via /proc scan: $it") }
+                ?: -1
+        }
         if (pid <= 0) {
             log("terminate[$reason]: proot pid unknown; destroyForcibly")
             proc.destroyForcibly()
             return
         }
+        if (!proc.isAlive) {
+            // Already exited (and reaped): the pid may be recycled, so don't snapshot or signal.
+            log("terminate[$reason]: proot already exited")
+            return
+        }
         val tree = LinkedHashMap<Int, Long>()
-        ProcTree.descendants(procRoot, pid).forEach { tree[it.pid] = it.startTime }
-        if (proc.isAlive) {
-            log("terminate[$reason]: SIGQUIT -> proot pid=$pid (guest tree=${tree.size})")
-            runCatching { sendSignal(pid, SIGQUIT) }
-                .onFailure { log("terminate[$reason]: SIGQUIT failed: ${it.message}") }
-            val exited = runCatching { proc.waitFor(graceMs, TimeUnit.MILLISECONDS) }.getOrDefault(false)
-            if (exited) {
-                log("terminate[$reason]: proot exited after SIGQUIT")
-            } else {
-                // Late forks during the grace period.
-                ProcTree.descendants(procRoot, pid).forEach { tree.putIfAbsent(it.pid, it.startTime) }
-                log("terminate[$reason]: grace ${graceMs}ms expired; destroyForcibly pid=$pid")
-                proc.destroyForcibly()
-                runCatching { proc.waitFor(1_000, TimeUnit.MILLISECONDS) }
-            }
+        snapshot(pid, tree)
+        log("terminate[$reason]: SIGQUIT -> proot pid=$pid (guest tree=${tree.size})")
+        runCatching { sendSignal(pid, SIGQUIT) }
+            .onFailure { log("terminate[$reason]: SIGQUIT failed: ${it.message}") }
+        val exited = runCatching { proc.waitFor(graceMs, TimeUnit.MILLISECONDS) }.getOrDefault(false)
+        if (exited) {
+            log("terminate[$reason]: proot exited after SIGQUIT")
+        } else {
+            // Late forks during the grace period.
+            snapshot(pid, tree)
+            log("terminate[$reason]: grace ${graceMs}ms expired; destroyForcibly pid=$pid")
+            proc.destroyForcibly()
+            runCatching { proc.waitFor(1_000, TimeUnit.MILLISECONDS) }
         }
         val survivors = tree.filter { (p, start) -> ProcTree.isAliveSame(procRoot, p, start) }.keys
         survivors.forEach { p -> runCatching { sendSignal(p, SIGKILL) } }
@@ -60,28 +101,51 @@ internal class ProotTerminator(
         }
     }
 
+    /**
+     * Backstop kill list: proot's ppid-descendants plus every process it traces
+     * (`TracerPid == pid`), which also catches guests that double-forked and were
+     * reparented away from proot.
+     */
+    private fun snapshot(pid: Int, into: MutableMap<Int, Long>) {
+        val all = ProcTree.all(procRoot)
+        ProcTree.descendants(all, pid).forEach { into.putIfAbsent(it.pid, it.startTime) }
+        ProcTree.tracees(procRoot, all, pid).forEach { into.putIfAbsent(it.pid, it.startTime) }
+    }
+
+    private fun selfPid(): Int = File(procRoot, "self").canonicalFile.name.toInt()
+
+    private fun childrenOfSelf(): Set<Pair<Int, Long>> {
+        val me = selfPid()
+        return ProcTree.all(procRoot).filter { it.ppid == me }.map { it.pid to it.startTime }.toSet()
+    }
+
+    private fun isProotCmdline(pid: Int): Boolean = runCatching {
+        File(procRoot, "$pid/cmdline").readText().split('\u0000').take(2)
+            .any { it.endsWith("/${ProotCommand.PROOT_LIB}") }
+    }.getOrDefault(false)
+
+    /**
+     * Last resort when no pid was captured at launch: the only live child of this
+     * process whose argv0/argv1 is `libproot.so`. Null if there are zero or several
+     * (never guess between concurrent commands).
+     */
+    private fun soleProotChild(): Int? = runCatching {
+        val me = selfPid()
+        ProcTree.all(procRoot)
+            .filter { it.ppid == me && it.state != 'Z' && it.state != 'X' }
+            .filter { isProotCmdline(it.pid) }
+            .singleOrNull()?.pid
+    }.getOrNull()
+
     companion object {
         const val SIGQUIT = 3
         const val SIGKILL = 9
         const val DEFAULT_GRACE_MS = 2_000L
 
-        /** Process pid on Android (field `pid` in ProcessImpl/UNIXProcess) or JVM 9+ `pid()`. */
-        /**
-         * Fallback when reflection can't read the pid: the only live child of this
-         * process whose argv0/argv1 is `libproot.so`. Null if there are zero or several
-         * (never guess between concurrent commands).
-         */
-        private fun ProotTerminator.soleProotChild(): Int? = runCatching {
-            val me = File(procRoot, "self").canonicalFile.name.toInt()
-            ProcTree.all(procRoot)
-                .filter { it.ppid == me && it.state != 'Z' && it.state != 'X' }
-                .filter { p ->
-                    File(procRoot, "${p.pid}/cmdline").readText().split('\u0000').take(2)
-                        .any { it.endsWith("/${ProotCommand.PROOT_LIB}") }
-                }
-                .singleOrNull()?.pid
-        }.getOrNull()
+        /** Serialises launches (all runtime instances) so the /proc children diff is unambiguous. */
+        private val LAUNCH_LOCK = Any()
 
+        /** Process pid on Android (field `pid` in ProcessImpl/UNIXProcess) or JVM 9+ `pid()`. */
         fun pidOf(proc: Process): Int {
             runCatching {
                 // Public Process.pid() (JDK 9+; reflective so it links on Android, where
@@ -123,8 +187,10 @@ internal object ProcTree {
     fun all(procRoot: File): List<Proc> =
         procRoot.listFiles().orEmpty().mapNotNull { d -> d.name.toIntOrNull()?.let { read(procRoot, it) } }
 
-    fun descendants(procRoot: File, root: Int): List<Proc> {
-        val byParent = all(procRoot).groupBy { it.ppid }
+    fun descendants(procRoot: File, root: Int): List<Proc> = descendants(all(procRoot), root)
+
+    fun descendants(all: List<Proc>, root: Int): List<Proc> {
+        val byParent = all.groupBy { it.ppid }
         val out = ArrayList<Proc>()
         val queue = ArrayDeque(listOf(root))
         val seen = HashSet<Int>()
@@ -139,6 +205,17 @@ internal object ProcTree {
         }
         return out
     }
+
+    /** `TracerPid` from `/proc/<pid>/status` (0 = not traced), or null if unreadable. */
+    fun tracerPid(procRoot: File, pid: Int): Int? = runCatching {
+        File(procRoot, "$pid/status").useLines { lines ->
+            lines.firstOrNull { it.startsWith("TracerPid:") }?.substringAfter(':')?.trim()?.toInt()
+        }
+    }.getOrNull()
+
+    /** Processes currently ptrace'd by [tracer] (proot's tracee set). */
+    fun tracees(procRoot: File, all: List<Proc>, tracer: Int): List<Proc> =
+        all.filter { it.pid != tracer && tracerPid(procRoot, it.pid) == tracer }
 
     /** Same process (pid not recycled) and not a zombie. */
     fun isAliveSame(procRoot: File, pid: Int, startTime: Long): Boolean {

@@ -60,7 +60,7 @@ class ProotTerminationTest {
         CosFiles.deleteTree(File(context.filesDir, CosConstants.COS_DIR))
     }
 
-    private fun runtime(timeoutMs: Long) = LocalComputerRuntime(
+    private fun runtime(timeoutMs: Long, launchPidOf: (Process) -> Int = ProotTerminator::pidOf) = LocalComputerRuntime(
         context = context,
         flags = flags,
         bootstrap = CosRootfsBootstrap(
@@ -81,6 +81,7 @@ class ProotTerminationTest {
             events += "signal:$sig"
             ProcessBuilder("kill", "-$sig", "$pid").start().waitFor()
         },
+        launchPidOf = launchPidOf,
     )
 
     private fun childPid(): Int? =
@@ -102,6 +103,10 @@ class ProotTerminationTest {
         assertEquals("events=$events", ProotTerminator.SIGQUIT, signals.firstOrNull()?.second)
         assertTrue(events.any { it.contains("proot exited after SIGQUIT") })
         assertFalse(events.any { it.contains("destroyForcibly") })
+        // pid captured when proot started; no later /proc guess.
+        assertTrue("events=$events", events.any { it.contains("(launch: reflection)") })
+        assertTrue("events=$events", events.any { it.startsWith("log:terminate[timeout]: pid via launch: ${signals.first().first}") })
+        assertFalse(events.any { it.contains("pid via /proc scan") })
         assertTrue(File(libDir, "events").readText().contains("QUIT"))
         val child = childPid()!!
         assertFalse("guest child $child survived", alive(child))
@@ -156,6 +161,60 @@ class ProotTerminationTest {
     }
 
     @Test
+    fun `pid captured at launch via proc diff when reflection fails`() = runBlocking {
+        val rt = runtime(timeoutMs = 1_500, launchPidOf = { -1 })
+        rt.ensureRootfs()
+        val r = rt.execStreaming(listOf("/bin/sh", "-c", "sleep 300 &"), "root") {}
+        assertEquals(124, r.exitCode)
+        val started = events.firstOrNull { it.contains("(launch: /proc diff)") }
+        assertTrue("events=$events", started != null)
+        val pid = Regex("pid=(\\d+)").find(started!!)!!.groupValues[1].toInt()
+        assertTrue("events=$events", events.any { it == "log:terminate[timeout]: pid via launch: $pid" })
+        assertEquals(pid to ProotTerminator.SIGQUIT, signals.first())
+        assertFalse(events.any { it.contains("pid via /proc scan") })
+        assertTrue(events.any { it.contains("proot exited after SIGQUIT") })
+        assertFalse(alive(childPid()!!))
+    }
+
+    @Test
+    fun `backstop kill list includes reparented tracees via TracerPid`() {
+        // Fake /proc: proot=4242; 500 is its ppid-child; 600 double-forked (ppid 1) but is
+        // still traced by proot; 700 is unrelated. proot "ignores" SIGQUIT (signals are only
+        // recorded), so the backstop sweep runs against the fake tree.
+        val fake = File(tmp, "proc").apply { mkdirs() }
+        fun proc(pid: Int, ppid: Int, tracer: Int) {
+            File(fake, "$pid").mkdirs()
+            File(fake, "$pid/stat").writeText("$pid (sh) S $ppid $pid $pid 0 -1 0 0 0 0 0 0 0 0 0 20 0 1 0 ${1000 + pid} 0 0")
+            File(fake, "$pid/status").writeText("Name:\tsh\nState:\tS\nTracerPid:\t$tracer\nUid:\t1\n")
+        }
+        proc(4242, 99, 0); proc(500, 4242, 4242); proc(600, 1, 4242); proc(700, 1, 0)
+        val real = ProcessBuilder("sleep", "30").start()
+        val sent = Collections.synchronizedList(mutableListOf<Pair<Int, Int>>())
+        val logs = Collections.synchronizedList(mutableListOf<String>())
+        ProotTerminator(
+            sendSignal = { pid, sig -> sent += pid to sig },
+            graceMs = 200,
+            log = { logs += it },
+            procRoot = fake,
+        ).terminate(ProotTerminator.Handle(real, 4242), "test")
+        assertEquals("logs=$logs", 4242 to ProotTerminator.SIGQUIT, sent.first())
+        assertTrue("logs=$logs", logs.any { it.contains("guest tree=2") })
+        assertEquals(setOf(500, 600), sent.filter { it.second == ProotTerminator.SIGKILL }.map { it.first }.toSet())
+        assertFalse(real.isAlive)
+    }
+
+    @Test
+    fun `already exited proot is not snapshotted or signalled`() {
+        val real = ProcessBuilder("true").start().apply { waitFor() }
+        val sent = mutableListOf<Pair<Int, Int>>()
+        val logs = mutableListOf<String>()
+        ProotTerminator({ p, s -> sent += p to s }, 200, { logs += it })
+            .terminate(ProotTerminator.Handle(real, 4242), "stop")
+        assertTrue(sent.isEmpty())
+        assertTrue(logs.any { it.contains("proot already exited") })
+    }
+
+    @Test
     fun `pid fallback via proc scan when reflection fails`() {
         val proc = ProcessBuilder(File(libDir, ProotCommand.PROOT_LIB).absolutePath, "-r", "x")
             .redirectErrorStream(true).start()
@@ -168,7 +227,7 @@ class ProotTerminationTest {
             graceMs = GRACE_MS,
             log = { logs += it },
             resolvePid = { -1 },
-        ).terminate(proc, "test")
+        ).terminate(ProotTerminator.Handle(proc, -1), "test")
         assertTrue("logs=$logs", logs.any { it.contains("pid via /proc scan") })
         assertEquals("logs=$logs", ProotTerminator.SIGQUIT, sent.firstOrNull()?.second)
         assertFalse(proc.isAlive)

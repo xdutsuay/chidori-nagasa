@@ -116,9 +116,21 @@ the guest tree outside path translation. So proot gets **SIGQUIT** first (its
 handler kills every tracee and exits), then a 2 s grace period. Only after that
 is it `destroyForcibly()`'d. Any guest pid from a `/proc` snapshot taken before
 signalling (same pid *and* starttime, not a zombie) that is still alive is then
-SIGKILLed. Stop runs this off the UI thread. Covered by `ProotTerminationTest`
-(fake proot): SIGQUIT honoured, and SIGQUIT ignored → force kill + child
-SIGKILL.
+SIGKILLed. The snapshot covers proot's ppid-descendants **and** every process
+whose `/proc/<pid>/status` `TracerPid` is proot (catches guests that
+double-forked and were reparented), and is only taken while proot is alive.
+
+proot's pid is **captured at launch**, right after `ProcessBuilder.start()`,
+and stored with the running command: reflection first (`Process.pid()` on a
+JVM, the private `pid` field on Android), else a diff of this app's `/proc`
+children before/after the start, under a process-wide launch lock. Logged as
+`proot started pid=N (launch: reflection|/proc diff)` and, at termination,
+`pid via launch`. A `/proc` scan for the sole `libproot.so` child is only the
+last resort (`pid via /proc scan`); if that is ambiguous the process is just
+`destroyForcibly()`'d. Stop runs this off the UI thread. Covered by
+`ProotTerminationTest` (fake proot): SIGQUIT honoured, SIGQUIT ignored → force
+kill + child SIGKILL, launch-time capture via both paths, TracerPid backstop,
+/proc-scan last resort.
 
 **Seccomp fallback.** If proot exits non-zero and its own stderr (`proot …`
 lines) reports `execve … EPERM / Operation not permitted` or suggests
@@ -136,6 +148,11 @@ Android host shell.
   existing chats. An explicit off — the per-chat/model toggle or the global
   switch in Settings → Tools — is respected. With Computer disabled the tool is
   never offered.
+- The toggle is also **enforced at execution time**: `ToolRegistry.executeToolCalls`
+  (the only tool dispatch path) returns `{"error":"cos_exec is disabled in this
+  chat; …"}` for a call to any disabled tool and never runs it, so a model that
+  still emits `cos_exec` after the user switched it off (or Computer is off,
+  which resolves the toggle to off) cannot reach the runtime.
 - Every local chat session gets a `## On-device computer (COS)` note appended
   to its system prompt (once, in the stable prefix) while Computer is enabled:
   what COS is, `apk add`, `/root`, limits (no systemd/services, no GUI apps

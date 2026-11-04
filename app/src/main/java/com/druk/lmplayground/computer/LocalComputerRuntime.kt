@@ -45,12 +45,13 @@ class LocalComputerRuntime(
     private val execTimeoutMs: Long = CosConstants.EXEC_TIMEOUT_MS,
     killGraceMs: Long = ProotTerminator.DEFAULT_GRACE_MS,
     sendSignal: (pid: Int, signal: Int) -> Unit = { pid, sig -> android.os.Process.sendSignal(pid, sig) },
+    launchPidOf: (Process) -> Int = ProotTerminator::pidOf,
 ) : ComputerRuntime {
 
-    private val terminator = ProotTerminator(sendSignal, killGraceMs, log)
+    private val terminator = ProotTerminator(sendSignal, killGraceMs, log, resolvePid = launchPidOf)
 
     private val running = AtomicBoolean(false)
-    private val activeProcess = AtomicReference<Process?>(null)
+    private val activeProcess = AtomicReference<ProotTerminator.Handle?>(null)
     private var lastError: String? = null
 
     private val cosDir: File get() = File(context.filesDir, CosConstants.COS_DIR)
@@ -277,9 +278,11 @@ class LocalComputerRuntime(
             )
             env.clear()
             env.putAll(built)
-            val proc = pb.start()
+            // pid captured right at launch and kept with the running command (Stop/timeout).
+            val handle = terminator.launch { pb.start() }
+            val proc = handle.proc
             proc.outputStream.close() // no stdin: commands must be non-interactive
-            activeProcess.set(proc)
+            activeProcess.set(handle)
             val stdoutReader = BufferedReader(InputStreamReader(proc.inputStream))
             val stderrReader = BufferedReader(InputStreamReader(proc.errorStream))
             val stdoutThread = Thread {
@@ -298,8 +301,8 @@ class LocalComputerRuntime(
             }.also { it.start() }
             val finished = proc.waitFor(execTimeoutMs, TimeUnit.MILLISECONDS)
             if (!finished) {
-                activeProcess.compareAndSet(proc, null)
-                terminator.terminate(proc, "timeout")
+                activeProcess.compareAndSet(handle, null)
+                terminator.terminate(handle, "timeout")
                 stdoutThread.join(5_000)
                 stderrThread.join(5_000)
                 val msg = "exec timed out after ${execTimeoutMs}ms"
@@ -325,8 +328,8 @@ class LocalComputerRuntime(
      * `running` is cleared by [runProot] once the process is really gone.
      */
     override fun stop() {
-        val proc = activeProcess.getAndSet(null) ?: return
-        Thread({ terminator.terminate(proc, "stop") }, "cos-stop").apply { isDaemon = true }.start()
+        val handle = activeProcess.getAndSet(null) ?: return
+        Thread({ terminator.terminate(handle, "stop") }, "cos-stop").apply { isDaemon = true }.start()
     }
 
     fun pruneIfNeeded(): List<String> {
