@@ -198,6 +198,7 @@ class LocalComputerRuntime(
         argv: List<String>,
         cwdRelative: String = CosCwd.DEFAULT,
         cancelReason: String = "cancel",
+        timeoutMs: Long = execTimeoutMs,
         onLine: (String) -> Unit,
     ): ComputerExecResult = withContext(Dispatchers.IO) {
         if (!flags.isComputerEnabled()) {
@@ -231,14 +232,14 @@ class LocalComputerRuntime(
             guestArgv = argv,
         )
         val noSeccomp = flags.isProotNoSeccomp()
-        val first = runProot(hostArgv, noSeccomp, cancelReason, onLine)
+        val first = runProot(hostArgv, noSeccomp, cancelReason, timeoutMs, onLine)
         if (!ProotCommand.shouldRetryWithoutSeccomp(first.exitCode, first.stderr, noSeccomp)) {
             log("exec path=proot seccomp=${if (noSeccomp) "off" else "on"} exit=${first.exitCode}")
             return@withContext first
         }
         log("proot failed with seccomp (exit ${first.exitCode}); retrying with PROOT_NO_SECCOMP=1")
         onLine("[cos] retrying with PROOT_NO_SECCOMP=1")
-        val second = runProot(hostArgv, true, cancelReason, onLine)
+        val second = runProot(hostArgv, true, cancelReason, timeoutMs, onLine)
         if (ProotCommand.fallbackWorked(second.exitCode, second.stderr)) {
             flags.setProotNoSeccomp(true)
         }
@@ -267,25 +268,14 @@ class LocalComputerRuntime(
         hostArgv: List<String>,
         noSeccomp: Boolean,
         cancelReason: String,
+        timeoutMs: Long,
         onLine: (String) -> Unit,
     ): ComputerExecResult {
         running.set(true)
         val outBuf = CappedBuffer(CosConstants.EXEC_OUTPUT_CAP_CHARS)
         val errBuf = CappedBuffer(CosConstants.EXEC_OUTPUT_CAP_CHARS)
         try {
-            val pb = ProcessBuilder(hostArgv)
-                .directory(rootfsDir)
-                .redirectErrorStream(false)
-            val env = pb.environment()
-            val built = ProotCommand.buildEnv(
-                nativeLibDir = nativeLibDir,
-                tmpDir = prootTmpDir.absolutePath,
-                l2sDir = l2sDir.absolutePath,
-                noSeccomp = noSeccomp,
-                hostEnv = HashMap(env),
-            )
-            env.clear()
-            env.putAll(built)
+            val pb = prootProcessBuilder(hostArgv, noSeccomp)
             // pid captured right at launch and kept with the running command (Stop/timeout).
             val handle = terminator.launch { pb.start() }
             val proc = handle.proc
@@ -310,7 +300,7 @@ class LocalComputerRuntime(
             val finished = try {
                 // Interruptible: cancelling the calling coroutine (chat Stop) unblocks this
                 // wait instead of hanging until the command ends or the timeout fires.
-                runInterruptible { proc.waitFor(execTimeoutMs, TimeUnit.MILLISECONDS) }
+                runInterruptible { proc.waitFor(timeoutMs, TimeUnit.MILLISECONDS) }
             } catch (c: CancellationException) {
                 Thread.interrupted() // clear any interrupt so the grace wait below really waits
                 log("terminate reason=$cancelReason (exec coroutine cancelled)")
@@ -328,7 +318,7 @@ class LocalComputerRuntime(
                 terminator.terminate(handle, "timeout")
                 stdoutThread.join(5_000)
                 stderrThread.join(5_000)
-                val msg = "exec timed out after ${execTimeoutMs}ms"
+                val msg = "exec timed out after ${timeoutMs}ms"
                 onLine("[err] $msg")
                 errBuf.appendLine(msg)
                 return ComputerExecResult(124, outBuf.text(), errBuf.text())
@@ -345,6 +335,83 @@ class LocalComputerRuntime(
             activeProcess.set(null)
             running.set(false)
         }
+    }
+
+    private fun prootProcessBuilder(hostArgv: List<String>, noSeccomp: Boolean): ProcessBuilder {
+        val pb = ProcessBuilder(hostArgv)
+            .directory(rootfsDir)
+            .redirectErrorStream(false)
+        val env = pb.environment()
+        val built = ProotCommand.buildEnv(
+            nativeLibDir = nativeLibDir,
+            tmpDir = prootTmpDir.absolutePath,
+            l2sDir = l2sDir.absolutePath,
+            noSeccomp = noSeccomp,
+            hostEnv = HashMap(env),
+        )
+        env.clear()
+        env.putAll(built)
+        return pb
+    }
+
+    /** Host directory of the Alpine rootfs (guest `/`). */
+    internal val hostRootfsDir: File get() = rootfsDir
+
+    /** Persisted seccomp fallback choice (see [execStreaming]). */
+    internal fun prootNoSeccomp(): Boolean = flags.isProotNoSeccomp()
+
+    internal fun rememberProotNoSeccomp() = flags.setProotNoSeccomp(true)
+
+    /**
+     * Same pre-flight refusals as [execStreaming] (disabled, no rootfs, battery / thermal,
+     * proot libs missing); null when a long-running guest process may start.
+     */
+    internal fun supervisedBlockReason(): String? {
+        if (!flags.isComputerEnabled()) return "computer disabled"
+        if (!rootfsPresent()) return "COS rootfs missing — set up Alpine on the Computer screen"
+        ComputerResourceGates.blockReason(batteryPercent(), thermalStatus())?.let { return it }
+        val missing = ProotCommand.missingLibs(nativeLibDir)
+        if (missing.isNotEmpty()) return "proot runtime missing from APK ($nativeLibDir: ${missing.joinToString()})"
+        return null
+    }
+
+    /**
+     * Starts a long-lived guest process tree (the desktop session) under proot WITHOUT
+     * the exec timeout and outside the terminal's single [activeProcess] slot, so the
+     * terminal and `cos_exec` keep working alongside it. Lines from stdout / stderr
+     * (stderr prefixed `[err] `) go to [onLine] on two reader threads until the process
+     * exits. The caller owns the returned handle and must end it with [terminateSupervised].
+     */
+    internal fun launchSupervised(
+        guestArgv: List<String>,
+        noSeccomp: Boolean,
+        onLine: (String) -> Unit,
+    ): ProotTerminator.Handle {
+        prepareGuest()
+        val hostArgv = ProotCommand.buildArgv(
+            nativeLibDir = nativeLibDir,
+            rootfsPath = rootfsDir.absolutePath,
+            guestCwd = CosConstants.GUEST_HOME,
+            guestArgv = guestArgv,
+        )
+        val pb = prootProcessBuilder(hostArgv, noSeccomp)
+        val handle = terminator.launch { pb.start() }
+        val proc = handle.proc
+        proc.outputStream.close()
+        Thread({
+            runCatching { BufferedReader(InputStreamReader(proc.inputStream)).lineSequence().forEach(onLine) }
+        }, "cos-desktop-out").apply { isDaemon = true }.start()
+        Thread({
+            runCatching {
+                BufferedReader(InputStreamReader(proc.errorStream)).lineSequence().forEach { onLine("[err] $it") }
+            }
+        }, "cos-desktop-err").apply { isDaemon = true }.start()
+        return handle
+    }
+
+    /** Blocking: SIGQUIT → grace → force kill → /proc sweep of the supervised tree. */
+    internal fun terminateSupervised(handle: ProotTerminator.Handle, reason: String) {
+        terminator.terminate(handle, reason)
     }
 
     /**
