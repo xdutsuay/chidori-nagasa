@@ -1,0 +1,51 @@
+Third-party native components bundled for the on-device computer (COS)
+======================================================================
+
+The APK ships these unmodified-source, prebuilt Termux binaries in
+lib/<abi>/ (jniLibs, ABIs arm64-v8a and x86_64). They were taken from the
+Termux main apt repository, renamed to lib*.so so Android installs them into
+nativeLibraryDir (the only exec-able app location under W^X), and patchelf'd
+only to set RUNPATH=$ORIGIN and the libtalloc.so DT_NEEDED name. No code was
+changed. Corresponding sources are linked below (GPL-2.0 §3 / LGPL-3.0 §4).
+
+PRoot 5.1.107.102 (Termux fork) — GPL-2.0-or-later — proot-GPL-2.0.txt
+  lib/<abi>/libproot.so         (bin/proot)
+  lib/<abi>/libproot-loader.so  (libexec/proot/loader)
+  binary: https://packages.termux.dev/apt/termux-main/pool/main/p/proot/proot_5.1.107.102_{aarch64,x86_64}.deb
+          sha256 aarch64 10a394b585c2fc2b2c8502544f4e5f1be581dc8bfff79e8ba62f16207423e030
+          sha256 x86_64  2497064226c15971be8131c7facead94a06c225347796326a383c832dca57758
+  source: https://github.com/termux/proot/archive/v5.1.107.102.zip
+          sha256 30d12a6e2cc4147123756ff58edea262d3083bbc238c12d0ab9b39e3d1c40852
+  build:  https://github.com/termux/termux-packages/blob/master/packages/proot/build.sh
+
+talloc 2.5.0 — LGPL-3.0-or-later — talloc-LGPL-3.0.txt (+ GPL-3.0.txt it references)
+  lib/<abi>/libtalloc.so
+  binary: https://packages.termux.dev/apt/termux-main/pool/main/libt/libtalloc/libtalloc_2.5.0_{aarch64,x86_64}.deb
+          sha256 aarch64 556591f43bb773ad8777e1a29522640866a55f95dab71914418b94a8c58ad5a7
+          sha256 x86_64  b8c6d95f20075dc1f9ec6573575b2444e8d526e48e0d8d6d5cf4e071e6e06530
+  source: https://www.samba.org/ftp/talloc/talloc-2.5.0.tar.gz
+          sha256 912afa237510ae542a7733998eb18a12bcda35ab6729c8e2ddb43e8d0ebab007
+  libtalloc.so is a separate shared object; users may replace it (LGPL-3.0 §4).
+
+libandroid-shmem 0.7 — BSD-3-Clause — libandroid-shmem-BSD-3-Clause.txt
+  lib/<abi>/libandroid-shmem.so
+  binary: https://packages.termux.dev/apt/termux-main/pool/main/liba/libandroid-shmem/libandroid-shmem_0.7_{aarch64,x86_64}.deb
+          sha256 aarch64 0da3a24d558b93c92bcf8d611e0826a99ff96e396b148e6cdf33b47c47c57ff6
+          sha256 x86_64  ffa9e4c87467b158b148d0ff92dda796aa038276c2075af3269cdcdb06f25797
+  source: https://github.com/termux/libandroid-shmem (tag v0.7)
+          sha256 (v0.7 tarball) 1e5ff8459bc0a8c229dd8a94b27d119987e09ef3414331c2b5ebfff20b98e867
+
+Shipped .so sha256 (after patchelf)
+  arm64-v8a  libproot.so          e0523e0d88aad950887cde3cbcdc18dd173ea36d19e4b04231cbc8afb41da9ce
+  arm64-v8a  libproot-loader.so   1da54355333cca3fb6ee10e3b82a24df24fb230c99241ce83809bf9e240609b5
+  arm64-v8a  libtalloc.so         15ccde1b4357b9ced650c469a9275ceebd1da0ee7ccf4e96b197a17e552cf302
+  arm64-v8a  libandroid-shmem.so  0bd211431c1436f7fa8032b5f2a15b64c7dcd989dfef00d5388dd7085b8ce976
+  x86_64     libproot.so          00bb73cf315a6a515b6cc090664dc401510aecce669581d519ed9655d23ba2a2
+  x86_64     libproot-loader.so   a836b0569c84b1661333d16bacf6b396ff08fea816a5c936a82e08ddeeca8341
+  x86_64     libtalloc.so         ec4a12d1f48248805a2fe6cc85ce5c05e186fa27500652c7d0bf81c3ef2caafb
+  x86_64     libandroid-shmem.so  aeb800e1873615e8fa768e0622b88d6031ae0531aebfa7bd5dabc8d6ad0e308d
+
+Alpine Linux minirootfs 3.24.3 is NOT bundled; it is downloaded at runtime
+from https://dl-cdn.alpinelinux.org/alpine/v3.24/releases/<arch>/ and verified
+against pinned sha256 values (see docs/COS.md). Its packages carry their own
+licenses inside the rootfs (/usr/share/licenses, apk metadata).
