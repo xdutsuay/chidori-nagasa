@@ -17,8 +17,10 @@ import java.util.concurrent.atomic.AtomicReference
  * reason `chat-stop`), re-issuing it every [pollMs] until the batch returns, so a
  * tool that registers its work just after the first cancel is still caught. The
  * wait is bounded by the tools' own cancel paths (proot: SIGQUIT + 2 s grace +
- * force kill). The batch's final results (e.g. cos_exec "cancelled: …") are handed
- * to [onCancelledResults] before the [CancellationException] is rethrown.
+ * force kill). The batch's results, completed with a cancelled entry for every
+ * call that has none (see [StoppedToolRound.complete]), are always handed to
+ * [onCancelledResults] before the [CancellationException] is rethrown, so the
+ * caller can record them in the session history and on the tool card.
  */
 internal object ToolCallRunner {
     const val CANCEL_POLL_MS = 200L
@@ -41,7 +43,8 @@ internal object ToolCallRunner {
                 while (withTimeoutOrNull(pollMs) { exec.join() } == null) {
                     registry.cancelInFlight()
                 }
-                finished.get()?.let { runCatching { onCancelledResults(it) } }
+                val results = StoppedToolRound.complete(toolCallsJson, finished.get())
+                runCatching { onCancelledResults(results) }
             }
             throw e
         }

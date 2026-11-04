@@ -493,6 +493,8 @@
     <!-- Tool-call detail in the chat bubble -->
     <string name="tool_call_input">Input</string>
     <string name="tool_call_output">Output</string>
+    <!-- Chip on a tool row when the user pressed Stop while the tool was pending or running -->
+    <string name="tool_call_stopped">Stopped</string>
     <!-- Model capability badges (content descriptions) -->
     <string name="cd_supports_tools">Supports tools</string>
     <string name="cd_supports_thinking">Supports thinking</string>

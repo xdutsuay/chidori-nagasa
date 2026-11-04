@@ -282,6 +282,17 @@ class GenerationCoordinator(
             val maxToolRounds = 5
             while (true) {
                 val rc = llamaSession.generateAll(callback)
+                if (rc == 2 && (toolRounds >= maxToolRounds || !this.isActive)) {
+                    // Leaving with tool calls pending: record results (not run) so
+                    // the history doesn't end on an orphan tool call.
+                    val pending = llamaSession.getToolCallsJson()
+                    val reason: (String) -> String = if (this.isActive) {
+                        { StoppedToolRound.ROUND_LIMIT_ERROR }
+                    } else {
+                        StoppedToolRound::cancelledContentFor
+                    }
+                    recordUnansweredRound(llamaSession, pending, StoppedToolRound.complete(pending, null, reason), 0L)
+                }
                 if (rc != 2 || toolRounds >= maxToolRounds || !this.isActive) {
                     break
                 }
@@ -294,11 +305,12 @@ class GenerationCoordinator(
                 // Blocking tool execution on IO; Stop aborts in-flight tools
                 // (web requests, cos_exec -> proot terminated "chat-stop") and the
                 // cancelled results are still shown on the tool card.
-                val toolResults = ToolCallRunner.run(toolRegistry, toolCallsJson) { partial ->
-                    listener.onToolCalls(
-                        ToolCallInfoMapper.buildToolCallInfoList(
-                            toolCallsJson, partial, System.currentTimeMillis() - toolStartTime,
-                        ),
+                // On Stop the cancelled results (cos_exec: exit_code 130, cancelled:true)
+                // go to the tool card AND into the session history before the
+                // CancellationException propagates, so the next turn sees them.
+                val toolResults = ToolCallRunner.run(toolRegistry, toolCallsJson) { cancelled ->
+                    recordUnansweredRound(
+                        llamaSession, toolCallsJson, cancelled, System.currentTimeMillis() - toolStartTime,
                     )
                 }
                 val toolDurationMs = System.currentTimeMillis() - toolStartTime
@@ -360,6 +372,25 @@ class GenerationCoordinator(
                 listener.onTurnFinished(ourJob, messageId, sessionId, callback.totalTokens)
             }
         }
+    }
+
+    /**
+     * Show [results] on the tool card and record them in the session's history
+     * without generating (blocking binder call; safe from NonCancellable).
+     */
+    private fun recordUnansweredRound(
+        session: com.druk.llamacpp.LlamaGenerationSession,
+        toolCallsJson: String,
+        results: String,
+        durationMs: Long,
+    ) {
+        Log.i(TAG, "Recording results for an unanswered tool round: $results")
+        StoppedToolRound.record(
+            toolCallsJson, results, durationMs,
+            submit = { session.submitToolResults(it, false) },
+            show = { listener.onToolCalls(it) },
+            log = { Log.i(TAG, it) },
+        )
     }
 
     private companion object {

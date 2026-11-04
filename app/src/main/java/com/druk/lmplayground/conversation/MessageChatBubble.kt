@@ -99,6 +99,7 @@ fun ChatItemBubble(
                     )
                     CollapsibleSection(
                         label = "${toolDisplayName(toolCall.name)} \u00B7 ${formatDuration(durationSec)}",
+                        stoppedChip = toolCall.stopped,
                         content = buildString {
                             if (toolCall.arguments.isNotBlank()) {
                                 append(inputLabel).append('\n')
@@ -263,7 +264,8 @@ fun ChatItemBubble(
 @Composable
 private fun CollapsibleSection(
     label: String,
-    content: String
+    content: String,
+    stoppedChip: Boolean = false,
 ) {
     var expanded by remember { mutableStateOf(false) }
 
@@ -285,6 +287,9 @@ private fun CollapsibleSection(
             color = MaterialTheme.colorScheme.outline,
             modifier = Modifier.padding(start = 4.dp)
         )
+        if (stoppedChip) {
+            StoppedChip(modifier = Modifier.padding(start = 6.dp))
+        }
     }
     AnimatedVisibility(visible = expanded) {
         Surface {
@@ -298,6 +303,23 @@ private fun CollapsibleSection(
                 )
             }
         }
+    }
+}
+
+/** Small "Stopped" chip on a tool row whose call was cancelled by chat Stop. */
+@Composable
+private fun StoppedChip(modifier: Modifier = Modifier) {
+    Surface(
+        modifier = modifier,
+        shape = MaterialTheme.shapes.small,
+        color = MaterialTheme.colorScheme.errorContainer,
+        contentColor = MaterialTheme.colorScheme.onErrorContainer,
+    ) {
+        Text(
+            text = stringResource(R.string.tool_call_stopped),
+            style = MaterialTheme.typography.labelSmall,
+            modifier = Modifier.padding(horizontal = 6.dp, vertical = 1.dp),
+        )
     }
 }
 

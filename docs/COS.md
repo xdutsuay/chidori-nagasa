@@ -141,10 +141,20 @@ cancels the coroutine running the command; `LocalComputerRuntime` waits on proot
 with `runInterruptible`, so the cancellation unblocks it and proot is terminated
 through the same `ProotTerminator` path as the Computer screen (SIGQUIT, 2 s grace,
 force kill, descendant/TracerPid sweep), logged `terminate reason=chat-stop` /
-`terminate[chat-stop]: …`. The tool card shows
-`{"exit_code":130,"cancelled":true,"error":"cancelled: the user pressed Stop; …"}`.
+`terminate[chat-stop]: …`. The result
+`{"exit_code":130,"cancelled":true,"error":"cancelled: the user pressed Stop; …"}`
+(every call of the batch without a result gets a cancelled entry) is shown on the
+tool card with a **Stopped** chip **and** recorded in the session history with
+`submitToolResults` (no generation) by `StoppedToolRound`, so the next turn's
+prompt contains the cancelled result rather than an unanswered tool call. Before
+CP1 r5 the history ended on the orphan tool call and LFM2.5 350M answered the next
+message with an invented `{"exit_code":0,"stdout":"","stderr":""}`. The same
+recording closes rounds left by the tool-round limit (`not run: tool-call round
+limit reached`) or a Stop that lands right after the model emitted a call.
 Covered by `ProotTerminationTest` (cancel → terminator, returns in < 5 s with a
-120 s timeout; SIGQUIT ignored → force kill).
+120 s timeout; SIGQUIT ignored → force kill) and `StoppedToolRoundTest`.
+Tool rows are not persisted to the chat database (pre-existing), so a reloaded
+chat shows neither the tool row nor the chip.
 
 **Seccomp fallback.** If proot exits non-zero and its own stderr (`proot …`
 lines) reports `execve … EPERM / Operation not permitted` or suggests

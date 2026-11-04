@@ -2,6 +2,7 @@ package com.druk.lmplayground.computer
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
+import com.druk.lmplayground.conversation.StoppedToolRound
 import com.druk.lmplayground.conversation.ToolCallRunner
 import com.druk.lmplayground.tools.CosExecTool
 import com.druk.lmplayground.tools.ToolRegistry
@@ -281,8 +282,14 @@ class ProotTerminationTest {
             JSONObject().put("id", "c1").put("name", "cos_exec").put("arguments", """{"command":"sleep 300"}"""),
         ).toString()
         val shown = AtomicReference<String?>(null)
-        // Same runner GenerationCoordinator uses; cancelling it == ConversationViewModel.cancelGeneration().
-        val turn = launch(Dispatchers.Default) { ToolCallRunner.run(registry, calls) { shown.set(it) } }
+        val card = AtomicReference<List<com.druk.lmplayground.conversation.ToolCallInfo>?>(null)
+        // Same runner + recording GenerationCoordinator uses; cancelling it ==
+        // ConversationViewModel.cancelGeneration().
+        val turn = launch(Dispatchers.Default) {
+            ToolCallRunner.run(registry, calls) { results ->
+                StoppedToolRound.record(calls, results, 0, submit = { shown.set(it); 0 }, show = { card.set(it) })
+            }
+        }
         waitForGuest()
         val child = childPid()!!
         val t0 = System.currentTimeMillis()
@@ -292,6 +299,8 @@ class ProotTerminationTest {
         val content = JSONObject(JSONArray(shown.get()!!).getJSONObject(0).getString("content"))
         assertTrue(content.toString(), content.getBoolean("cancelled"))
         assertTrue(content.toString(), content.getString("error").startsWith("cancelled"))
+        assertEquals(130, content.getInt("exit_code"))
+        assertTrue("tool card marked stopped", card.get()!!.single().stopped)
         assertTrue("events=$events", events.contains("log:terminate reason=chat-stop (exec coroutine cancelled)"))
         assertEquals(ProotTerminator.SIGQUIT, signals.first().second)
         Thread.sleep(200)
