@@ -30,6 +30,7 @@ import androidx.compose.material.icons.outlined.Computer
 import androidx.compose.material.icons.outlined.HelpOutline
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Language
+import androidx.compose.material.icons.outlined.Memory
 import androidx.compose.material.icons.outlined.Policy
 import androidx.compose.material.icons.outlined.Storage
 import androidx.compose.material.icons.outlined.Tune
@@ -80,6 +81,7 @@ fun SettingsScreen(
     onAdvancedClick: () -> Unit,
     onSendFeedbackClick: () -> Unit,
     onChidoriClick: () -> Unit = {},
+    onComputerClick: () -> Unit = {},
     onCloudApisClick: () -> Unit = {},
     onUsageClick: () -> Unit = {},
     appVersion: String,
@@ -249,6 +251,7 @@ fun SettingsScreen(
                         onPrivacyPolicyClick = { detail = SettingsDetail.PrivacyPolicy },
                         onFaqClick = { detail = SettingsDetail.Faq },
                         onChidoriClick = { detail = SettingsDetail.Chidori },
+                        onComputerClick = onComputerClick,
                         onCloudApisClick = {
                             if (cloudApisDetailContent != null) {
                                 detail = SettingsDetail.CloudApis
@@ -344,6 +347,7 @@ fun SettingsScreen(
                 onPrivacyPolicyClick = onPrivacyPolicyClick,
                 onFaqClick = onFaqClick,
                 onChidoriClick = onChidoriClick,
+                onComputerClick = onComputerClick,
                 onCloudApisClick = onCloudApisClick,
                 onUsageClick = onUsageClick,
                 onCrashEngineClick = onCrashEngineClick,
@@ -374,6 +378,7 @@ private fun SettingsList(
     onPrivacyPolicyClick: () -> Unit,
     onFaqClick: () -> Unit,
     onChidoriClick: () -> Unit = {},
+    onComputerClick: () -> Unit = {},
     onCloudApisClick: () -> Unit = {},
     onUsageClick: () -> Unit = {},
     onCrashEngineClick: (() -> Unit)?,
@@ -416,6 +421,14 @@ private fun SettingsList(
             subtitle = stringResource(R.string.chidori_desktop_subtitle),
             selected = selectedDetail == SettingsDetail.Chidori,
             onClick = onChidoriClick
+        )
+
+        SettingsRow(
+            icon = Icons.Outlined.Memory,
+            title = stringResource(R.string.cos_computer_title),
+            subtitle = stringResource(R.string.cos_computer_blurb),
+            selected = false,
+            onClick = onComputerClick
         )
 
         SettingsRow(

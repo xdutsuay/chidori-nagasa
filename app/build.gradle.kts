@@ -137,9 +137,19 @@ android {
                 arguments += "-DLLAMA_OPENSSL=OFF"
                 arguments += "-DGGML_LLAMAFILE=OFF"
                 arguments += "-DGGML_NATIVE=OFF"
-                // Vulkan needs a Windows host compiler for vulkan-shaders-gen
-                // (MSVC). Override with -PggmlVulkan=off when that is missing.
-                val ggmlVulkan = (project.findProperty("ggmlVulkan") as String?) != "off"
+                // Vulkan needs a Windows host toolchain for vulkan-shaders-gen
+                // (MSVC + nested host CMake that finds Ninja). Android Studio
+                // Run/Refresh on Windows otherwise fails with:
+                //   CMake Error: unable to find a build program "Ninja"
+                // Default OFF on Windows; force with -PggmlVulkan=on, or
+                // disable anywhere with -PggmlVulkan=off.
+                val ggmlVulkanProp = project.findProperty("ggmlVulkan") as String?
+                val isWindowsHost = System.getProperty("os.name").lowercase().contains("win")
+                val ggmlVulkan = when (ggmlVulkanProp) {
+                    "off" -> false
+                    "on" -> true
+                    else -> !isWindowsHost
+                }
                 arguments += "-DGGML_VULKAN=${if (ggmlVulkan) "ON" else "OFF"}"
                 if (ggmlVulkan) {
                     vulkanGlslcPath?.let { arguments += "-DVulkan_GLSLC_EXECUTABLE=$it" }

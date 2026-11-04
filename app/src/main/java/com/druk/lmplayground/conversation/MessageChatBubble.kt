@@ -330,6 +330,7 @@ private fun toolDisplayName(name: String): String = when (name) {
     "run_javascript" -> stringResource(R.string.tool_run_javascript_title)
     "web_search" -> stringResource(R.string.tool_web_search_title)
     "web_fetch" -> stringResource(R.string.tool_web_fetch_title)
+    "cos_exec" -> stringResource(R.string.tool_cos_exec_title)
     else -> name
 }
 

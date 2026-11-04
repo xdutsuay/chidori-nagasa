@@ -18,6 +18,9 @@ import com.druk.lmplayground.R
  * Transient system notification for needs_you run events (KMA-288) —
  * mirrors NodeNotification's channel posture (own channel, no lights/vibrate
  * ceremony) but as one-shot alerts, not an ongoing service notification.
+ *
+ * The content Intent carries [ACTION_OPEN_NEEDS_YOU] plus instance/run ids so
+ * a tap opens the monitor run detail (daily-use deep link), not bare home.
  */
 internal object NeedsYouNotification {
     const val CHANNEL_ID = "chidori_needs_you"
@@ -37,7 +40,7 @@ internal object NeedsYouNotification {
         nm.createNotificationChannel(channel)
     }
 
-    fun post(context: Context, runId: String, reason: String) {
+    fun post(context: Context, instanceId: String, runId: String, reason: String) {
         // Android 13+ gates notify() behind the runtime POST_NOTIFICATIONS
         // permission; skip rather than crash when the user hasn't granted it
         // (the monitor screen still shows the run's NEEDS_YOU state).
@@ -50,10 +53,16 @@ internal object NeedsYouNotification {
         }
         ensureChannel(context)
         val launch = Intent(context, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
+            action = ACTION_OPEN_NEEDS_YOU
+            putExtra(EXTRA_NEEDS_YOU_INSTANCE_ID, instanceId)
+            putExtra(EXTRA_NEEDS_YOU_RUN_ID, runId)
+            flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
         }
+        // requestCode keyed by runId hash so concurrent needs_you notifications
+        // don't clobber each other's PendingIntent extras.
+        val requestCode = runId.hashCode()
         val pi = PendingIntent.getActivity(
-            context, 0, launch,
+            context, requestCode, launch,
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
         val text = reason.ifBlank { context.getString(R.string.needs_you_notification_default_text) }
@@ -69,6 +78,8 @@ internal object NeedsYouNotification {
             .setAutoCancel(true)
             .setCategory(NotificationCompat.CATEGORY_STATUS)
             .build()
-        NotificationManagerCompat.from(context).notify(NOTIFICATION_ID, notification)
+        // Per-run notification id so two blocked runs both stay visible.
+        val notifyId = NOTIFICATION_ID xor (runId.hashCode() and 0x7FFF_FFFF)
+        NotificationManagerCompat.from(context).notify(notifyId, notification)
     }
 }

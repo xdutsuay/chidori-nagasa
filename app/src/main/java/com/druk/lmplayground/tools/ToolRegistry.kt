@@ -87,6 +87,7 @@ class ToolRegistry {
                 register(WebSearchTool(webLinkStore))
                 register(WebFetchTool(webLinkStore))
                 register(JavaScriptTool(context))
+                register(CosExecTool(context))
             }
         }
     }

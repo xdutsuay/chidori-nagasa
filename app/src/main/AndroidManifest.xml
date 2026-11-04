@@ -47,6 +47,7 @@
         <activity
             android:name="com.druk.lmplayground.MainActivity"
             android:configChanges="screenSize|smallestScreenSize|screenLayout|orientation|keyboardHidden|density"
+            android:launchMode="singleTop"
             android:windowSoftInputMode="adjustResize"
             android:exported="true">
             <intent-filter>
@@ -78,6 +79,12 @@
              by the OS shortly after bind on Android 8+/14. -->
         <service
             android:name="com.druk.lmplayground.coordinator.node.NodeService"
+            android:foregroundServiceType="dataSync"
+            android:exported="false" />
+
+        <!-- COS (on-device mini-Linux) long exec / prune — opt-in Computer only. -->
+        <service
+            android:name="com.druk.lmplayground.computer.CosComputerService"
             android:foregroundServiceType="dataSync"
             android:exported="false" />
 

@@ -23,6 +23,13 @@ class ChidoriFragment : Fragment() {
 
     private val viewModel: ChidoriViewModel by viewModels()
 
+    override fun onResume() {
+        super.onResume()
+        // Notification tap while already on this screen (or after Nav lands
+        // here) — re-check the process-wide pending deep link.
+        viewModel.consumeNeedsYouPending()
+    }
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
