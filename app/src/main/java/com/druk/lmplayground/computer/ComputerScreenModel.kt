@@ -8,17 +8,23 @@ package com.druk.lmplayground.computer
 object ComputerScreenModel {
 
     /** Every action that lives in the top-bar ⋮ menu (no button rows on screen). */
-    enum class Action { INSTALL_ROOTFS, REINSTALL_ROOTFS, SMOKE, PRUNE, NEW_SESSION, CLEAR_TERMINAL }
+    enum class Action { INSTALL_ROOTFS, REINSTALL_ROOTFS, INSTALL_DESKTOP, SMOKE, PRUNE, NEW_SESSION, CLEAR_TERMINAL }
 
     data class MenuItem(val action: Action, val enabled: Boolean)
 
     data class RecipeItem(val id: String, val title: String, val installed: Boolean, val enabled: Boolean)
 
-    fun menuItems(state: ComputerUiState): List<MenuItem> {
+    /**
+     * @param desktopIdle the desktop is not installing / starting / running (from
+     *   `DesktopStateMachine.canInstall`); "Install desktop" also needs the rootfs.
+     */
+    fun menuItems(state: ComputerUiState, desktopIdle: Boolean = true): List<MenuItem> {
         val idle = state.enabled && !state.busy
+        val rootfsReady = state.status == ComputerStatus.Ready || state.status == ComputerStatus.Running
         return listOf(
             MenuItem(Action.INSTALL_ROOTFS, idle),
             MenuItem(Action.REINSTALL_ROOTFS, idle),
+            MenuItem(Action.INSTALL_DESKTOP, idle && rootfsReady && desktopIdle),
             MenuItem(Action.SMOKE, idle),
             MenuItem(Action.PRUNE, state.enabled),
             MenuItem(Action.NEW_SESSION, true),

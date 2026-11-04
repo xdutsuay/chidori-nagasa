@@ -6,6 +6,7 @@ import android.os.BatteryManager
 import android.os.PowerManager
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.druk.lmplayground.computer.desktop.LocalDesktopBridge
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -83,6 +84,8 @@ class ComputerViewModel(app: Application) : AndroidViewModel(app) {
         flags.setComputerEnabled(enabled)
         if (!enabled) {
             runtime.stop()
+            // Turning Computer off also stops the desktop (whole proot tree, off-thread).
+            LocalDesktopBridge.peek()?.stopAsync("computer-disabled")
             CosComputerService.stop(getApplication())
         }
         refresh()

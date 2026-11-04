@@ -76,6 +76,12 @@ fun ComputerScreen(
     onRun: () -> Unit,
     onStop: () -> Unit,
     onClearTerminal: () -> Unit,
+    /** Label for the "Install desktop" ⋮ item (shows the download size). */
+    installDesktopLabel: String = "Install desktop",
+    desktopIdle: Boolean = true,
+    onInstallDesktop: () -> Unit = {},
+    /** Temporary CP2 Desktop debug section, shown under the status line when set. */
+    desktopPanel: (@Composable () -> Unit)? = null,
 ) {
     Scaffold(
         topBar = {
@@ -110,6 +116,9 @@ fun ComputerScreen(
                         onInstallRecipe = onInstallRecipe,
                         onRotateSession = onRotateSession,
                         onClearTerminal = onClearTerminal,
+                        installDesktopLabel = installDesktopLabel,
+                        desktopIdle = desktopIdle,
+                        onInstallDesktop = onInstallDesktop,
                     )
                 },
             )
@@ -134,6 +143,7 @@ fun ComputerScreen(
                     .padding(horizontal = 12.dp, vertical = 2.dp)
                     .testTag(TAG_STATUS),
             )
+            desktopPanel?.invoke()
             CosTerminalOutput(
                 text = state.terminal,
                 modifier = Modifier
@@ -162,6 +172,9 @@ private fun ComputerOverflowMenu(
     onInstallRecipe: (String) -> Unit,
     onRotateSession: () -> Unit,
     onClearTerminal: () -> Unit,
+    installDesktopLabel: String,
+    desktopIdle: Boolean,
+    onInstallDesktop: () -> Unit,
 ) {
     var open by remember { mutableStateOf(false) }
     // Two-step reinstall: first tap arms (menu stays open), second tap confirms.
@@ -181,7 +194,7 @@ private fun ComputerOverflowMenu(
                 open = false
                 reinstallArmed = false
             }
-            ComputerScreenModel.menuItems(state).forEach { item ->
+            ComputerScreenModel.menuItems(state, desktopIdle).forEach { item ->
                 val label = when (item.action) {
                     Action.INSTALL_ROOTFS -> stringResource(R.string.cos_ensure_rootfs)
                     Action.REINSTALL_ROOTFS -> if (reinstallArmed) {
@@ -189,6 +202,7 @@ private fun ComputerOverflowMenu(
                     } else {
                         stringResource(R.string.cos_reinstall_rootfs)
                     }
+                    Action.INSTALL_DESKTOP -> installDesktopLabel
                     Action.SMOKE -> stringResource(R.string.cos_smoke_uname)
                     Action.PRUNE -> stringResource(R.string.cos_prune)
                     Action.NEW_SESSION -> stringResource(R.string.cos_rotate_session)
@@ -215,6 +229,7 @@ private fun ComputerOverflowMenu(
                             } else {
                                 reinstallArmed = true
                             }
+                            Action.INSTALL_DESKTOP -> { close(); onInstallDesktop() }
                             Action.SMOKE -> { close(); onSmoke() }
                             Action.PRUNE -> { close(); onPrune() }
                             Action.NEW_SESSION -> { close(); onRotateSession() }

@@ -10,6 +10,7 @@ import com.druk.lmplayground.cloud.CloudClient
 import com.druk.lmplayground.cloud.CloudKeyStore
 import com.druk.lmplayground.cloud.CloudProviderRepository
 import com.druk.lmplayground.cloud.EncryptedCloudKeyStore
+import com.druk.lmplayground.computer.desktop.LocalDesktopBridge
 import com.druk.lmplayground.coordinator.CoordinatorRepository
 import com.druk.lmplayground.coordinator.notifications.NeedsYouBadgePoller
 import com.druk.lmplayground.data.AppDatabase
@@ -106,6 +107,12 @@ class App : Application() {
         val appContext = applicationContext
         thread(isDaemon = true, name = "legacy-download-cleanup") {
             LegacyDownloadCleanup.run(appContext)
+        }
+
+        // CP2: publish the COS desktop runtime for the chat tools (DesktopBridges.bridge).
+        // get() reads the rootfs install marker, so keep it off the main thread.
+        thread(isDaemon = true, name = "cos-desktop-bridge") {
+            LocalDesktopBridge.get(appContext)
         }
 
         val database = AppDatabase.getInstance(this)
