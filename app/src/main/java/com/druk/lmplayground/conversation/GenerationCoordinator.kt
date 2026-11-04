@@ -6,8 +6,10 @@ import com.druk.llamacpp.InferenceUnavailableException
 import com.druk.llamacpp.LlamaGenerationCallback
 import com.druk.lmplayground.App
 import com.druk.lmplayground.R
+import com.druk.lmplayground.computer.CosPromptNote
 import com.druk.lmplayground.inference.ModelRuntime
 import com.druk.lmplayground.storage.StoragePreferences
+import com.druk.lmplayground.tools.CosToolDefaults
 import com.druk.lmplayground.tools.ToolRegistry
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -146,6 +148,16 @@ class GenerationCoordinator(
 
         // Tools are active when model supports it and user has tools enabled
         val toolsActive = supportsToolCalling && toolRegistry.hasEnabledTools()
+
+        // COS note, re-evaluated every turn: if Computer/rootfs/cos_exec state changed
+        // since the session was told, prepend a one-off update to this turn's model
+        // input (the stored chat message is untouched). No chat restart needed.
+        val announcedCos = runtime.cosStateOf(llamaSession)
+        val cosUpdate = announcedCos?.let { announced ->
+            val cosExecAvailable = toolsActive && toolRegistry.isToolEnabled(CosToolDefaults.COS_EXEC)
+            val live = CosPromptNote.liveState(runtime.cosStateProvider(), cosExecAvailable)
+            CosPromptNote.turnUpdate(announced, live)?.let { it to live }
+        }
         try {
             val toolsJson = if (toolsActive) toolRegistry.toOpenAIToolsJson() else "[]"
             llamaSession.setTools(toolsJson)
@@ -166,7 +178,11 @@ class GenerationCoordinator(
             if (imageBytes != null) {
                 llamaSession.setImageData(imageBytes)
             }
-            llamaSession.addMessage(content, enableThinking)
+            llamaSession.addMessage(CosPromptNote.withTurnUpdate(content, cosUpdate?.first), enableThinking)
+            cosUpdate?.let { (_, live) ->
+                runtime.markCosState(llamaSession, live)
+                Log.i(TAG, "COS prompt state $announcedCos -> $live (per-turn update)")
+            }
         } catch (e: InferenceUnavailableException) {
             Log.w(TAG, "addMessage failed: service unavailable", e)
             listener.onUserError(

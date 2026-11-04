@@ -122,6 +122,19 @@ class ModelRuntime(
      */
     fun systemPromptOf(session: LlamaGenerationSession): String? = sessionPrompts[session]
 
+    /** COS state each chat session was last told (system prompt, then per-turn updates). */
+    private val sessionCosStates = java.util.Collections.synchronizedMap(
+        java.util.WeakHashMap<LlamaGenerationSession, CosPromptNote.State>(),
+    )
+
+    /** Last COS state announced to [session], or null for non-chat / unknown sessions. */
+    fun cosStateOf(session: LlamaGenerationSession): CosPromptNote.State? = sessionCosStates[session]
+
+    /** Record that [session] has now been told [state] (after a per-turn update). */
+    fun markCosState(session: LlamaGenerationSession, state: CosPromptNote.State) {
+        sessionCosStates[session] = state
+    }
+
     /**
      * COS readiness for the prompt note; replaceable in tests. Reads only prefs and
      * the rootfs ready marker (no network, no proot).
@@ -391,11 +404,8 @@ class ModelRuntime(
         systemPrompt: String,
         chat: Boolean = true,
     ): LlamaGenerationSession? {
-        val effectivePrompt = CosPromptNote.sessionSystemPrompt(
-            systemPrompt,
-            chat,
-            if (chat) cosStateProvider() else CosPromptNote.State.DISABLED,
-        )
+        val cosState = if (chat) cosStateProvider() else CosPromptNote.State.DISABLED
+        val effectivePrompt = CosPromptNote.sessionSystemPrompt(systemPrompt, chat, cosState)
         return try {
             model.createSession(
                 params.contextSize,
@@ -407,7 +417,12 @@ class ModelRuntime(
                 params.seed,
                 params.thinkingBudget,
                 effectivePrompt
-            )?.also { if (chat) sessionPrompts[it] = effectivePrompt }
+            )?.also {
+                if (chat) {
+                    sessionPrompts[it] = effectivePrompt
+                    sessionCosStates[it] = cosState
+                }
+            }
         } catch (e: InferenceUnavailableException) {
             // The :llama service died (or hasn't bound yet). Surface a
             // recoverable error to the UI rather than letting the AIDL

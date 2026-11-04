@@ -6,8 +6,13 @@ package com.druk.lmplayground.computer
  *
  * Injected once per session by `ModelRuntime.createSessionWithParams`, i.e. in the
  * stable system-prompt prefix (KMA-318 preamble KV cache stays valid across
- * turns); it is never repeated per user turn. With Computer disabled the user's
- * prompt is returned unchanged.
+ * turns). With Computer disabled the user's prompt is returned unchanged.
+ *
+ * The state is re-evaluated every turn (`GenerationCoordinator`): Computer flag,
+ * rootfs readiness and the effective `cos_exec` tool toggle ([liveState]). When it
+ * differs from what the session was last told, a one-off [turnUpdate] is prepended
+ * to that turn's model input (never to the stored chat message), so toggling the
+ * tool or finishing setup takes effect without restarting the chat.
  */
 object CosPromptNote {
 
@@ -21,6 +26,9 @@ object CosPromptNote {
 
         /** Computer is on and the pinned Alpine rootfs is installed. */
         READY,
+
+        /** Computer is on but `cos_exec` is not available in this chat (toggled off / no tool calling). */
+        TOOL_OFF,
     }
 
     /** First line of every note; used to detect / avoid double injection. */
@@ -44,7 +52,40 @@ object CosPromptNote {
                 "wants you to run commands, tell them to open the Computer screen and tap " +
                 "\"Install rootfs\". Once installed, `cos_exec` runs shell commands there " +
                 "(workspace `$workspace`, packages via `apk add`)."
+        State.TOOL_OFF ->
+            "$HEADER\n" +
+                "An on-device Alpine Linux computer (COS) exists, but the `cos_exec` tool is not " +
+                "available in this chat (it is turned off, or this model cannot call tools), so you " +
+                "cannot run commands there. Do not offer or attempt to call `cos_exec`. If the user " +
+                "wants commands run, tell them to turn the `cos_exec` tool on in this chat's tool settings."
     }
+
+    /**
+     * Effective state for this turn: [base] from [stateFor], downgraded to [State.TOOL_OFF]
+     * when Computer is on but `cos_exec` is not usable this turn.
+     */
+    fun liveState(base: State, cosExecAvailable: Boolean): State =
+        if (base != State.DISABLED && !cosExecAvailable) State.TOOL_OFF else base
+
+    /** Marker opening a per-turn update (so it is recognisable in logs and tests). */
+    const val UPDATE_OPEN = "[System update: on-device computer (COS) changed]"
+    const val UPDATE_CLOSE = "[End of system update]"
+
+    /**
+     * One-off note for a turn whose live COS state differs from what the session was
+     * last told ([announced]); null when nothing changed.
+     */
+    fun turnUpdate(announced: State, live: State): String? {
+        if (announced == live) return null
+        val body = note(live)
+            ?: "The on-device computer (COS) has been turned off. `cos_exec` is no longer " +
+            "available; do not offer or call it."
+        return "$UPDATE_OPEN\n$body\nThis replaces any earlier COS instructions.\n$UPDATE_CLOSE"
+    }
+
+    /** [content] with [update] in front (blank-line separated), or unchanged when null. */
+    fun withTurnUpdate(content: String, update: String?): String =
+        if (update == null) content else "$update\n\n$content"
 
     /**
      * [userPrompt] with the note for [state] appended (blank-line separated).
