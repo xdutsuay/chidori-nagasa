@@ -192,6 +192,121 @@ Android host shell.
   `cos_exec` unavailable the note says not to offer or call it. A replayed
   session gets the current state in its system prompt.
 
+## Desktop (CP2, M1)
+
+An optional X11 desktop inside the same Alpine rootfs, driven by a headless
+framebuffer (no VNC in v1). Code: `computer/desktop/`. The chat tools that use it
+(`cos_screenshot`, `cos_gui`) are documented in `docs/COS_DESKTOP_TOOLS.md`
+(branch `cp/cos-desktop-chat-tools`); they talk to the runtime only through the
+`DesktopBridge` contract (`computer/desktop/DesktopBridge.kt`).
+
+### Install
+
+Computer ⋮ → **Install desktop (~113 MiB)**. The item needs Computer on, Alpine
+installed and the desktop idle. A confirm dialog shows the download and on-disk
+size *before* anything is fetched, warns on metered Wi‑Fi or mobile data
+("Download anyway"), and blocks when offline or when free space is below
+installed + download + 64 MiB. Firefox ESR is a separate opt-in checkbox.
+
+Packages are exact pins from Alpine 3.24 (`DesktopPackages.kt`), installed with
+`apk add -U name=version …` inside proot (via `execStreaming`, 30 min timeout, cancel reason `desktop-install`). Both
+`aarch64` and `x86_64` use the same versions:
+
+| Set | Packages |
+|---|---|
+| `default` | xvfb 21.1.25-r0, openbox 3.6.1-r8, tint2 17.1.3-r1, xterm 410-r0, xdotool 4.20260303.1-r0, xdpyinfo 1.4.0-r0, xwd 1.0.9-r2, xauth 1.1.5-r0, font-dejavu 2.37-r6, netsurf 3.11-r1, pcmanfm 1.3.2-r2 |
+| `firefox` (opt-in) | firefox-esr 140.12.0-r0 |
+
+| Arch | Set | Download | Installed |
+|---|---|---|---|
+| aarch64 | default | 118,354,286 B | 324,693,859 B |
+| aarch64 | firefox | 115,763,494 B | 287,854,520 B |
+| x86_64 | default | 123,988,068 B | 337,580,815 B |
+| x86_64 | firefox | 123,468,692 B | 330,394,900 B |
+
+The pins and sizes were resolved against the APKINDEX snapshots whose sha256
+are recorded in `DesktopPackages.APKINDEX_SHA256`; after each install the
+cached `/var/cache/apk/APKINDEX.*` are compared and logged (`APKINDEX snapshot: main=match …`). Install is idempotent. After `apk add`, every pin is
+checked with `apk info -v`, and only then is
+`/var/lib/cos-desktop/installed` written. Progress is parsed from apk's
+`( i/n) Installing …` lines into `DesktopState.Installing(progress)`. When
+Alpine moves a pin out of the mirror, `apk add` fails with an
+"unable to select packages" hint, and the fix is a pin bump in a new build.
+
+The default set alone already exceeds the 512 MiB COS soft cap together with
+the base rootfs: the cap is a prune target, and the desktop is not pruned.
+
+### Session
+
+`DesktopSession` runs the whole desktop as **one proot process tree** (one
+supervised `libproot.so` child), started by `LocalDesktopBridge.start()`:
+
+1. Create `/var/lib/cos-desktop/{fb,…}` and check `Xvfb xauth xdpyinfo openbox tint2 xterm`.
+2. Clean a stale `/tmp/.X<N>-lock` / socket. A *live* Xvfb on the display is an error.
+3. Create a fresh 128-bit MIT-MAGIC-COOKIE-1 with `xauth source -` from stdin, so it never appears in argv or `ps`.
+4. Run `Xvfb :N -screen 0 1280x720x24 -nolisten tcp -nolisten local -auth /var/lib/cos-desktop/Xauthority -fbdir /var/lib/cos-desktop/fb`.
+   - `-nolisten local` drops the abstract socket. That namespace is shared by
+     every app on the device, so only the filesystem socket inside the private
+     rootfs remains.
+5. Wait for `xdpyinfo` with the cookie (up to 60 s), then start openbox, tint2 and xterm.
+6. Print `COS-DESKTOP-READY display=:N width=… height=… depth=…` (or `COS-DESKTOP-ERROR …`).
+
+The default display is `:1` inside the guest. Displays live in the rootfs's
+own `/tmp/.X11-unix`, so this does not collide with other apps; the abstract
+socket is off. Tests and the box smoke run use `DesktopConfig(display = 42)`.
+
+**Stop** (Desktop panel Stop, Computer switch off, or `DesktopBridge.stop()`)
+snapshots the tree, signals it through `ProotTerminator` (SIGQUIT to proot → 2 s
+grace → `destroyForcibly` → SIGKILL sweep of surviving guest pids), and then
+verifies by pid + start time that nothing survived:
+
+```
+COS: desktop ready display=:1 pid=12345 in 2300ms
+COS: desktop stop reason=desktop-stop display=:1 tree=7
+COS: terminate[desktop-stop]: SIGQUIT -> proot pid=12345 (guest tree=7)
+COS: terminate[desktop-stop]: proot exited after SIGQUIT
+COS: desktop stopped display=:1 survivors=0
+```
+
+If Xvfb dies on its own, the state moves to `Error("… exited …")` and Start
+works again. Session stderr goes to `/var/lib/cos-desktop/session.log` (rootfs)
+and to logcat with an `[err] ` prefix.
+
+`execInDesktop(cmd)` runs `/bin/sh -c "export DISPLAY=:N XAUTHORITY=… HOME=/root; <cmd>"`
+through `execStreaming` (cancel reason `desktop-exec`). The command arrives
+already shell-quoted (`ShellQuote`) and is not re-quoted. Cancelling the
+coroutine (chat Stop) kills only that exec's proot tree; the desktop keeps
+running.
+
+`screenshot(format, scale)` is `DesktopScreenshots.encode(fbFile, format, scale)`.
+Xvfb's `-fbdir` file is an XWD v7 dump (160-byte header + 256-entry colormap,
+so pixels start at byte 3232) that Xvfb keeps mmap'd. Reading it needs no X
+client. A frame can tear if the screen changes mid-read.
+
+`LocalDesktopBridge.get(context)` is process-wide. `App.onCreate` creates it
+on a background thread and publishes it as `DesktopBridges.bridge`, so the chat
+tools see the same session as the Computer screen. Leaving the Computer screen
+does **not** stop a running desktop; turning Computer off does.
+
+### `/dev/shm`
+
+Android has no `/dev/shm`. Every proot (terminal, exec, desktop) binds
+`<rootfs>/tmp` there (`-b <rootfs>/tmp:/dev/shm`, as proot-distro does), so
+POSIX shm (`shm_open`, Firefox, glib) works in the guest. SysV shm (MIT-SHM)
+is not available on Android. Xvfb still runs, and X clients that try MIT-SHM
+get a clean failure and fall back to normal requests (`libandroid-shmem.so`
+is proot's dependency, not used for X).
+
+### Temporary debug section
+
+The Computer screen shows a **Desktop (debug)** strip under the status line with
+the state (`Not installed`, `Installing 42% · ( 5/38) Installing …`,
+`Running :1 · 1280×720×24`, `Error: …`), Start/Stop and **Shot**. Shot calls
+`screenshot(PNG, 1f)`, displays the frame, saves it to
+`cache/cos-desktop/last.png`, and logs
+`desktop screenshot 1280x720 png_bytes=…`. The strip will be replaced by the
+viewer in a later milestone.
+
 ## Troubleshooting
 
 | Symptom | Likely cause / fix |
@@ -202,5 +317,8 @@ Android host shell.
 | `CANNOT LINK EXECUTABLE … libtalloc.so` | `$ORIGIN` RUNPATH not honoured; `LD_LIBRARY_PATH` should cover it — report with `adb logcat -s COS` |
 | `apk add` DNS errors | check `/etc/resolv.conf` in the guest; it is rewritten if missing |
 | exit 124 | command exceeded 120 s; run long jobs in smaller steps |
+| `desktop error: display :N already held by running Xvfb` | an earlier desktop survived (should not happen); Stop, or turn Computer off and on |
+| `Install desktop` fails with `unable to select packages` | Alpine dropped a pinned version from the mirror; needs a pin bump |
+| Desktop stuck at `Starting…` then `Error: … not ready` | Xvfb/xdpyinfo did not come up within 60 s; see `/var/lib/cos-desktop/session.log` |
 
 Logs: `adb logcat -s COS`.

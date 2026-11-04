@@ -24,6 +24,18 @@ class ComputerScreenModelTest {
     }
 
     @Test
+    fun `install desktop needs an idle rootfs and an idle desktop`() {
+        fun on(s: ComputerUiState, desktopIdle: Boolean = true) =
+            ComputerScreenModel.menuItems(s, desktopIdle).single { it.action == Action.INSTALL_DESKTOP }.enabled
+        assertTrue(on(ready))
+        assertTrue(on(ready.copy(status = ComputerStatus.Running)))
+        assertFalse(on(ready.copy(status = ComputerStatus.MissingRootfs)))
+        assertFalse(on(ready.copy(busy = true)))
+        assertFalse(on(ready.copy(enabled = false)))
+        assertFalse(on(ready, desktopIdle = false))
+    }
+
+    @Test
     fun `menu enablement follows enabled and busy`() {
         val idle = ComputerScreenModel.menuItems(ready).associate { it.action to it.enabled }
         assertTrue(idle.values.all { it })
