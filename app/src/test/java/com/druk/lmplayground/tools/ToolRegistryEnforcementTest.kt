@@ -94,6 +94,44 @@ class ToolRegistryEnforcementTest {
     }
 
     @Test
+    fun `chat toggle on but Computer off resolves disabled and is rejected`() {
+        // Review nit: the per-turn hydration (CosToolDefaults.resolve) feeds setToolEnabled.
+        val enabled = CosToolDefaults.resolve(
+            CosToolDefaults.COS_EXEC, override = true, globalDefault = true, computerEnabled = false,
+        )
+        assertFalse(enabled)
+        val cos = CountingTool(CosToolDefaults.COS_EXEC)
+        val registry = ToolRegistry().apply { register(cos); setToolEnabled(CosToolDefaults.COS_EXEC, enabled) }
+        val results = registry.executeToolCalls(JSONArray().put(call("1", CosToolDefaults.COS_EXEC, "{}")).toString())
+        assertTrue(JSONObject(contentOf(results, "1")).getString("error").startsWith("cos_exec is disabled"))
+        assertEquals(0, cos.calls.get())
+    }
+
+    @Test
+    fun `calls after Stop in the same batch are skipped`() {
+        lateinit var registry: ToolRegistry
+        val first = object : Tool {
+            override val name = "web_search"
+            override val description = "x"
+            override val parametersSchema = "{}"
+            override fun execute(arguments: String): String { registry.cancelInFlight(); return "{}" }
+        }
+        val second = CountingTool("web_fetch")
+        registry = ToolRegistry().apply {
+            register(first); register(second)
+            setToolEnabled("web_search", true); setToolEnabled("web_fetch", true)
+        }
+        val results = registry.executeToolCalls(
+            JSONArray().put(call("1", "web_search", "{}")).put(call("2", "web_fetch", "{}")).toString(),
+        )
+        assertEquals(0, second.calls.get())
+        assertTrue(contentOf(results, "2").contains("cancelled"))
+        // Next batch starts fresh.
+        registry.executeToolCalls(JSONArray().put(call("3", "web_fetch", "{}")).toString())
+        assertEquals(1, second.calls.get())
+    }
+
+    @Test
     fun `unknown tool still reports unknown`() {
         val results = ToolRegistry().executeToolCalls(JSONArray().put(call("1", "nope", "{}")).toString())
         assertTrue(contentOf(results, "1").contains("Unknown tool: nope"))

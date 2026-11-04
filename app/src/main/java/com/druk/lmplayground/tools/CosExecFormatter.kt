@@ -32,6 +32,18 @@ object CosExecFormatter {
         return obj.toString()
     }
 
+    /** Tool result after chat Stop cancelled a running command. */
+    const val CANCELLED_MESSAGE =
+        "cancelled: the user pressed Stop; the command was terminated before it finished"
+
+    fun cancelledJson(): String = JSONObject()
+        .put("exit_code", 130)
+        .put("stdout", "")
+        .put("stderr", CANCELLED_MESSAGE)
+        .put("cancelled", true)
+        .put("error", CANCELLED_MESSAGE)
+        .toString()
+
     fun errorJson(message: String): String {
         return JSONObject().put("error", message).toString()
     }

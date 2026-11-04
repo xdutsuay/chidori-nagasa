@@ -15,6 +15,9 @@ object CosAgentBridge {
     const val AGENT_CWD = "root"
 
     /** stderr when Computer is off (matched by [com.druk.lmplayground.tools.CosExecFormatter.isCosDisabled]). */
+    /** Terminator reason when the chat turn running `cos_exec` is stopped. */
+    const val CHAT_STOP = "chat-stop"
+
     const val DISABLED_MESSAGE = "COS disabled — enable Computer first"
 
     /** stderr when Alpine is not installed and auto-setup failed. */
@@ -41,7 +44,9 @@ object CosAgentBridge {
         if (argv.isEmpty()) {
             return ComputerExecResult(2, "", "empty command")
         }
-        return runtime.execStreaming(argv, AGENT_CWD) { }
+        // Cancellation of the calling coroutine (chat Stop) terminates proot via
+        // ProotTerminator with reason "chat-stop" and rethrows.
+        return runtime.execStreaming(argv, AGENT_CWD, cancelReason = CHAT_STOP) { }
     }
 
     fun isAvailable(context: Context): Boolean {

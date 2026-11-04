@@ -2,7 +2,9 @@ package com.druk.lmplayground.computer
 
 import android.content.Context
 import android.util.Log
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runInterruptible
 import kotlinx.coroutines.withContext
 import java.io.BufferedReader
 import java.io.File
@@ -30,6 +32,10 @@ import java.util.concurrent.atomic.AtomicReference
  *   path translation. [ProotTerminator] sends SIGQUIT (proot's `kill_all_tracees`
  *   handler), waits ~2 s, then `destroyForcibly()`, then SIGKILLs any surviving
  *   descendant found in `/proc` before the signal.
+ * - Coroutine cancellation (chat Stop on `cos_exec`): the wait on proot is
+ *   [runInterruptible], so cancelling the calling coroutine unblocks it and the command is
+ *   torn down through the same [ProotTerminator] path, with `cancelReason` as the reason
+ *   (logged `terminate reason=<cancelReason>`), before the [CancellationException] is rethrown.
  *
  * Used by the Computer screen terminal, [CosAgentBridge] (`cos_exec`) and
  * [CosComputerService] alike.
@@ -43,7 +49,7 @@ class LocalComputerRuntime(
     private val nativeLibDirOverride: String? = null,
     private val log: (String) -> Unit = { msg -> runCatching { Log.i(LOG_TAG, msg) } },
     private val execTimeoutMs: Long = CosConstants.EXEC_TIMEOUT_MS,
-    killGraceMs: Long = ProotTerminator.DEFAULT_GRACE_MS,
+    private val killGraceMs: Long = ProotTerminator.DEFAULT_GRACE_MS,
     sendSignal: (pid: Int, signal: Int) -> Unit = { pid, sig -> android.os.Process.sendSignal(pid, sig) },
     launchPidOf: (Process) -> Int = ProotTerminator::pidOf,
 ) : ComputerRuntime {
@@ -191,6 +197,7 @@ class LocalComputerRuntime(
     suspend fun execStreaming(
         argv: List<String>,
         cwdRelative: String = CosCwd.DEFAULT,
+        cancelReason: String = "cancel",
         onLine: (String) -> Unit,
     ): ComputerExecResult = withContext(Dispatchers.IO) {
         if (!flags.isComputerEnabled()) {
@@ -224,14 +231,14 @@ class LocalComputerRuntime(
             guestArgv = argv,
         )
         val noSeccomp = flags.isProotNoSeccomp()
-        val first = runProot(hostArgv, noSeccomp, onLine)
+        val first = runProot(hostArgv, noSeccomp, cancelReason, onLine)
         if (!ProotCommand.shouldRetryWithoutSeccomp(first.exitCode, first.stderr, noSeccomp)) {
             log("exec path=proot seccomp=${if (noSeccomp) "off" else "on"} exit=${first.exitCode}")
             return@withContext first
         }
         log("proot failed with seccomp (exit ${first.exitCode}); retrying with PROOT_NO_SECCOMP=1")
         onLine("[cos] retrying with PROOT_NO_SECCOMP=1")
-        val second = runProot(hostArgv, true, onLine)
+        val second = runProot(hostArgv, true, cancelReason, onLine)
         if (ProotCommand.fallbackWorked(second.exitCode, second.stderr)) {
             flags.setProotNoSeccomp(true)
         }
@@ -256,9 +263,10 @@ class LocalComputerRuntime(
         }
     }
 
-    private fun runProot(
+    private suspend fun runProot(
         hostArgv: List<String>,
         noSeccomp: Boolean,
+        cancelReason: String,
         onLine: (String) -> Unit,
     ): ComputerExecResult {
         running.set(true)
@@ -299,7 +307,22 @@ class LocalComputerRuntime(
                     }
                 }
             }.also { it.start() }
-            val finished = proc.waitFor(execTimeoutMs, TimeUnit.MILLISECONDS)
+            val finished = try {
+                // Interruptible: cancelling the calling coroutine (chat Stop) unblocks this
+                // wait instead of hanging until the command ends or the timeout fires.
+                runInterruptible { proc.waitFor(execTimeoutMs, TimeUnit.MILLISECONDS) }
+            } catch (c: CancellationException) {
+                Thread.interrupted() // clear any interrupt so the grace wait below really waits
+                log("terminate reason=$cancelReason (exec coroutine cancelled)")
+                if (activeProcess.compareAndSet(handle, null)) {
+                    terminator.terminate(handle, cancelReason)
+                } else {
+                    // stop() already owns termination; wait for it to finish.
+                    runCatching { proc.waitFor(killGraceMs + 2_000, TimeUnit.MILLISECONDS) }
+                }
+                runCatching { stdoutThread.join(2_000); stderrThread.join(2_000) }
+                throw c
+            }
             if (!finished) {
                 activeProcess.compareAndSet(handle, null)
                 terminator.terminate(handle, "timeout")
@@ -313,6 +336,8 @@ class LocalComputerRuntime(
             stdoutThread.join(5_000)
             stderrThread.join(5_000)
             return ComputerExecResult(proc.exitValue(), outBuf.text(), errBuf.text())
+        } catch (c: CancellationException) {
+            throw c
         } catch (t: Throwable) {
             activeProcess.getAndSet(null)?.let { terminator.terminate(it, "error") }
             return ComputerExecResult(1, "", "proot exec failed: ${t.message ?: t.javaClass.simpleName}")

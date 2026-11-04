@@ -11,11 +11,9 @@ import com.druk.lmplayground.inference.ModelRuntime
 import com.druk.lmplayground.storage.StoragePreferences
 import com.druk.lmplayground.tools.CosToolDefaults
 import com.druk.lmplayground.tools.ToolRegistry
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
-import kotlinx.coroutines.async
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -293,17 +291,15 @@ class GenerationCoordinator(
                 Log.d(TAG, "Tool calls (round $toolRounds): $toolCallsJson")
 
                 val toolStartTime = System.currentTimeMillis()
-                // Run the (blocking) tool execution on IO and await it so
-                // Stop can interrupt it: on cancel we abort in-flight
-                // network requests, which unblocks the call promptly.
-                val toolResults = withContext(Dispatchers.IO) {
-                    val exec = async { toolRegistry.executeToolCalls(toolCallsJson) }
-                    try {
-                        exec.await()
-                    } catch (e: CancellationException) {
-                        toolRegistry.cancelInFlight()
-                        throw e
-                    }
+                // Blocking tool execution on IO; Stop aborts in-flight tools
+                // (web requests, cos_exec -> proot terminated "chat-stop") and the
+                // cancelled results are still shown on the tool card.
+                val toolResults = ToolCallRunner.run(toolRegistry, toolCallsJson) { partial ->
+                    listener.onToolCalls(
+                        ToolCallInfoMapper.buildToolCallInfoList(
+                            toolCallsJson, partial, System.currentTimeMillis() - toolStartTime,
+                        ),
+                    )
                 }
                 val toolDurationMs = System.currentTimeMillis() - toolStartTime
                 Log.d(TAG, "Tool results (${toolDurationMs}ms): $toolResults")

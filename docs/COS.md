@@ -123,7 +123,8 @@ double-forked and were reparented), and is only taken while proot is alive.
 proot's pid is **captured at launch**, right after `ProcessBuilder.start()`,
 and stored with the running command: reflection first (`Process.pid()` on a
 JVM, the private `pid` field on Android), else a diff of this app's `/proc`
-children before/after the start, under a process-wide launch lock. Logged as
+children before/after the start (retried once after 100 ms if it finds no proot
+child yet, since the fork may not have exec'd), under a process-wide launch lock. Logged as
 `proot started pid=N (launch: reflection|/proc diff)` and, at termination,
 `pid via launch`. A `/proc` scan for the sole `libproot.so` child is only the
 last resort (`pid via /proc scan`); if that is ambiguous the process is just
@@ -131,6 +132,19 @@ last resort (`pid via /proc scan`); if that is ambiguous the process is just
 `ProotTerminationTest` (fake proot): SIGQUIT honoured, SIGQUIT ignored → force
 kill + child SIGKILL, launch-time capture via both paths, TracerPid backstop,
 /proc-scan last resort.
+
+**Chat Stop during `cos_exec`.** Stop cancels the generating coroutine;
+`ToolCallRunner` (used by `GenerationCoordinator`) then calls
+`ToolRegistry.cancelInFlight()` — re-issued every 200 ms until the batch returns —
+and skips any not-yet-started calls in the batch. `CosExecTool.cancelInFlight()`
+cancels the coroutine running the command; `LocalComputerRuntime` waits on proot
+with `runInterruptible`, so the cancellation unblocks it and proot is terminated
+through the same `ProotTerminator` path as the Computer screen (SIGQUIT, 2 s grace,
+force kill, descendant/TracerPid sweep), logged `terminate reason=chat-stop` /
+`terminate[chat-stop]: …`. The tool card shows
+`{"exit_code":130,"cancelled":true,"error":"cancelled: the user pressed Stop; …"}`.
+Covered by `ProotTerminationTest` (cancel → terminator, returns in < 5 s with a
+120 s timeout; SIGQUIT ignored → force kill).
 
 **Seccomp fallback.** If proot exits non-zero and its own stderr (`proot …`
 lines) reports `execve … EPERM / Operation not permitted` or suggests

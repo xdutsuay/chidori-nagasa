@@ -2,7 +2,16 @@ package com.druk.lmplayground.computer
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
+import com.druk.lmplayground.conversation.ToolCallRunner
+import com.druk.lmplayground.tools.CosExecTool
+import com.druk.lmplayground.tools.ToolRegistry
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import org.json.JSONArray
+import org.json.JSONObject
+import java.util.concurrent.atomic.AtomicReference
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -166,7 +175,7 @@ class ProotTerminationTest {
         rt.ensureRootfs()
         val r = rt.execStreaming(listOf("/bin/sh", "-c", "sleep 300 &"), "root") {}
         assertEquals(124, r.exitCode)
-        val started = events.firstOrNull { it.contains("(launch: /proc diff)") }
+        val started = events.firstOrNull { it.contains("(launch: /proc diff") }
         assertTrue("events=$events", started != null)
         val pid = Regex("pid=(\\d+)").find(started!!)!!.groupValues[1].toInt()
         assertTrue("events=$events", events.any { it == "log:terminate[timeout]: pid via launch: $pid" })
@@ -233,6 +242,76 @@ class ProotTerminationTest {
         assertFalse(proc.isAlive)
         Thread.sleep(200)
         assertFalse(alive(childPid()!!))
+    }
+
+    private fun waitForGuest() {
+        val deadline = System.currentTimeMillis() + 10_000
+        while (childPid() == null && System.currentTimeMillis() < deadline) Thread.sleep(50)
+        assertTrue("fake guest never started; events=$events", childPid() != null)
+    }
+
+    @Test
+    fun `cancelling a running cos_exec coroutine terminates proot via ProotTerminator`() = runBlocking {
+        val rt = runtime(timeoutMs = 120_000) // well beyond the test: must not wait for it
+        var result: ComputerExecResult? = null
+        val job = launch(Dispatchers.IO) { result = CosAgentBridge.exec(rt, "sleep 300") }
+        waitForGuest()
+        val child = childPid()!!
+        val t0 = System.currentTimeMillis()
+        job.cancelAndJoin()
+        val elapsed = System.currentTimeMillis() - t0
+        assertTrue("cancel took ${elapsed}ms; events=$events", elapsed < 5_000)
+        assertEquals(null, result) // cancellation propagated, no fake "result"
+        assertTrue("events=$events", events.contains("log:terminate reason=chat-stop (exec coroutine cancelled)"))
+        assertTrue("events=$events", events.any { it.startsWith("log:terminate[chat-stop]: pid via launch: ") })
+        assertEquals(ProotTerminator.SIGQUIT, signals.first().second)
+        assertTrue("events=$events", events.any { it == "log:terminate[chat-stop]: proot exited after SIGQUIT" })
+        Thread.sleep(200)
+        assertFalse(alive(child))
+    }
+
+    @Test
+    fun `chat Stop during cos_exec returns a cancelled tool result within seconds`() = runBlocking {
+        val rt = runtime(timeoutMs = 120_000)
+        val registry = ToolRegistry().apply {
+            register(CosExecTool { command -> CosAgentBridge.exec(rt, command) })
+            setToolEnabled("cos_exec", true)
+        }
+        val calls = JSONArray().put(
+            JSONObject().put("id", "c1").put("name", "cos_exec").put("arguments", """{"command":"sleep 300"}"""),
+        ).toString()
+        val shown = AtomicReference<String?>(null)
+        // Same runner GenerationCoordinator uses; cancelling it == ConversationViewModel.cancelGeneration().
+        val turn = launch(Dispatchers.Default) { ToolCallRunner.run(registry, calls) { shown.set(it) } }
+        waitForGuest()
+        val child = childPid()!!
+        val t0 = System.currentTimeMillis()
+        turn.cancelAndJoin()
+        val elapsed = System.currentTimeMillis() - t0
+        assertTrue("Stop took ${elapsed}ms; events=$events", elapsed < 5_000)
+        val content = JSONObject(JSONArray(shown.get()!!).getJSONObject(0).getString("content"))
+        assertTrue(content.toString(), content.getBoolean("cancelled"))
+        assertTrue(content.toString(), content.getString("error").startsWith("cancelled"))
+        assertTrue("events=$events", events.contains("log:terminate reason=chat-stop (exec coroutine cancelled)"))
+        assertEquals(ProotTerminator.SIGQUIT, signals.first().second)
+        Thread.sleep(200)
+        assertFalse(alive(child))
+    }
+
+    @Test
+    fun `cancel with SIGQUIT ignored still force-kills within grace`() = runBlocking {
+        File(libDir, "ignore_quit").writeText("1")
+        val rt = runtime(timeoutMs = 120_000)
+        val job = launch(Dispatchers.IO) { CosAgentBridge.exec(rt, "sleep 300") }
+        waitForGuest()
+        val child = childPid()!!
+        val t0 = System.currentTimeMillis()
+        job.cancelAndJoin()
+        val elapsed = System.currentTimeMillis() - t0
+        assertTrue("cancel took ${elapsed}ms; events=$events", elapsed < 6_000)
+        assertTrue("events=$events", events.any { it.startsWith("log:terminate[chat-stop]: grace ${GRACE_MS}ms expired") })
+        Thread.sleep(200)
+        assertFalse(alive(child))
     }
 
     @Test
