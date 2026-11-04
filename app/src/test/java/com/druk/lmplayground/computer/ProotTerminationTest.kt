@@ -314,6 +314,58 @@ class ProotTerminationTest {
         assertFalse(alive(child))
     }
 
+    private fun fakeProc(root: File, pid: Int, ppid: Int, cmdline: String) {
+        File(root, "$pid").mkdirs()
+        File(root, "$pid/stat").writeText("$pid (x) S $ppid $pid $pid 0 -1 0 0 0 0 0 0 0 0 0 20 0 1 0 ${5000 + pid} 0 0")
+        File(root, "$pid/cmdline").writeText(cmdline)
+    }
+
+    private fun fakeProcRootWithSelf(): File {
+        val root = File(tmp, "proc-diff").apply { mkdirs() }
+        fakeProc(root, 1000, 1, "app_process\u0000")
+        Files.createSymbolicLink(File(root, "self").toPath(), File(root, "1000").toPath())
+        return root
+    }
+
+    @Test
+    fun `proc diff with zero candidates is retried once after 100ms`() {
+        val root = fakeProcRootWithSelf()
+        val logs = Collections.synchronizedList(mutableListOf<String>())
+        val term = ProotTerminator({ _, _ -> }, 200, { logs += it }, procRoot = root, resolvePid = { -1 })
+        val real = ProcessBuilder("sleep", "30").start()
+        try {
+            val h = term.launch {
+                // proot's exec lands ~40ms after start(): the first diff sees nothing.
+                Thread {
+                    Thread.sleep(40)
+                    fakeProc(root, 2000, 1000, "/data/app/lib/libproot.so\u0000-r\u0000x\u0000")
+                }.start()
+                real
+            }
+            assertEquals("logs=$logs", 2000, h.pid)
+            assertTrue("logs=$logs", logs.contains("proot started pid=2000 (launch: /proc diff, after ${ProotTerminator.DIFF_RETRY_MS}ms retry)"))
+        } finally {
+            real.destroyForcibly()
+        }
+    }
+
+    @Test
+    fun `proc diff still empty after retry leaves pid uncaptured`() {
+        val root = fakeProcRootWithSelf()
+        val logs = mutableListOf<String>()
+        val real = ProcessBuilder("sleep", "30").start()
+        try {
+            val t0 = System.currentTimeMillis()
+            val h = ProotTerminator({ _, _ -> }, 200, { logs += it }, procRoot = root, resolvePid = { -1 })
+                .launch { real }
+            assertTrue(System.currentTimeMillis() - t0 >= ProotTerminator.DIFF_RETRY_MS)
+            assertEquals(-1, h.pid)
+            assertTrue("logs=$logs", logs.any { it.contains("pid NOT captured") && it.contains("retry found 0") })
+        } finally {
+            real.destroyForcibly()
+        }
+    }
+
     @Test
     fun `proc stat parsing handles spaces and parens in comm`() {
         val p = ProcTree.parseStat(42, "42 (we ird) (x)) S 7 42 42 0 -1 4194304 1 0 0 0 0 0 0 0 20 0 1 0 98765 0 0")!!

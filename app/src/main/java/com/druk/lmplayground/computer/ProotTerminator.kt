@@ -30,6 +30,7 @@ internal class ProotTerminator(
     private val log: (String) -> Unit,
     private val procRoot: File = File("/proc"),
     private val resolvePid: (Process) -> Int = ::pidOf,
+    private val diffRetryMs: Long = DIFF_RETRY_MS,
 ) {
 
     /** A started proot plus the pid captured at launch (-1 if it could not be captured). */
@@ -49,13 +50,20 @@ internal class ProotTerminator(
             log("proot started pid=$reflected (launch: reflection)")
             return Handle(proc, reflected)
         }
-        val fresh = runCatching { childrenOfSelf() - before }.getOrDefault(emptySet())
-            .map { it.first }
-            .filter { isProotCmdline(it) }
+        var fresh = prootChildrenSince(before)
+        var retried = false
+        if (fresh.isEmpty() && diffRetryMs > 0) {
+            // Right after fork the child may still show the app's cmdline (exec not done
+            // yet), so a zero-candidate diff is retried once after a short pause.
+            Thread.sleep(diffRetryMs)
+            fresh = prootChildrenSince(before)
+            retried = true
+        }
         val pid = fresh.singleOrNull() ?: -1
+        val via = if (retried) "/proc diff, after ${diffRetryMs}ms retry" else "/proc diff"
         log(
-            if (pid > 0) "proot started pid=$pid (launch: /proc diff)"
-            else "proot started, pid NOT captured (reflection failed, /proc diff found ${fresh.size})",
+            if (pid > 0) "proot started pid=$pid (launch: $via)"
+            else "proot started, pid NOT captured (reflection failed, $via found ${fresh.size})",
         )
         Handle(proc, pid)
     }
@@ -112,6 +120,11 @@ internal class ProotTerminator(
         ProcTree.tracees(procRoot, all, pid).forEach { into.putIfAbsent(it.pid, it.startTime) }
     }
 
+    private fun prootChildrenSince(before: Set<Pair<Int, Long>>): List<Int> =
+        runCatching { childrenOfSelf() - before }.getOrDefault(emptySet())
+            .map { it.first }
+            .filter { isProotCmdline(it) }
+
     private fun selfPid(): Int = File(procRoot, "self").canonicalFile.name.toInt()
 
     private fun childrenOfSelf(): Set<Pair<Int, Long>> {
@@ -141,6 +154,9 @@ internal class ProotTerminator(
         const val SIGQUIT = 3
         const val SIGKILL = 9
         const val DEFAULT_GRACE_MS = 2_000L
+
+        /** One retry of the launch-time /proc diff when it finds no proot child yet. */
+        const val DIFF_RETRY_MS = 100L
 
         /** Serialises launches (all runtime instances) so the /proc children diff is unambiguous. */
         private val LAUNCH_LOCK = Any()
