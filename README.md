@@ -62,6 +62,7 @@ Sideload notes:
 - Background downloads with resume, SAF storage picker
 - ARM64 optimizations (KleidiAI / OpenMP)
 - Large-screen layout for tablets, foldables, Chromebooks
+- Opt-in **on-device computer (COS)**: Alpine Linux 3.24 via bundled proot; the `cos_exec` tool is on by default once Computer is enabled — see [`docs/COS.md`](docs/COS.md)
 
 ### Companion (chidori-specific)
 

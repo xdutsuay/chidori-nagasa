@@ -31,3 +31,12 @@ https://github.com/xdutsuay/chidori. The projects are governed by
 
 Tracked in `UPSTREAM_DIVERGENCE.md` as changes accumulate — kept separate
 from this notice so attribution stays stable while the divergence log grows.
+
+## On-device computer (COS) native components
+
+The APK bundles prebuilt Termux builds of **PRoot 5.1.107.102** (GPL-2.0),
+**talloc 2.5.0** (LGPL-3.0) and **libandroid-shmem 0.7** (BSD-3-Clause) as
+`lib/<abi>/lib*.so`. Full license texts, binary/source URLs and sha256 values
+ship in the APK under `assets/licenses/` (see
+[`app/src/main/assets/licenses/NOTICE`](app/src/main/assets/licenses/NOTICE)).
+Alpine Linux is downloaded at runtime, not bundled. Details: [`docs/COS.md`](docs/COS.md).
