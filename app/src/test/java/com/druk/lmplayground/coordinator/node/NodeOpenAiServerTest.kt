@@ -11,6 +11,7 @@ import org.json.JSONObject
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
 import org.junit.Test
 
 class NodeOpenAiServerTest {
@@ -311,4 +312,21 @@ class NodeOpenAiServerTest {
     }
 
     private fun responseBody(response: String): String = response.substringAfter("\r\n\r\n", "")
+
+    @Test
+    fun `refuses plaintext wildcard bind`() {
+        assertTrue(NodeOpenAiServer.isWildcard("0.0.0.0"))
+        assertTrue(NodeOpenAiServer.isWildcard("::"))
+        val srv = NodeOpenAiServer(dataPlaneToken, bindHost = "0.0.0.0") {
+            AbsentNodeInferenceBridge
+        }
+        try {
+            srv.start()
+            fail("expected refuse wildcard")
+        } catch (e: IllegalArgumentException) {
+            assertTrue(e.message!!.contains("wildcard"))
+        } finally {
+            srv.stop()
+        }
+    }
 }

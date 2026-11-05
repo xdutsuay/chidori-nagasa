@@ -16,7 +16,12 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeout
 
-data class NodeListenEndpoint(val port: Int, val dataPlaneToken: String)
+data class NodeListenEndpoint(
+    val port: Int,
+    val dataPlaneToken: String,
+    /** Unicast host the socket is bound to (LAN IPv4 or loopback). */
+    val bindHost: String = NodeOpenAiServer.LOOPBACK,
+)
 
 /**
  * Foreground [dataSync] host for [NodeOpenAiServer].
@@ -55,7 +60,9 @@ class NodeService : Service() {
             }
             else -> {
                 try {
-                    ensureServerStarted()
+                    val host = intent?.getStringExtra(EXTRA_BIND_HOST)?.takeIf { it.isNotBlank() }
+                        ?: NodeOpenAiServer.LOOPBACK
+                    ensureServerStarted(host)
                 } catch (t: Throwable) {
                     Log.e(TAG, "failed to start node socket", t)
                     failPending(t)
@@ -90,23 +97,28 @@ class NodeService : Service() {
         isForeground = true
     }
 
-    private fun ensureServerStarted() {
+    private fun ensureServerStarted(bindHost: String) {
         if (server != null) {
             val port = listenPort.get()
             val token = listenToken.get()
+            val host = listenHost.get()
             if (port > 0 && token.isNotEmpty()) {
-                completePending(NodeListenEndpoint(port, token))
+                completePending(NodeListenEndpoint(port, token, host))
             }
             return
         }
+        require(!NodeOpenAiServer.isWildcard(bindHost)) {
+            "Refusing plaintext wildcard bind ($bindHost)"
+        }
         val token = NodeOpenAiServer.newDataPlaneToken()
-        val srv = NodeOpenAiServer(token) { NodeInferenceHub.bridge }
+        val srv = NodeOpenAiServer(token, bindHost = bindHost) { NodeInferenceHub.bridge }
         val port = srv.start()
         server = srv
         listenPort.set(port)
         listenToken.set(token)
-        completePending(NodeListenEndpoint(port, token))
-        Log.i(TAG, "NodeOpenAiServer listening on $port")
+        listenHost.set(bindHost)
+        completePending(NodeListenEndpoint(port, token, bindHost))
+        Log.i(TAG, "NodeOpenAiServer listening on $bindHost:$port (not 0.0.0.0)")
     }
 
     private fun tearDown() {
@@ -118,6 +130,7 @@ class NodeService : Service() {
         server = null
         listenPort.set(-1)
         listenToken.set("")
+        listenHost.set(NodeOpenAiServer.LOOPBACK)
         if (isForeground) {
             try {
                 stopForeground(STOP_FOREGROUND_REMOVE)
@@ -134,28 +147,41 @@ class NodeService : Service() {
         private const val START_TIMEOUT_MS = 15_000L
 
         private val mu = Mutex()
+        private const val EXTRA_BIND_HOST = "bind_host"
+
         private val listenPort = AtomicInteger(-1)
         private val listenToken = AtomicReference("")
+        private val listenHost = AtomicReference(NodeOpenAiServer.LOOPBACK)
         private val startRequested = AtomicBoolean(false)
         private val hosted = AtomicBoolean(false)
         @Volatile private var pendingPort: CompletableDeferred<NodeListenEndpoint>? = null
 
         /**
          * Starts the foreground service (if needed) and returns listen port +
-         * data-plane bearer. Throws if the service fails to bind within [START_TIMEOUT_MS].
+         * data-plane bearer. [bindHost] must be LAN unicast or loopback — never
+         * `0.0.0.0`. Throws if the service fails to bind within [START_TIMEOUT_MS].
          */
-        suspend fun startAndAwaitPort(context: Context): NodeListenEndpoint = mu.withLock {
+        suspend fun startAndAwaitPort(
+            context: Context,
+            bindHost: String = NodeOpenAiServer.LOOPBACK,
+        ): NodeListenEndpoint = mu.withLock {
+            require(!NodeOpenAiServer.isWildcard(bindHost)) {
+                "Refusing plaintext wildcard bind ($bindHost)"
+            }
             val existingPort = listenPort.get()
             val existingToken = listenToken.get()
-            if (existingPort > 0 && existingToken.isNotEmpty()) {
-                return NodeListenEndpoint(existingPort, existingToken)
+            val existingHost = listenHost.get()
+            if (existingPort > 0 && existingToken.isNotEmpty() && existingHost == bindHost) {
+                return NodeListenEndpoint(existingPort, existingToken, existingHost)
             }
 
             val deferred = CompletableDeferred<NodeListenEndpoint>()
             pendingPort = deferred
             startRequested.set(true)
             val app = context.applicationContext
-            val intent = Intent(app, NodeService::class.java).setAction(ACTION_START)
+            val intent = Intent(app, NodeService::class.java)
+                .setAction(ACTION_START)
+                .putExtra(EXTRA_BIND_HOST, bindHost)
             ContextCompat.startForegroundService(app, intent)
             try {
                 withTimeout(START_TIMEOUT_MS) { deferred.await() }
@@ -178,12 +204,14 @@ class NodeService : Service() {
                 pendingPort = null
                 listenPort.set(-1)
                 listenToken.set("")
+                listenHost.set(NodeOpenAiServer.LOOPBACK)
                 return
             }
             val app = context.applicationContext
             startRequested.set(false)
             listenPort.set(-1)
             listenToken.set("")
+            listenHost.set(NodeOpenAiServer.LOOPBACK)
             pendingPort?.cancel()
             pendingPort = null
             app.stopService(Intent(app, NodeService::class.java))

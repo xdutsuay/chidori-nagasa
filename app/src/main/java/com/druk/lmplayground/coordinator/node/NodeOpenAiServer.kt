@@ -20,13 +20,15 @@ import kotlinx.coroutines.runBlocking
  * Serves GET /v1/models and POST /v1/chat/completions (non-streaming).
  * Stdlib ServerSocket — no new dependency.
  *
- * Binding: wildcard (all interfaces) so the paired desktop can dial the phone
- * LAN IP in [api_base]. Access control is the data-plane bearer (KMA-65), not
- * loopback-only bind. Control-plane pairing remains on companion :8027.
+ * Binding (CP5 / KMA-20): **unicast only** — LAN IPv4 the desktop dials, or
+ * loopback for unit tests. Never plaintext `0.0.0.0` / `::` (TLS would be
+ * required for a wildcard; v1 avoids that). Access control is still the
+ * data-plane bearer (KMA-65). Control plane remains companion :8027.
  */
 class NodeOpenAiServer(
     private val dataPlaneToken: String,
     private val maxConcurrentCompletions: Int = DEFAULT_MAX_COMPLETIONS,
+    private val bindHost: String = LOOPBACK,
     private val bridge: () -> NodeInferenceBridge,
 ) {
     private val running = AtomicBoolean(false)
@@ -34,14 +36,23 @@ class NodeOpenAiServer(
     private var pool = newWorkerPool()
     private val completionSlots = Semaphore(maxConcurrentCompletions.coerceAtLeast(1))
 
-    /** Bind ephemeral port; returns the local listen port. */
+    /** Host this server is bound to (set in [start]). */
+    var boundHost: String = bindHost
+        private set
+
+    /** Bind ephemeral port on [bindHost]; returns the local listen port. */
     fun start(): Int {
         check(!running.get()) { "already started" }
+        require(!isWildcard(bindHost)) {
+            "Refusing plaintext wildcard bind ($bindHost); pass LAN unicast or $LOOPBACK"
+        }
         if (pool.isShutdown) pool = newWorkerPool()
         val ss = ServerSocket()
         ss.reuseAddress = true
-        ss.bind(InetSocketAddress(0))
+        val addr = java.net.InetAddress.getByName(bindHost)
+        ss.bind(InetSocketAddress(addr, 0))
         serverSocket = ss
+        boundHost = bindHost
         running.set(true)
         val workers = pool
         workers.execute {
@@ -330,7 +341,13 @@ class NodeOpenAiServer(
         const val MAX_HEADER_BYTES = 16 * 1024
         const val MAX_BODY_BYTES = 1 * 1024 * 1024
         const val DEFAULT_MAX_COMPLETIONS = 2
+        const val LOOPBACK = "127.0.0.1"
         val CRLF4 = byteArrayOf(13, 10, 13, 10)
+
+        fun isWildcard(host: String): Boolean {
+            val h = host.trim().lowercase()
+            return h.isEmpty() || h == "0.0.0.0" || h == "::" || h == "*" || h == "[::]"
+        }
 
         fun newDataPlaneToken(): String {
             val bytes = ByteArray(32)
