@@ -12,4 +12,13 @@ interface Tool {
      * nothing to cancel (e.g. JavaScript).
      */
     fun cancelInFlight() {}
+
+    /**
+     * Whether the tool can run right now, independent of the user's toggle (e.g.
+     * the desktop tools need the COS desktop to be running). Unavailable tools are
+     * left out of the schema sent to the model; a tool called anyway must check
+     * again in [execute] and return an error without doing anything. Must be
+     * cheap: it is evaluated on every turn.
+     */
+    fun isAvailable(): Boolean = true
 }

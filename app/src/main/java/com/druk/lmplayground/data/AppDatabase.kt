@@ -18,7 +18,7 @@ import com.druk.lmplayground.cloud.CloudProviderEntity
         CloudProviderEntity::class,
         UsageEventEntity::class,
     ],
-    version = 8,
+    version = 9,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -155,6 +155,13 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        /** Tool rows (and their Stopped chip) persisted with assistant messages. */
+        val MIGRATION_8_9 = object : Migration(8, 9) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE chat_messages ADD COLUMN toolCallsJson TEXT")
+            }
+        }
+
         fun getInstance(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 INSTANCE ?: Room.databaseBuilder(
@@ -170,6 +177,7 @@ abstract class AppDatabase : RoomDatabase() {
                         MIGRATION_5_6,
                         MIGRATION_6_7,
                         MIGRATION_7_8,
+                        MIGRATION_8_9,
                     )
                     .build().also { INSTANCE = it }
             }

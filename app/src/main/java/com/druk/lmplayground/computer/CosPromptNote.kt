@@ -29,10 +29,29 @@ object CosPromptNote {
 
         /** Computer is on but `cos_exec` is not available in this chat (toggled off / no tool calling). */
         TOOL_OFF,
+
+        /**
+         * [READY] plus the COS desktop is running and `cos_screenshot`/`cos_gui` are
+         * available this turn. Only reached through [liveState] (per-turn update),
+         * never at session creation, so the cached system-prompt prefix is unchanged.
+         */
+        READY_DESKTOP,
+
+        /** Desktop tools available, but `cos_exec` is not (toggled off in this chat). */
+        DESKTOP_ONLY,
     }
 
     /** First line of every note; used to detect / avoid double injection. */
     const val HEADER = "## On-device computer (COS)"
+
+    /** Desktop section shared by [State.READY_DESKTOP] and [State.DESKTOP_ONLY]. */
+    private const val DESKTOP_SECTION =
+        "A graphical desktop (X11, Openbox) is running in COS. Use `cos_screenshot` to see the " +
+            "screen (the image is attached to its result; it reports the real width/height and " +
+            "`scale`) and `cos_gui` to act on it: click/move at x,y in screen pixels (0,0 is the " +
+            "top-left; multiply screenshot pixels by `scale`), type text, press keys such as " +
+            "\"ctrl+l\" or \"Return\", and scroll. Take a new screenshot after acting to check the " +
+            "result before the next step."
 
     /** The note body for [state], or null for [State.DISABLED]. */
     fun note(state: State, workspace: String = CosConstants.GUEST_HOME): String? = when (state) {
@@ -58,14 +77,28 @@ object CosPromptNote {
                 "available in this chat (it is turned off, or this model cannot call tools), so you " +
                 "cannot run commands there. Do not offer or attempt to call `cos_exec`. If the user " +
                 "wants commands run, tell them to turn the `cos_exec` tool on in this chat's tool settings."
+        State.READY_DESKTOP ->
+            note(State.READY, workspace)!!
+                .replace(", no GUI apps yet,", ",") + "\n" + DESKTOP_SECTION
+        State.DESKTOP_ONLY ->
+            "$HEADER\n" +
+                "An on-device Alpine Linux computer (COS) runs on this phone. The `cos_exec` tool is " +
+                "turned off in this chat, so do not call it. " + DESKTOP_SECTION
     }
 
     /**
      * Effective state for this turn: [base] from [stateFor], downgraded to [State.TOOL_OFF]
-     * when Computer is on but `cos_exec` is not usable this turn.
+     * when Computer is on but `cos_exec` is not usable this turn, and upgraded to
+     * [State.READY_DESKTOP] / [State.DESKTOP_ONLY] while the COS desktop is running and
+     * the desktop tools (`cos_screenshot`, `cos_gui`) are offered this turn.
      */
-    fun liveState(base: State, cosExecAvailable: Boolean): State =
-        if (base != State.DISABLED && !cosExecAvailable) State.TOOL_OFF else base
+    fun liveState(base: State, cosExecAvailable: Boolean, desktopToolsAvailable: Boolean = false): State = when {
+        base == State.DISABLED -> State.DISABLED
+        desktopToolsAvailable && base != State.NOT_SET_UP ->
+            if (cosExecAvailable) State.READY_DESKTOP else State.DESKTOP_ONLY
+        !cosExecAvailable -> State.TOOL_OFF
+        else -> base
+    }
 
     /** Marker opening a per-turn update (so it is recognisable in logs and tests). */
     const val UPDATE_OPEN = "[System update: on-device computer (COS) changed]"

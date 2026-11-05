@@ -153,7 +153,9 @@ class GenerationCoordinator(
         val announcedCos = runtime.cosStateOf(llamaSession)
         val cosUpdate = announcedCos?.let { announced ->
             val cosExecAvailable = toolsActive && toolRegistry.isToolEnabled(CosToolDefaults.COS_EXEC)
-            val live = CosPromptNote.liveState(runtime.cosStateProvider(), cosExecAvailable)
+            val desktopToolsAvailable = toolsActive &&
+                CosToolDefaults.DESKTOP_TOOLS.any { toolRegistry.isToolActive(it) }
+            val live = CosPromptNote.liveState(runtime.cosStateProvider(), cosExecAvailable, desktopToolsAvailable)
             CosPromptNote.turnUpdate(announced, live)?.let { it to live }
         }
         try {
@@ -334,7 +336,15 @@ class GenerationCoordinator(
                 // silently ignored). See testReproduceAppBehavior
                 // for the canonical repro.
                 val responseThinking = supportsThinking || enableThinking
-                llamaSession.submitToolResults(toolResults, responseThinking)
+                // cos_screenshot: attach the captured image to its tool result (vision
+                // models only); the native session folds it into the tool message.
+                val visionAvailable = runCatching { runtime.model?.supportsVision() == true }.getOrDefault(false)
+                val prepared = toolRegistry.toolImages.prepare(toolResults, visionAvailable)
+                prepared.image?.let { bytes ->
+                    Log.i(TAG, "Attaching tool image (${bytes.size} bytes) to ${prepared.attachedToolCallId}")
+                    llamaSession.setImageData(bytes)
+                }
+                llamaSession.submitToolResults(prepared.resultsJson, responseThinking)
 
                 // Reset the streaming callback's per-round counters
                 // so the next generateAll() reports a fresh

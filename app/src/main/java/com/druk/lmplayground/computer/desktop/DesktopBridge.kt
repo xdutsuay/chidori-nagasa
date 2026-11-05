@@ -1,6 +1,7 @@
 package com.druk.lmplayground.computer.desktop
 
 import com.druk.lmplayground.computer.ComputerExecResult
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 import java.io.File
 import kotlin.time.Duration
@@ -52,6 +53,51 @@ interface DesktopBridge {
     suspend fun execInDesktop(cmd: String, timeout: Duration = 30.seconds): CosExecResult
     /** Reads the Xvfb -fbdir XWD file and returns an ARGB bitmap / PNG bytes; no guest process, no imagemagick. */
     suspend fun screenshot(format: ImageFormat = ImageFormat.PNG, scale: Float = 1f): ByteArray
+
+    /**
+     * CP2 input-layer ADDITION (proposed by the chat-tools/input branch, see
+     * docs/COS_DESKTOP_INPUT.md; not in the spike doc yet): starts [cmd] with `sh -c`
+     * in the desktop environment (same DISPLAY/XAUTHORITY/HOME as [execInDesktop])
+     * through the CP1 runtime, keeps its stdin open and returns at once.
+     *
+     * Requirements for the runtime:
+     * - one proot per call, registered with ProotTerminator; [DesktopStream.close]
+     *   and desktop [stop] tear it down via ProotTerminator (SIGQUIT, grace, SIGKILL)
+     *   with the given reason, exactly like a cancelled `cos_exec`;
+     * - no exec timeout (the stream is long-lived); stdout/stderr are delivered
+     *   line by line as they arrive (no output cap beyond a sane line length);
+     * - throws (e.g. IllegalStateException) if the desktop is not running.
+     *
+     * The default throws [UnsupportedOperationException]: callers (XdotoolSession)
+     * then fall back to one [execInDesktop] per command.
+     */
+    suspend fun openDesktopStream(cmd: String): DesktopStream =
+        throw UnsupportedOperationException("openDesktopStream not implemented by this DesktopBridge")
+}
+
+/**
+ * A long-lived process in the desktop environment (see [DesktopBridge.openDesktopStream]).
+ * All members are thread-safe.
+ */
+interface DesktopStream {
+    /** Writes [data] (UTF-8) to stdin and flushes. Throws [java.io.IOException] once the process is gone. */
+    suspend fun write(data: String)
+
+    /** stdout lines without the trailing newline; hot, single collector; completes when the process exits. */
+    val stdout: Flow<String>
+
+    /** stderr lines, same rules as [stdout]. */
+    val stderr: Flow<String>
+
+    /** null while running, then the exit code (130 when terminated by [close] or chat Stop). */
+    val exitCode: StateFlow<Int?>
+
+    /** Closes stdin and terminates the process through ProotTerminator with [reason]. Idempotent. */
+    suspend fun close(reason: String = CLOSE_REASON)
+
+    companion object {
+        const val CLOSE_REASON = "desktop-input-close"
+    }
 }
 
 /**

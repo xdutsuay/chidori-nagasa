@@ -409,6 +409,39 @@ class LocalComputerRuntime(
         return handle
     }
 
+    /**
+     * Like [launchSupervised], but keeps stdin open for long-lived guests (e.g. `xdotool -`).
+     * Caller must [terminateSupervised] when done.
+     */
+    internal fun launchSupervisedStream(
+        guestArgv: List<String>,
+        noSeccomp: Boolean,
+        onStdout: (String) -> Unit,
+        onStderr: (String) -> Unit,
+    ): ProotTerminator.Handle {
+        prepareGuest()
+        val hostArgv = ProotCommand.buildArgv(
+            nativeLibDir = nativeLibDir,
+            rootfsPath = rootfsDir.absolutePath,
+            guestCwd = CosConstants.GUEST_HOME,
+            guestArgv = guestArgv,
+        )
+        val pb = prootProcessBuilder(hostArgv, noSeccomp)
+        val handle = terminator.launch { pb.start() }
+        val proc = handle.proc
+        Thread({
+            runCatching {
+                BufferedReader(InputStreamReader(proc.inputStream)).lineSequence().forEach(onStdout)
+            }
+        }, "cos-desktop-stream-out").apply { isDaemon = true }.start()
+        Thread({
+            runCatching {
+                BufferedReader(InputStreamReader(proc.errorStream)).lineSequence().forEach(onStderr)
+            }
+        }, "cos-desktop-stream-err").apply { isDaemon = true }.start()
+        return handle
+    }
+
     /** Blocking: SIGQUIT → grace → force kill → /proc sweep of the supervised tree. */
     internal fun terminateSupervised(handle: ProotTerminator.Handle, reason: String) {
         terminator.terminate(handle, reason)

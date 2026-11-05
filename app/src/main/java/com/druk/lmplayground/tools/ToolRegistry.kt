@@ -29,7 +29,19 @@ class ToolRegistry {
         enabledState[name] = enabled
     }
 
-    fun hasEnabledTools(): Boolean = tools.keys.any { isToolEnabled(it) }
+    fun hasEnabledTools(): Boolean = tools.values.any { isToolActive(it) }
+
+    /** Enabled by the user AND currently available (see [Tool.isAvailable]). */
+    fun isToolActive(name: String): Boolean = tools[name]?.let { isToolActive(it) } ?: false
+
+    private fun isToolActive(tool: Tool): Boolean =
+        isToolEnabled(tool.name) && runCatching { tool.isAvailable() }.getOrDefault(false)
+
+    /**
+     * Images produced by tools in the current round (`cos_screenshot`), attached to
+     * the tool results by the generation loop. See [ToolImageAttachments].
+     */
+    val toolImages = ToolImageAttachments()
 
     @Volatile private var batchCancelled = false
 
@@ -45,12 +57,12 @@ class ToolRegistry {
     }
 
     /**
-     * Returns OpenAI-format JSON for enabled tools only.
+     * Returns OpenAI-format JSON for enabled, currently available tools only.
      */
     fun toOpenAIToolsJson(): String {
         val arr = JSONArray()
         for (tool in tools.values) {
-            if (!isToolEnabled(tool.name)) continue
+            if (!isToolActive(tool)) continue
             val obj = JSONObject()
             obj.put("type", "function")
             val func = JSONObject()
@@ -82,6 +94,9 @@ class ToolRegistry {
                 tool == null -> """{"error":"Unknown tool: $name"}"""
                 !isToolEnabled(name) -> disabledError(name)
                 batchCancelled -> CANCELLED_ERROR
+                // Availability (e.g. the COS desktop stopped since the schema was
+                // sent) is re-checked by the tool itself: the desktop tools answer
+                // with cos_exec's disabled shape or a "desktop not running" error.
                 else -> tool.execute(arguments)
             }
 
@@ -103,6 +118,7 @@ class ToolRegistry {
             JSONObject().put("error", "$name is disabled in this chat; it was not run. Do not call it.").toString()
 
         fun createDefault(context: Context): ToolRegistry {
+            val desktop = DesktopToolContext.forApp(context)
             return ToolRegistry().apply {
                 // Shared link store: web_search hands the model compact
                 // "ddg:N" references instead of long URLs, web_fetch resolves
@@ -111,6 +127,9 @@ class ToolRegistry {
                 register(WebFetchTool(webLinkStore))
                 register(JavaScriptTool(context))
                 register(CosExecTool(context))
+                // CP2: COS desktop tools, advertised only while the desktop runs.
+                register(CosScreenshotTool(desktop, toolImages))
+                register(CosGuiTool(desktop))
             }
         }
     }

@@ -37,8 +37,12 @@ LM Playground already nails on-device chat. chidori-nagasa keeps that working an
 | **Remote chat** | Chat through the desktop's local/remote LLMs from the phone |
 | **Phone as node** | Opt-in foreground service hosting an OpenAI-compatible facade so the desktop can route work to the phone |
 | **Windows native builds** | Gradle probes for `glslc.exe`, Vulkan SDK / SPIRV headers, `-PggmlVulkan=off` escape hatch |
+| **CINDI (COS desktop)** | Opt-in graphical Alpine desktop (Xvfb fbdir + xdotool); chat tools `cos_screenshot` / `cos_gui`; live viewer on the Computer screen |
 
 The wire protocol, product scope, and engineering rules live in [`CHIDORI_PROTOCOL.md`](CHIDORI_PROTOCOL.md), [`WIRE_CONTRACT.md`](WIRE_CONTRACT.md), [`PRD.md`](PRD.md), and [`ROADMAP.md`](ROADMAP.md). Desktop implementers: start at [`DESKTOP_HANDOFF.md`](DESKTOP_HANDOFF.md).
+
+**CP2 → CP5 execution plan (agents / God):** [`docs/plans/CP2-CP5-MASTER-PLAN.md`](docs/plans/CP2-CP5-MASTER-PLAN.md).  
+**Security / telemetry inventory:** [`docs/SECURITY-TELEMETRY.md`](docs/SECURITY-TELEMETRY.md).
 
 ## Download
 
@@ -146,6 +150,37 @@ source links and the sha256 of each packaged `.so` are in
 [`app/src/main/assets/licenses/`](app/src/main/assets/licenses/) (`NOTICE`). See
 [`docs/COS.md`](docs/COS.md) for how to check an APK against them.
 
+### CINDI — drive the on-device Linux desktop
+
+**CINDI** is the product name for *using* COS as a bot-driven desktop: install a
+pinned X11 stack (~114 MiB download), run **Xvfb** with an app-private `-fbdir`
+framebuffer (no VNC / no listening TCP in v1), see it live on the Computer
+screen, and let chat tools screenshot or click/type via **xdotool**.
+
+| Piece | Docs |
+|-------|------|
+| Install / session / security flags | [`docs/COS.md`](docs/COS.md) (Desktop M1) |
+| Chat tools `cos_screenshot`, `cos_gui` | [`docs/COS_DESKTOP_TOOLS.md`](docs/COS_DESKTOP_TOOLS.md) |
+| Touch / keyboard → xdotool | [`docs/COS_DESKTOP_INPUT.md`](docs/COS_DESKTOP_INPUT.md) |
+| Checkpoint plan (CP2–CP5) | [`docs/plans/CP2-CP5-MASTER-PLAN.md`](docs/plans/CP2-CP5-MASTER-PLAN.md) |
+
+**Status (2026-11-05):** CP2 runtime tip on branch `cp/cos-desktop-runtime` —
+desktop install/start/stop, fbdir screenshots, M2 viewer + gestures, and chat
+tools smoked on a Realme device. Integration into `cp/cos-desktop` and CP3+
+follow the master plan (per-CP handout / OK). **Backlog:** “Add desktop context
+to CINDI chat” (CUA-style attach of frames + window hints) — see master plan.
+
+## Status & roadmap (short)
+
+| Now | Next |
+|-----|------|
+| On-device chat + COS shell (`cos_exec`) on `main` / CP1 | Fold CP2 into `cp/cos-desktop`, then CP3 history/FGS hardening |
+| CINDI desktop M1/M2 + `cos_screenshot` / `cos_gui` on `cp/cos-desktop-runtime` | CP4 release hardening (local scripts; no CI until unlocked) |
+| Companion pairing / monitor | CP5 phone-as-node over paired channel (KMA-20) |
+
+Full phase list: [`ROADMAP.md`](ROADMAP.md). Security / no-telemetry stance and
+vulnerable points: [`docs/SECURITY-TELEMETRY.md`](docs/SECURITY-TELEMETRY.md).
+
 ## Supported models
 
 | Family | Sizes | Provider |
@@ -216,6 +251,9 @@ Before merging changes that touch `net/coordinator`, `inference/`, or JNI: read 
 | [`WIRE_CONTRACT.md`](WIRE_CONTRACT.md) | HTTP / pairing / chat contract |
 | [`DESKTOP_HANDOFF.md`](DESKTOP_HANDOFF.md) | Brief for the desktop server half |
 | [`PRD.md`](PRD.md) / [`ROADMAP.md`](ROADMAP.md) | Product scope and phases |
+| [`docs/plans/CP2-CP5-MASTER-PLAN.md`](docs/plans/CP2-CP5-MASTER-PLAN.md) | Active CP2–CP5 checkpoint plan (CINDI) |
+| [`docs/SECURITY-TELEMETRY.md`](docs/SECURITY-TELEMETRY.md) | Network egress, deps, telemetry audit |
+| [`docs/COS.md`](docs/COS.md) / [`COS_DESKTOP_*.md`](docs/COS_DESKTOP_TOOLS.md) | On-device computer + desktop tools/input |
 | [`TEST_PLAN.md`](TEST_PLAN.md) | Regression / release gates |
 | [`UPSTREAM_DIVERGENCE.md`](UPSTREAM_DIVERGENCE.md) | Diff vs LM Playground |
 | [`ARCHITECTURE.md`](ARCHITECTURE.md) | High-level layout |

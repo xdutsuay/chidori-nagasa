@@ -29,5 +29,8 @@ data class ChatMessageEntity(
     val timestamp: Long,
     // Absolute path of the attached image persisted under filesDir/chat_images,
     // null for text-only messages. Restored to a FileProvider URI on load.
-    val imagePath: String? = null
+    val imagePath: String? = null,
+    // Tool rows under an assistant message (JSON; ToolCallInfoCodec). Without it,
+    // a reopen lost tool cards / Stopped chips (Room v9 / CP1 carry-overs).
+    val toolCallsJson: String? = null,
 )

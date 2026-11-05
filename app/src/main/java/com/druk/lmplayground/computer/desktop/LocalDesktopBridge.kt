@@ -4,17 +4,27 @@ import android.content.Context
 import com.druk.lmplayground.computer.ComputerExecResult
 import com.druk.lmplayground.computer.LocalComputerRuntime
 import com.druk.lmplayground.computer.ProotCommand
+import com.druk.lmplayground.computer.ProotTerminator
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import java.io.BufferedWriter
 import java.io.File
+import java.io.IOException
+import java.io.OutputStreamWriter
+import java.nio.charset.StandardCharsets
+import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.time.Duration
 
 /**
@@ -47,6 +57,7 @@ class LocalDesktopBridge internal constructor(
     val installMessage: StateFlow<String?> = _installMessage.asStateFlow()
 
     @Volatile private var session: DesktopSession? = null
+    private val openStreams = CopyOnWriteArrayList<ProotDesktopStream>()
 
     private val stateDir: File get() = File(runtime.hostRootfsDir, DesktopCommand.GUEST_STATE_DIR.trimStart('/'))
     private val installedMarker: File get() = File(runtime.hostRootfsDir, DesktopCommand.GUEST_INSTALLED_MARKER.trimStart('/'))
@@ -203,6 +214,8 @@ class LocalDesktopBridge internal constructor(
     }
 
     private fun stopLocked(reason: String): DesktopState {
+        openStreams.toList().forEach { runCatching { it.closeBlocking(reason) } }
+        openStreams.clear()
         val s = session
         session = null
         if (s == null) {
@@ -240,6 +253,86 @@ class LocalDesktopBridge internal constructor(
     override suspend fun screenshot(format: ImageFormat, scale: Float): ByteArray = withContext(Dispatchers.IO) {
         val running = _state.value as? DesktopState.Running ?: throw IllegalStateException("desktop not running")
         DesktopScreenshots.encode(running.framebufferHostFile, format, scale)
+    }
+
+    /**
+     * Long-lived `sh -c` with DISPLAY/XAUTHORITY/HOME (stdin open) for [XdotoolSession].
+     * Torn down via [ProotTerminator] on [DesktopStream.close] or desktop [stop].
+     */
+    override suspend fun openDesktopStream(cmd: String): DesktopStream = withContext(Dispatchers.IO) {
+        if (!isDesktopRunning() || session?.isAlive != true) {
+            throw IllegalStateException("desktop not running — start it on the Computer screen")
+        }
+        val stdoutLines = CopyOnWriteArrayList<(String) -> Unit>()
+        val stderrLines = CopyOnWriteArrayList<(String) -> Unit>()
+        val handle = runtime.launchSupervisedStream(
+            guestArgv = DesktopCommand.execArgv(config, cmd),
+            noSeccomp = false,
+            onStdout = { line -> stdoutLines.forEach { it(line) } },
+            onStderr = { line -> stderrLines.forEach { it(line) } },
+        )
+        ProotDesktopStream(runtime, handle, stdoutLines, stderrLines).also { stream ->
+            openStreams.add(stream)
+            stream.onClosed = { openStreams.remove(stream) }
+        }
+    }
+
+    private class ProotDesktopStream(
+        private val runtime: LocalComputerRuntime,
+        private val handle: ProotTerminator.Handle,
+        private val stdoutListeners: CopyOnWriteArrayList<(String) -> Unit>,
+        private val stderrListeners: CopyOnWriteArrayList<(String) -> Unit>,
+    ) : DesktopStream {
+        private val closed = AtomicBoolean(false)
+        private val _exit = MutableStateFlow<Int?>(null)
+        override val exitCode: StateFlow<Int?> = _exit.asStateFlow()
+        var onClosed: (() -> Unit)? = null
+
+        private val writer = BufferedWriter(
+            OutputStreamWriter(handle.proc.outputStream, StandardCharsets.UTF_8),
+            8 * 1024,
+        )
+
+        override val stdout: Flow<String> = callbackFlow {
+            val listener: (String) -> Unit = { trySend(it) }
+            stdoutListeners.add(listener)
+            awaitClose { stdoutListeners.remove(listener) }
+        }
+
+        override val stderr: Flow<String> = callbackFlow {
+            val listener: (String) -> Unit = { trySend(it) }
+            stderrListeners.add(listener)
+            awaitClose { stderrListeners.remove(listener) }
+        }
+
+        init {
+            Thread({
+                val code = runCatching { handle.proc.waitFor() }.getOrDefault(-1)
+                _exit.value = code
+            }, "cos-desktop-stream-wait").apply { isDaemon = true }.start()
+        }
+
+        override suspend fun write(data: String) = withContext(Dispatchers.IO) {
+            if (closed.get()) throw IOException("desktop stream closed")
+            synchronized(writer) {
+                writer.write(data)
+                writer.flush()
+            }
+        }
+
+        override suspend fun close(reason: String) = withContext(Dispatchers.IO) {
+            closeBlocking(reason)
+        }
+
+        fun closeBlocking(reason: String) {
+            if (!closed.compareAndSet(false, true)) return
+            runCatching { synchronized(writer) { writer.close() } }
+            runtime.terminateSupervised(handle, reason)
+            if (_exit.value == null) {
+                _exit.value = runCatching { handle.proc.exitValue() }.getOrDefault(130)
+            }
+            onClosed?.invoke()
+        }
     }
 
     /** Alpine arch of the rootfs (`aarch64` / `x86_64`), or null when it is not set up. */

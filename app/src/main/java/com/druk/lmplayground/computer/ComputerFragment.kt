@@ -20,9 +20,12 @@ import com.druk.lmplayground.computer.desktop.DesktopDebugPanel
 import com.druk.lmplayground.computer.desktop.DesktopInstallDialog
 import com.druk.lmplayground.computer.desktop.DesktopInstallPolicy
 import com.druk.lmplayground.computer.desktop.DesktopPanelViewModel
+import com.druk.lmplayground.computer.desktop.DesktopState
 import com.druk.lmplayground.computer.desktop.DesktopStateMachine
+import com.druk.lmplayground.computer.desktop.DesktopViewer
 import kotlinx.coroutines.launch
 import com.druk.lmplayground.theme.PlaygroundTheme
+import androidx.compose.foundation.layout.Column
 
 class ComputerFragment : Fragment() {
 
@@ -66,13 +69,22 @@ class ComputerFragment : Fragment() {
                     desktopIdle = DesktopStateMachine.canInstall(desktop.state),
                     onInstallDesktop = { showPrompt(false) },
                     desktopPanel = {
-                        DesktopDebugPanel(
-                            panel = desktop,
-                            enabled = state.enabled,
-                            onStart = desktopViewModel::start,
-                            onStop = desktopViewModel::stop,
-                            onScreenshot = desktopViewModel::screenshot,
-                        )
+                        Column {
+                            DesktopDebugPanel(
+                                panel = desktop,
+                                enabled = state.enabled,
+                                onStart = desktopViewModel::start,
+                                onStop = desktopViewModel::stop,
+                                onScreenshot = desktopViewModel::screenshot,
+                            )
+                            val running = desktop.state as? DesktopState.Running
+                            if (running != null) {
+                                DesktopViewer(
+                                    bridge = desktopViewModel.bridge,
+                                    running = running,
+                                )
+                            }
+                        }
                     },
                 )
                 installPrompt?.let { p ->

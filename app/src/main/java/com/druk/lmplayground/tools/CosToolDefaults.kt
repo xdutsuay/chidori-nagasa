@@ -12,9 +12,23 @@ package com.druk.lmplayground.tools
  * user OFF (the chat's tool toggle, stored as a per-model override, or the
  * global switch in Settings → Tools) is always respected. When Computer is
  * disabled the tool is never offered, whatever the stored toggles say.
+ *
+ * The CP2 desktop tools (`cos_screenshot`, `cos_gui`) follow the same rule
+ * ([COS_TOOLS]). They are additionally only advertised while the COS desktop is
+ * running (`Tool.isAvailable`), which is not a preference and is not resolved here.
  */
 object CosToolDefaults {
     const val COS_EXEC = "cos_exec"
+    const val COS_SCREENSHOT = "cos_screenshot"
+    const val COS_GUI = "cos_gui"
+
+    /** Tools that need Computer (COS) and default ON while it is enabled. */
+    val COS_TOOLS: Set<String> = setOf(COS_EXEC, COS_SCREENSHOT, COS_GUI)
+
+    /** Tools that need the running COS desktop. */
+    val DESKTOP_TOOLS: Set<String> = setOf(COS_SCREENSHOT, COS_GUI)
+
+    fun isCosTool(toolName: String): Boolean = toolName in COS_TOOLS
 
     /**
      * @param override per-model override (the chat's tool toggle), null if never set
@@ -27,7 +41,7 @@ object CosToolDefaults {
         globalDefault: Boolean?,
         computerEnabled: Boolean,
     ): Boolean {
-        if (toolName != COS_EXEC) return override ?: globalDefault ?: false
+        if (toolName !in COS_TOOLS) return override ?: globalDefault ?: false
         if (!computerEnabled) return false
         return override ?: globalDefault ?: true
     }
@@ -38,5 +52,5 @@ object CosToolDefaults {
      * the user's intent is visible even while Computer is off.
      */
     fun globalDisplay(toolName: String, globalDefault: Boolean?): Boolean =
-        globalDefault ?: (toolName == COS_EXEC)
+        globalDefault ?: (toolName in COS_TOOLS)
 }
