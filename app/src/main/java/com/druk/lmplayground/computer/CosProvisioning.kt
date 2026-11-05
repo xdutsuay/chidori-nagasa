@@ -84,12 +84,17 @@ object CosProvisioning {
     fun resolvConf(nameservers: List<String> = CosConstants.GUEST_NAMESERVERS): String =
         nameservers.joinToString("") { "nameserver $it\n" }
 
-    /** Writes guest files proot + apk need: resolv.conf, /tmp (1777), /root. */
-    fun writeGuestFiles(rootfs: File) {
+    /**
+     * Writes guest files proot + apk need: resolv.conf, /tmp (1777), /root.
+     * [nameservers] defaults to [CosConstants.GUEST_NAMESERVERS]; callers that have a
+     * [android.content.Context] should pass [CosGuestDns.nameserversFor] so Wi‑Fi vs
+     * cellular DNS matches the phone.
+     */
+    fun writeGuestFiles(rootfs: File, nameservers: List<String> = CosConstants.GUEST_NAMESERVERS) {
         File(rootfs, "etc").mkdirs()
         File(rootfs, "etc/resolv.conf").apply {
             delete() // may be a dangling symlink in some images
-            writeText(resolvConf())
+            writeText(resolvConf(nameservers))
         }
         File(rootfs, "tmp").apply {
             mkdirs()

@@ -253,14 +253,23 @@ class LocalComputerRuntime(
         return ComputerExecResult(code, "", msg)
     }
 
-    /** Guest dirs proot binds / apk writes; resolv.conf re-written if missing. */
+    /**
+     * Guest dirs proot binds / apk writes. Always refresh `/etc/resolv.conf` from the
+     * active Android DNS (Wi‑Fi or cellular) with public-resolver fallback — so a switch
+     * between networks does not leave a stale guest resolv.conf.
+     */
     private fun prepareGuest() {
         prootTmpDir.mkdirs()
         l2sDir.mkdirs()
-        if (!File(rootfsDir, "etc/resolv.conf").isFile || !File(rootfsDir, "tmp").isDirectory ||
-            !File(rootfsDir, "root").isDirectory
-        ) {
-            CosProvisioning.writeGuestFiles(rootfsDir)
+        val dns = CosGuestDns.nameserversFor(context)
+        if (!File(rootfsDir, "tmp").isDirectory || !File(rootfsDir, "root").isDirectory) {
+            CosProvisioning.writeGuestFiles(rootfsDir, dns)
+        } else {
+            File(rootfsDir, "etc").mkdirs()
+            File(rootfsDir, "etc/resolv.conf").apply {
+                delete()
+                writeText(CosProvisioning.resolvConf(dns))
+            }
         }
     }
 
