@@ -104,8 +104,11 @@ after ⋮ → Install rootfs (“Ready · Rootfs: alpine · 16.4 MB · proot”)
 1. Drawer → **Computer** → toggle **Computer (COS)** on (TalkBack: “Computer (COS), switch”).
 2. **⋮ → Install rootfs**, wait until status is Ready.
 3. **⋮ → Install desktop** (Xvfb + Openbox; confirm size prompt).
-4. On the Desktop panel: **Start**, then optionally open the live viewer.
-5. In chat (tool-capable model): ask for a screenshot or a click — tools
+4. On the Desktop panel: **Start**, then use the live viewer.
+5. Viewer chips: **Direct** (tap = click there) or **Trackpad** (drag moves cursor;
+   tap clicks at cursor); **Rotate** cycles 0°/90°/180°/270°. Soft-keyboard bar
+   below the frame for Esc/arrows/type.
+6. In chat (tool-capable model): ask for a screenshot or a click — tools
    `cos_screenshot` / `cos_gui`. Keep the COS notification while the desktop runs
    (Android 12+ FGS). **Stop** on Computer or chat tears down proot/Xvfb and clears
    stale X locks.
@@ -177,11 +180,10 @@ screen, and let chat tools screenshot or click/type via **xdotool**.
 | Touch / keyboard → xdotool | [`docs/COS_DESKTOP_INPUT.md`](docs/COS_DESKTOP_INPUT.md) |
 | Checkpoint plan (CP2–CP5) | [`docs/plans/CP2-CP5-MASTER-PLAN.md`](docs/plans/CP2-CP5-MASTER-PLAN.md) |
 
-**Status (2026-11-05):** CP2 tip is on **`origin/main`** (`27c7528`) via FF merge
-from `cp/cos-desktop`. Desktop install/start/stop, fbdir screenshots, M2 viewer +
-gestures, and `cos_screenshot` / `cos_gui` smoked on Realme. CP3
-(`cp/kma-cp3-history-cos-hardening`) hardens Room restore, desktop FGS, and
-cleanup. Branch map: [`docs/BRANCH-SANITY.md`](docs/BRANCH-SANITY.md).
+**Status (2026-11-05):** CP2 on **`origin/main`** (`27c7528`). CP3 tip
+`cp/kma-cp3-history-cos-hardening` @ `4ad8f28` (installed on Realme): Room tool-row
+restore, desktop FGS, DNS refresh, Direct/Trackpad + Rotate viewer — **not merged**
+yet. Branch map: [`docs/BRANCH-SANITY.md`](docs/BRANCH-SANITY.md).
 **Backlog:** “Add desktop context to CINDI chat” — see master plan.
 
 ## Status & roadmap (short)

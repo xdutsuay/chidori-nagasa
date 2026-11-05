@@ -70,12 +70,34 @@ class MainActivity : AppCompatActivity() {
 
         setContentView(R.layout.content_main)
         handleNeedsYouIntent(intent)
+        handleComputerDeepLink(intent)
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
         handleNeedsYouIntent(intent)
+        handleComputerDeepLink(intent)
+    }
+
+    /**
+     * Dogfood / adb: `chidori-nagasa://computer` opens [ComputerFragment] without
+     * UI taps or KEYCODE_BACK (which previously risked leaving the app for Imou).
+     */
+    private fun handleComputerDeepLink(intent: Intent?) {
+        if (intent == null) return
+        val uri = intent.data ?: return
+        if (uri.scheme != "chidori-nagasa" || uri.host != "computer") return
+        intent.data = null
+        val navHost = supportFragmentManager
+            .findFragmentById(R.id.nav_host_fragment) as? NavHostFragment
+            ?: return
+        val nav = navHost.navController
+        window.decorView.post {
+            if (nav.currentDestination?.id != R.id.nav_computer) {
+                runCatching { nav.navigate(R.id.nav_computer) }
+            }
+        }
     }
 
     /**

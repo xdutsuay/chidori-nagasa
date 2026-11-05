@@ -150,6 +150,10 @@
     <fragment
         android:id="@+id/nav_computer"
         android:name="com.druk.lmplayground.computer.ComputerFragment"
-        android:label="@string/cos_computer_title" />
+        android:label="@string/cos_computer_title">
+        <!-- Agent / dogfood: adb shell am start -a android.intent.action.VIEW -d "chidori-nagasa://computer"
+             Stays inside this app — no BACK/monkey taps that can leave to Imou etc. -->
+        <deepLink app:uri="chidori-nagasa://computer" />
+    </fragment>
 
 </navigation>
