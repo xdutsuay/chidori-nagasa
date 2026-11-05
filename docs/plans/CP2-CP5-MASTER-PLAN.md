@@ -27,7 +27,11 @@
 - Do not commit `gradle/gradle-daemon-jvm.properties`.
 - Evidence root: `C:\Users\kaust\AndroidStudioProjects\nagasa-evidence\<cp>\`.
 - Device: `8XPFBYUGMNAUPRON` · adb `%LOCALAPPDATA%\Android\Sdk\platform-tools\adb.exe` · logcat `-s COS`.
-- **Install package:** `com.xdutsuay.chidori.nagasa.debug`.
+- **Install package:** `com.xdutsuay.chidori.nagasa.debug` only on the Realme.
+  Release id `com.xdutsuay.chidori.nagasa` is a **second launcher icon** — never
+  leave both installed. Use `scripts/dogfood-install.ps1` (uninstalls sibling
+  first). CP4 R8 evidence: install release **only** after removing `.debug`, then
+  restore `.debug` when done; never side-by-side.
 - Every CP done bar: full unit tests 0 failures · APK sha256 · logcat + screen recording per new behaviour · Stop/kill with no leftover proot/Xvfb · docs screenshots cropped (no status bar/keyboard/notifications/PII).
 - Linear: evidence comments only on KMA-59 / KMA-20; never mark Done.
 - End of whole run: `adb -s 8XPFBYUGMNAUPRON shell svc power stayon false`.
