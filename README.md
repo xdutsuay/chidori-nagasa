@@ -117,6 +117,7 @@ after ⋮ → Install rootfs (“Ready · Rootfs: alpine · 16.4 MB · proot”)
    stale X locks.
 
 Details: [`docs/COS.md`](docs/COS.md), [`docs/COS_DESKTOP_TOOLS.md`](docs/COS_DESKTOP_TOOLS.md).
+Stuck on DNS / Stop / storage? See [`docs/COS_TROUBLESHOOTING.md`](docs/COS_TROUBLESHOOTING.md).
 
 **The `cos_exec` chat tool**
 
