@@ -64,16 +64,54 @@ class CosRootfsBootstrapTest {
     }
 
     @Test
-    fun `download failure removes partial file`() {
+    fun `download failure keeps partial for resume and tries mirrors`() {
+        val urls = mutableListOf<String>()
         val b = CosRootfsBootstrap(
-            fetch = { _, dest, _ -> dest.writeText("half"); CosProvisioning.Outcome(false, "HTTP 503 downloading Alpine") },
+            fetch = { url, dest, _ ->
+                urls += url
+                dest.writeText("half")
+                CosProvisioning.Outcome(false, "HTTP 503 downloading Alpine")
+            },
             extract = extractOk,
         )
         val (ok, msg) = b.downloadAndExtract(rootfs, cache, "x86_64")
         assertFalse(ok)
         assertEquals("HTTP 503 downloading Alpine", msg)
-        assertTrue(cache.listFiles()!!.isEmpty())
+        assertEquals(1 + CosConstants.ALPINE_CDN_MIRRORS.size, urls.size)
+        assertTrue(urls[0].startsWith(CosConstants.ALPINE_CDN_BASE))
+        assertEquals(1, cache.listFiles()!!.size)
+        assertTrue(cache.listFiles()!![0].name.endsWith(".part"))
+        assertEquals("half", cache.listFiles()!![0].readText())
         assertFalse(rootfs.exists())
+    }
+
+    @Test
+    fun `mirror succeeds after primary fails`() {
+        var n = 0
+        val b = CosRootfsBootstrap(
+            fetch = { _, dest, _ ->
+                n++
+                if (n == 1) CosProvisioning.Outcome(false, "HTTP 503 downloading Alpine")
+                else {
+                    dest.writeBytes(payload)
+                    CosProvisioning.Outcome(true, "ok")
+                }
+            },
+            extract = extractOk,
+            expectedSha256For = { payloadSha },
+        )
+        val (ok, msg) = b.downloadAndExtract(rootfs, cache, "x86_64")
+        assertTrue(msg, ok)
+        assertEquals(2, n)
+        assertTrue(File(rootfs, CosConstants.READY_MARKER).isFile)
+    }
+
+    @Test
+    fun `alpineTarballUrls are https and include mirrors`() {
+        val urls = CosRootfsBootstrap(fetch = fetchOk).alpineTarballUrls("aarch64")
+        assertEquals(1 + CosConstants.ALPINE_CDN_MIRRORS.size, urls.size)
+        assertTrue(urls.all { it.startsWith("https://") })
+        assertTrue(urls.all { it.endsWith("alpine-minirootfs-3.24.3-aarch64.tar.gz") })
     }
 
     @Test

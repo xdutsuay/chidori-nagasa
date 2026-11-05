@@ -3,6 +3,7 @@ package com.druk.lmplayground.computer
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.File
+import java.io.FileOutputStream
 import java.util.concurrent.TimeUnit
 
 /**
@@ -10,11 +11,12 @@ import java.util.concurrent.TimeUnit
  * [CosConstants.ALPINE_SHA256] and installs it atomically via
  * [CosProvisioning.installVerified].
  *
- * There is no silent fallback: a failed download, checksum mismatch or extract
- * error leaves no rootfs behind and is reported to the caller (the Computer
- * screen shows it; `cos_exec` tells the model to ask the user to set up Computer).
+ * CP4: downloads resume from an existing `.part` (HTTP Range) and walk
+ * [CosConstants.ALPINE_CDN_MIRRORS] when the primary CDN fails. Checksum mismatch
+ * or extract failure still leaves no rootfs; a mid-transfer failure **keeps** the
+ * `.part` so the next Install can continue.
  *
- * @param fetch downloads `url` into the given file; replaceable in tests.
+ * @param fetch downloads `url` into the given file (append/resume aware); tests inject fakes.
  * @param extract unpacks a `.tar.gz` into a directory; replaceable in tests.
  * @param expectedSha256For pinned hash per Alpine arch; replaceable in tests only.
  */
@@ -26,9 +28,15 @@ class CosRootfsBootstrap(
 ) {
     data class Progress(val message: String, val bytesRead: Long = 0L)
 
-    fun alpineTarballUrl(arch: String): String =
-        "${CosConstants.ALPINE_CDN_BASE}/v${CosConstants.ALPINE_SERIES}/releases/" +
+    fun alpineTarballUrl(arch: String, cdnBase: String = CosConstants.ALPINE_CDN_BASE): String =
+        "${cdnBase.trimEnd('/')}/v${CosConstants.ALPINE_SERIES}/releases/" +
             "$arch/${tarballName(arch)}"
+
+    /** Primary CDN first, then [CosConstants.ALPINE_CDN_MIRRORS] — all HTTPS. */
+    fun alpineTarballUrls(arch: String): List<String> {
+        val bases = listOf(CosConstants.ALPINE_CDN_BASE) + CosConstants.ALPINE_CDN_MIRRORS
+        return bases.map { alpineTarballUrl(arch, it) }.distinct()
+    }
 
     /**
      * Downloads, verifies and installs Alpine for [arch] into [rootfsDir].
@@ -44,38 +52,63 @@ class CosRootfsBootstrap(
         if (expectedSha256 == null) {
             return false to "Unsupported architecture '$arch' (COS supports aarch64 and x86_64)"
         }
-        val url = alpineTarballUrl(arch)
-        if (!url.startsWith("https://")) return false to "Refusing non-HTTPS rootfs URL"
-        onProgress(Progress("Fetching $url"))
+        val urls = alpineTarballUrls(arch)
+        if (urls.any { !it.startsWith("https://") }) {
+            return false to "Refusing non-HTTPS rootfs URL"
+        }
         cacheDir.mkdirs()
         rootfsDir.parentFile?.mkdirs()
         val part = File(cacheDir, tarballName(arch) + ".part")
-        part.delete()
-        val dl = (fetch ?: ::httpFetch)(url, part, onProgress)
-        if (!dl.ok) {
-            part.delete()
-            return false to dl.message
+        val doFetch = fetch ?: ::httpFetch
+        var lastFail = "Alpine download failed"
+        for (url in urls) {
+            val resumeNote = if (part.length() > 0L) " (resume ${part.length()} B)" else ""
+            onProgress(Progress("Fetching $url$resumeNote"))
+            val dl = doFetch(url, part, onProgress)
+            if (!dl.ok) {
+                lastFail = dl.message
+                continue
+            }
+            onProgress(Progress("Verifying sha256…", part.length()))
+            val res = CosProvisioning.installVerified(
+                tarball = part,
+                expectedSha256 = expectedSha256,
+                rootfsDir = rootfsDir,
+                version = CosConstants.ALPINE_VERSION,
+                arch = arch,
+                extract = extract,
+            )
+            if (!res.ok) part.delete()
+            return res.ok to res.message
         }
-        onProgress(Progress("Verifying sha256…", part.length()))
-        val res = CosProvisioning.installVerified(
-            tarball = part,
-            expectedSha256 = expectedSha256,
-            rootfsDir = rootfsDir,
-            version = CosConstants.ALPINE_VERSION,
-            arch = arch,
-            extract = extract,
-        )
-        return res.ok to res.message
+        return false to lastFail
     }
 
+    /**
+     * Appends [dest] from [url], using `Range` when [dest] already has bytes.
+     * On failure leaves [dest] in place for a later resume.
+     */
     private fun httpFetch(url: String, dest: File, onProgress: (Progress) -> Unit): CosProvisioning.Outcome =
         try {
-            val req = Request.Builder().url(url).get().build()
-            http.newCall(req).execute().use { resp ->
-                if (!resp.isSuccessful) return CosProvisioning.Outcome(false, "HTTP ${resp.code} downloading Alpine")
+            val already = dest.length().coerceAtLeast(0L)
+            val reqBuilder = Request.Builder().url(url).get()
+            if (already > 0L) reqBuilder.header("Range", "bytes=$already-")
+            http.newCall(reqBuilder.build()).execute().use { resp ->
+                when (resp.code) {
+                    416 -> {
+                        onProgress(Progress("Already downloaded ${dest.length()} bytes", dest.length()))
+                        return CosProvisioning.Outcome(true, "already complete ${dest.length()} bytes")
+                    }
+                    200 -> if (already > 0L) dest.delete() // server ignored Range — restart
+                    206 -> { /* partial content — append */ }
+                    else -> if (!resp.isSuccessful) {
+                        val kind = if (already > 0L) "resuming" else "downloading"
+                        return CosProvisioning.Outcome(false, "HTTP ${resp.code} $kind Alpine")
+                    }
+                }
                 val body = resp.body ?: return CosProvisioning.Outcome(false, "Empty body downloading Alpine")
-                var read = 0L
-                dest.outputStream().use { out ->
+                var read = dest.length()
+                FileOutputStream(dest, /* append = */ dest.length() > 0L).use { out ->
                     body.byteStream().use { input ->
                         val buf = ByteArray(64 * 1024)
                         while (true) {

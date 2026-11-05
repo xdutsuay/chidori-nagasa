@@ -12,6 +12,9 @@ object ComputerPrefs {
     /** Set once proot needed `PROOT_NO_SECCOMP=1` on this device; later runs start there. */
     const val KEY_PROOT_NO_SECCOMP = "computer.proot_no_seccomp"
 
+    /** CP4 first-run COS explainer dismissed. */
+    const val KEY_FIRST_RUN_SEEN = "computer.first_run_seen"
+
     fun isComputerEnabled(prefs: SharedPreferences): Boolean =
         prefs.getBoolean(KEY_COMPUTER_ENABLED, DEFAULT_ENABLED)
 

@@ -30,6 +30,15 @@ object CosConstants {
     const val ALPINE_CDN_BASE = "https://dl-cdn.alpinelinux.org/alpine"
 
     /**
+     * Extra HTTPS Alpine mirrors tried after [ALPINE_CDN_BASE] fails (CP4).
+     * Same path layout: `/v{series}/releases/{arch}/{tarball}`.
+     */
+    val ALPINE_CDN_MIRRORS: List<String> = listOf(
+        "https://mirror.math.princeton.edu/pub/alpinelinux",
+        "https://mirrors.edge.kernel.org/alpine",
+    )
+
+    /**
      * Official sha256 of `alpine-minirootfs-[ALPINE_VERSION]-<arch>.tar.gz`, keyed by
      * Alpine arch. Sources:
      * - $ALPINE_CDN_BASE/v3.24/releases/aarch64/alpine-minirootfs-3.24.3-aarch64.tar.gz.sha256

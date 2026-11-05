@@ -66,7 +66,7 @@ import java.util.Locale
  * [promptsDetailContent] slots — the caller owns the ViewModels and passes
  * the appropriate Composable when on tablet.
  */
-private enum class SettingsDetail { Models, Prompts, CloudApis, Usage, Language, Tools, SoundHaptic, Advanced, PrivacyPolicy, Faq, Chidori }
+private enum class SettingsDetail { Models, Prompts, CloudApis, Usage, Language, Tools, SoundHaptic, Advanced, PrivacyPolicy, CosLicences, Faq, Chidori }
 
 @Composable
 fun SettingsScreen(
@@ -160,6 +160,28 @@ fun SettingsScreen(
             }
         )
     }
+    // Phone: full-screen NOTICE (tablet uses detail pane).
+    var phoneCosLicences by remember { mutableStateOf(false) }
+    if (!twoPane && phoneCosLicences) {
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = { Text(stringResource(R.string.cos_licences_title)) },
+                    navigationIcon = {
+                        IconButton(onClick = { phoneCosLicences = false }) {
+                            Icon(
+                                Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = stringResource(R.string.back),
+                            )
+                        }
+                    },
+                )
+            },
+        ) { padding ->
+            CosLicencesContent(Modifier.fillMaxSize().padding(padding))
+        }
+        return
+    }
 
     if (twoPane) {
         // Two-pane layout: each pane owns its own TopAppBar (Scaffold) so the
@@ -249,6 +271,7 @@ fun SettingsScreen(
                             }
                         },
                         onPrivacyPolicyClick = { detail = SettingsDetail.PrivacyPolicy },
+                        onCosLicencesClick = { detail = SettingsDetail.CosLicences },
                         onFaqClick = { detail = SettingsDetail.Faq },
                         onChidoriClick = { detail = SettingsDetail.Chidori },
                         onComputerClick = onComputerClick,
@@ -284,6 +307,7 @@ fun SettingsScreen(
                 SettingsDetail.SoundHaptic -> stringResource(R.string.sound_and_haptic)
                 SettingsDetail.Advanced -> stringResource(R.string.advanced)
                 SettingsDetail.PrivacyPolicy -> stringResource(R.string.privacy_policy)
+                SettingsDetail.CosLicences -> stringResource(R.string.cos_licences_title)
                 SettingsDetail.Faq -> stringResource(R.string.faq)
                 SettingsDetail.Chidori -> stringResource(R.string.chidori_desktop)
                 null -> ""
@@ -310,6 +334,7 @@ fun SettingsScreen(
                         SettingsDetail.Advanced -> advancedDetailContent?.invoke()
                         SettingsDetail.PrivacyPolicy ->
                             PrivacyPolicyContent(onSendFeedbackClick = onSendFeedbackClick)
+                        SettingsDetail.CosLicences -> CosLicencesContent()
                         SettingsDetail.Faq -> FaqContent()
                         SettingsDetail.Chidori -> com.druk.lmplayground.coordinator.ui.ChidoriDetailContent()
                         null -> Unit
@@ -345,6 +370,7 @@ fun SettingsScreen(
                 onSoundHapticClick = onSoundHapticClick,
                 onAdvancedClick = onAdvancedClick,
                 onPrivacyPolicyClick = onPrivacyPolicyClick,
+                onCosLicencesClick = { phoneCosLicences = true },
                 onFaqClick = onFaqClick,
                 onChidoriClick = onChidoriClick,
                 onComputerClick = onComputerClick,
@@ -376,6 +402,7 @@ private fun SettingsList(
     onSoundHapticClick: () -> Unit,
     onAdvancedClick: () -> Unit,
     onPrivacyPolicyClick: () -> Unit,
+    onCosLicencesClick: () -> Unit = {},
     onFaqClick: () -> Unit,
     onChidoriClick: () -> Unit = {},
     onComputerClick: () -> Unit = {},
@@ -490,6 +517,14 @@ private fun SettingsList(
             title = stringResource(R.string.privacy_policy),
             selected = selectedDetail == SettingsDetail.PrivacyPolicy,
             onClick = onPrivacyPolicyClick
+        )
+
+        SettingsRow(
+            icon = Icons.AutoMirrored.Outlined.Article,
+            title = stringResource(R.string.cos_licences_title),
+            subtitle = stringResource(R.string.cos_licences_blurb),
+            selected = selectedDetail == SettingsDetail.CosLicences,
+            onClick = onCosLicencesClick,
         )
 
         // FAQ row

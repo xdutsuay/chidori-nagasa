@@ -86,6 +86,7 @@ fun ComputerScreen(
     desktopPanel: (@Composable () -> Unit)? = null,
 ) {
     val cosSwitchCd = stringResource(R.string.cd_cos_desktop_switch)
+    CosFirstRunDialogHost()
     Scaffold(
         topBar = {
             TopAppBar(

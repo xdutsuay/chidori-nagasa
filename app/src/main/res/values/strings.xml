@@ -215,6 +215,12 @@
     <string name="needs_you_home_banner">%1$s desktop run(s) need you — tap to review</string>
     <string name="cos_computer_title">Computer (COS)</string>
     <string name="cos_computer_blurb">Pocket Linux on this phone (COS). Live terminal below. Off by default. Tries Alpine download, falls back offline. Works without a paired desktop.</string>
+    <string name="cos_first_run_title">Computer (COS)</string>
+    <string name="cos_first_run_body">Pocket Linux on this phone (CINDI / COS).\n\n• Off until you enable the switch.\n• Rootfs and desktop need free storage (desktop default set is about 114 MiB download / 304 MiB on disk).\n• Stop ends proot and Xvfb so nothing is left running.\n• Guest DNS follows Wi‑Fi or cellular.</string>
+    <string name="cos_first_run_got_it">Got it</string>
+    <string name="cos_licences_title">COS licences (NOTICE)</string>
+    <string name="cos_licences_blurb">proot, talloc, android-shmem and related notices shipped with Computer</string>
+    <string name="cos_licences_missing">NOTICE asset missing from this build.</string>
     <string name="cos_enable">Enable COS</string>
     <string name="cos_status">Status: %1$s</string>
     <string name="cos_session">Session %1$s…</string>
