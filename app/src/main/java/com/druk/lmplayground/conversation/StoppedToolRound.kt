@@ -27,7 +27,8 @@ internal object StoppedToolRound {
 
     /** Cancelled content for a call that has no result yet (Stop before or while it ran). */
     fun cancelledContentFor(toolName: String): String =
-        if (toolName == CosToolDefaults.COS_EXEC) CosExecFormatter.cancelledJson()
+        // cos_exec + cos_screenshot + cos_gui share exit 130 / cancelled:true (CP2 desktop tools).
+        if (CosToolDefaults.isCosTool(toolName)) CosExecFormatter.cancelledJson()
         else ToolRegistry.CANCELLED_ERROR
 
     /**

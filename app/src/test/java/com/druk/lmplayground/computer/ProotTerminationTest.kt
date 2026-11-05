@@ -18,6 +18,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
+import org.junit.Assume.assumeFalse
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -47,6 +48,10 @@ class ProotTerminationTest {
 
     @Before
     fun setUp() {
+        assumeFalse(
+            "fake libproot / sleep /proc fakes need a POSIX host (master plan: skip-on-Windows)",
+            System.getProperty("os.name").orEmpty().lowercase().startsWith("windows"),
+        )
         context = ApplicationProvider.getApplicationContext()
         val prefs = context.getSharedPreferences(CosConstants.PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit().clear().commit()
@@ -65,9 +70,16 @@ class ProotTerminationTest {
 
     @After
     fun tearDown() {
-        childPid()?.let { if (alive(it)) ProcessBuilder("kill", "-9", "$it").start().waitFor() }
-        CosFiles.deleteTree(tmp)
-        CosFiles.deleteTree(File(context.filesDir, CosConstants.COS_DIR))
+        // assumeFalse in setUp must not trip UninitializedPropertyAccessException here.
+        if (::tmp.isInitialized) {
+            runCatching {
+                childPid()?.let { if (alive(it)) ProcessBuilder("kill", "-9", "$it").start().waitFor() }
+            }
+            CosFiles.deleteTree(tmp)
+        }
+        if (::context.isInitialized) {
+            CosFiles.deleteTree(File(context.filesDir, CosConstants.COS_DIR))
+        }
     }
 
     private fun runtime(timeoutMs: Long, launchPidOf: (Process) -> Int = ProotTerminator::pidOf) = LocalComputerRuntime(

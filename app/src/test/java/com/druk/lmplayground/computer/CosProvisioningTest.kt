@@ -4,6 +4,7 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import org.junit.Assume.assumeFalse
 import org.junit.Test
 import java.io.File
 import java.nio.file.Files
@@ -142,6 +143,10 @@ class CosProvisioningTest {
 
     @Test
     fun `deleteTree never follows symlinks out of the rootfs`() {
+        assumeFalse(
+            "Windows needs SeCreateSymbolicLinkPrivilege for Files.createSymbolicLink",
+            System.getProperty("os.name").orEmpty().lowercase().startsWith("windows"),
+        )
         val outside = File(tmp, "host-dir").apply { mkdirs() }
         val precious = File(outside, "precious.txt").apply { writeText("keep me") }
         File(rootfs, "var").mkdirs()
@@ -155,6 +160,10 @@ class CosProvisioningTest {
 
     @Test
     fun `usedBytes counts regular files only without following links`() {
+        assumeFalse(
+            "Windows needs SeCreateSymbolicLinkPrivilege for Files.createSymbolicLink",
+            System.getProperty("os.name").orEmpty().lowercase().startsWith("windows"),
+        )
         val outside = File(tmp, "big").apply { mkdirs() }
         File(outside, "blob").writeBytes(ByteArray(10_000))
         File(rootfs, "a").apply { parentFile!!.mkdirs(); writeBytes(ByteArray(100)) }

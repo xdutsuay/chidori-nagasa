@@ -4,6 +4,7 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import org.junit.Assume.assumeFalse
 import org.junit.Test
 import java.io.File
 import java.nio.file.Files
@@ -84,6 +85,10 @@ class CosRootfsBootstrapTest {
 
     @Test
     fun `real toybox-style tar extraction of a gzip tarball works`() {
+        assumeFalse(
+            "needs POSIX tar + symlink privilege (master plan: skip-on-Windows)",
+            System.getProperty("os.name").orEmpty().lowercase().startsWith("windows"),
+        )
         // Build a tiny real .tar.gz with the system tar and run the production extractor on it.
         val src = File(tmp, "src").apply { mkdirs() }
         File(src, "etc").mkdirs()

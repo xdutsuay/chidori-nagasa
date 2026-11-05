@@ -89,7 +89,9 @@ object ProotCommand {
     ): List<String> {
         require(guestArgv.isNotEmpty()) { "empty guest argv" }
         return buildList {
-            add(File(nativeLibDir, PROOT_LIB).path)
+            // Always '/' — these are Android nativeLibraryDir paths; File.path on a
+            // Windows CI/dev host would inject '\' and break argv equality + device parity.
+            add(androidJoin(nativeLibDir, PROOT_LIB))
             add("--kill-on-exit")
             add("--link2symlink")
             add("-0")
@@ -126,13 +128,19 @@ object ProotCommand {
         hostEnv: Map<String, String> = emptyMap(),
     ): Map<String, String> {
         val env = hostEnv.filterKeys { it !in STRIPPED_HOST_ENV && it != ENV_NO_SECCOMP }.toMutableMap()
-        env[ENV_LOADER] = File(nativeLibDir, LOADER_LIB).path
+        env[ENV_LOADER] = androidJoin(nativeLibDir, LOADER_LIB)
         env[ENV_TMP_DIR] = tmpDir
         if (l2sDir != null) env[ENV_L2S_DIR] = l2sDir
-        env["LD_LIBRARY_PATH"] = nativeLibDir
+        env["LD_LIBRARY_PATH"] = androidPath(nativeLibDir)
         if (noSeccomp) env[ENV_NO_SECCOMP] = "1"
         return env
     }
+
+    /** Normalize host-provided native lib dirs to Android-style forward slashes. */
+    internal fun androidPath(path: String): String = path.replace('\\', '/')
+
+    internal fun androidJoin(dir: String, name: String): String =
+        androidPath(dir).trimEnd('/') + "/" + name
 
     /**
      * True when a proot run failed in the way the seccomp-accelerated tracer fails

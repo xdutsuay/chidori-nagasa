@@ -42,7 +42,7 @@
 | Carryovers APK | Built + installed once (arm64); device cleaned to single `….nagasa.debug` |
 | Task 1 on-device checklist | **Not run** |
 | Runtime realme exit test | **Not run** |
-| Chat-tools Gangadhar review | **Not finished** |
+| Chat-tools Gangadhar review | **Finished** — `docs/reviews/gangadhar-cp2-chat-tools-closeout.md` (on CP3 tip; post-merge closeout) |
 | Input verify | **Not run** |
 | Merge to `cp/cos-desktop` | Branch exists at `6995f0e` only |
 

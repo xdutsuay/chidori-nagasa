@@ -8,6 +8,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import org.junit.Assume.assumeFalse
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -36,6 +37,10 @@ class LocalComputerRuntimeProotTest {
 
     @Before
     fun setUp() {
+        assumeFalse(
+            "fake libproot.so is a Unix shell script (master plan: skip-on-Windows)",
+            System.getProperty("os.name").orEmpty().lowercase().startsWith("windows"),
+        )
         context = ApplicationProvider.getApplicationContext()
         val prefs = context.getSharedPreferences(CosConstants.PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit().clear().commit()
@@ -53,8 +58,12 @@ class LocalComputerRuntimeProotTest {
 
     @After
     fun tearDown() {
-        CosFiles.deleteTree(tmp)
-        CosFiles.deleteTree(File(context.filesDir, CosConstants.COS_DIR))
+        // assumeFalse in setUp must not trip UninitializedPropertyAccessException here
+        // (JUnit turns that into TestCouldNotBeSkippedException).
+        if (::tmp.isInitialized) CosFiles.deleteTree(tmp)
+        if (::context.isInitialized) {
+            CosFiles.deleteTree(File(context.filesDir, CosConstants.COS_DIR))
+        }
     }
 
     private fun bootstrap(sha: (String) -> String? = { payloadSha }, extractCount: IntArray = IntArray(1)) =
