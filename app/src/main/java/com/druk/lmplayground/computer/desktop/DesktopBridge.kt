@@ -101,11 +101,11 @@ interface DesktopStream {
 }
 
 /**
- * Process-wide handle to the desktop runtime's [DesktopBridge], for the chat
- * tools (which are created per conversation by `ToolRegistry.createDefault`).
- * The desktop runtime sets [bridge] once at startup (e.g. in `App.onCreate` or
- * its service); while it is null the desktop tools are simply unavailable
- * (hidden from the model, "desktop not running" if called).
+ * **Single process-wide source of truth** for COS desktop [DesktopState]: the Computer
+ * screen panel, [DesktopViewer], chat tools (`cos_screenshot` / `cos_gui`), and
+ * [com.druk.lmplayground.computer.CosPromptNote] live-desktop notes all read
+ * [bridge].state (set once via [LocalDesktopBridge.get] at app start). Null means
+ * desktop tools are unavailable (hidden from the model; "desktop not running" if called).
  */
 object DesktopBridges {
     @Volatile var bridge: DesktopBridge? = null

@@ -26,8 +26,16 @@ After CP2 tip FF-merge into `origin/main` @ `27c7528`.
 
 | Path | Why |
 |------|-----|
-| Dirty checkout `chidori-nagasa` on `main` @ `6fbacc7` (behind 7) | Laptop WIP — do not reset/rebase unless God asks |
 | Detached `chidori-nagasa-cp2` @ `27c7528` | Scratch build tree; safe to delete later |
+
+## Discarded (2026-11-05)
+
+Laptop `main` was dirty @ `6fbacc7` (behind 7): uncommitted **pre-CP2 COS sandbox** (`computer/`, `CosExec*`) + **NeedsYou inbox / HubSessionFilter drafts**. Compared to `origin/main`: untracked paths already landed; WT `LocalComputerRuntime` was ~250 lines behind tip; tracked diffs only *removed* CP2 strings/FGS keepDebugSymbols. **Decision:** not unique work — archived then hard-reset.
+
+| Ref | Note |
+|-----|------|
+| `archive/dirty-main-wip-2026-11-05` @ `1603c8a` | Local-only ARCHIVE; do not merge/push |
+| `main` worktree | Now clean @ `origin/main` `27c7528` |
 
 ## Rule
 

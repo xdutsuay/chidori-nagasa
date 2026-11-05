@@ -76,6 +76,12 @@ class ComputerFragment : Fragment() {
                                 onStart = desktopViewModel::start,
                                 onStop = desktopViewModel::stop,
                                 onScreenshot = desktopViewModel::screenshot,
+                                onRetry = {
+                                    // Install failure leaves marker unset → re-prompt with size.
+                                    // Start failure with desktop installed → Start again.
+                                    if (desktopViewModel.bridge.isInstalled()) desktopViewModel.start()
+                                    else showPrompt(false)
+                                },
                             )
                             val running = desktop.state as? DesktopState.Running
                             if (running != null) {
