@@ -1,6 +1,6 @@
 # CP2 → CP5 master plan (chidori-nagasa)
 
-**Status:** **CP2 on `origin/main`** @ `27c7528` (FF from `cp/cos-desktop`). **CP3 in progress** on `cp/kma-cp3-history-cos-hardening` (worktree `chidori-nagasa-cp3`). Branch map: `docs/BRANCH-SANITY.md`. Security: `docs/SECURITY-TELEMETRY.md`. Dirty laptop `main` WIP @ `6fbacc7` untouched.  
+**Status:** **CP2 on `origin/main`** @ `27c7528`. **CP3 coding tip** `cp/kma-cp3-history-cos-hardening` @ `3e72177` (APK installed on Realme; E3-6 sha in `nagasa-evidence/cp3/`). Still **not merged to main** — awaiting E3-1…E3-5 device captures + OK. Branch map: `docs/BRANCH-SANITY.md`. Local `main` clean @ tip.  
 **Date:** 2026-11-05.  
 **Product name (use case):** **CINDI** — chidori-nagasa driving apps on the on-device Linux desktop (bot-driven COS). Incremental UX; tweak as use cases land.  
 **Sources:** `nagasa-handover/CURSOR-HANDOVER.txt`, `POST-CP2-PLAN.txt`, `docs/cp2-desktop-spike.md`, Gangadhar/LightYagami handovers, `NODE_MODE_SPIKE.md`, `ROADMAP.md`, `UPSTREAM_DIVERGENCE.md`.  
