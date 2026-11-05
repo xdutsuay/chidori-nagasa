@@ -15,10 +15,26 @@ local branch until God OK.
 ## Trust
 
 - Opt-in offer after one-tap pairing; require loaded on-device model.
-- Allowlist = paired `instance_id`s; unpaired / replay rejected on desktop `/node/*`
-  (companion half).
+- Phone allowlist = paired `instance_id`s ([NodePeerPolicy](../app/src/main/java/com/druk/lmplayground/coordinator/node/NodePeerPolicy.kt)).
+- Each register carries a fresh `register_nonce` (UUID). Phone [ReplayGuard]
+  and desktop `nodeRegisterNonceCache` both reject reuse (HTTP 409).
+- Unpaired peers never get past pairing bearer on `:8027`.
+
+## Wire (additive)
+
+```
+POST   /node/register     Authorization: Bearer <pairing token>
+  body: node_id, display_name, api_base, models, data_plane_token,
+        register_nonce (required, single-use), optional battery fields
+POST   /node/heartbeat
+DELETE /node/register
+```
+
+Desktop half lives on local branch `local/kma-20-node-register-replay` in
+`lclreason` until OK to merge.
 
 ## UI
 
-- Paired instance always shows **local** vs **node** (offer / offering).
+- Paired instance always shows **local** vs **node** (offer / offering) via
+  `chidori_mode_*` strings on [ChidoriMonitorScreen].
 - One-tap “Offer as inference source” after pair.

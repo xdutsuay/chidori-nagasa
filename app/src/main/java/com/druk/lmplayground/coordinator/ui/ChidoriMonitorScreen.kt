@@ -126,6 +126,17 @@ fun ChidoriMonitorContent(
             lastUpdatedEpochMillis = lastUpdatedEpochMillis,
         )
         Spacer(Modifier.height(8.dp))
+        // CP5: always show Local vs Node so the paired surface never looks ambiguous.
+        Text(
+            text = when {
+                nodeOffering -> stringResource(R.string.chidori_mode_node)
+                nodeOfferSupported -> stringResource(R.string.chidori_mode_node_ready)
+                else -> stringResource(R.string.chidori_mode_local)
+            },
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.primary,
+        )
+        Spacer(Modifier.height(8.dp))
         if (nodeOfferSupported) {
             Card(modifier = Modifier.fillMaxWidth()) {
                 Row(

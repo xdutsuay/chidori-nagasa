@@ -3,10 +3,12 @@ package com.druk.lmplayground.coordinator.node
 import android.content.Context
 import android.util.Log
 import com.druk.lmplayground.coordinator.model.InstanceId
+import com.druk.lmplayground.coordinator.pairing.PairedInstanceStore
 import com.druk.lmplayground.coordinator.transport.CoordinatorApi
 import com.druk.lmplayground.coordinator.transport.NodeRegisterPayload
 import java.net.Inet4Address
 import java.net.NetworkInterface
+import java.util.UUID
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -25,8 +27,10 @@ import kotlinx.coroutines.sync.withLock
 class DefaultNodeRegistrationCapability(
     context: Context,
     private val api: CoordinatorApi,
+    private val pairedStore: PairedInstanceStore,
     private val bridge: () -> NodeInferenceBridge = { NodeInferenceHub.bridge },
     private val lanIpv4: () -> String? = { primaryIpv4() },
+    private val replayGuard: NodePeerPolicy.ReplayGuard = NodePeerPolicy.ReplayGuard(),
     private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
 ) : NodeRegistrationCapability {
 
@@ -39,10 +43,20 @@ class DefaultNodeRegistrationCapability(
     private var heartbeatJob: Job? = null
 
     override suspend fun registerAsNode(instanceId: InstanceId): Result<Unit> = mu.withLock {
+        val pairedIds = pairedStore.getAll().map { it.instanceId.value }.toSet()
+        try {
+            NodePeerPolicy.assertPaired(instanceId, pairedIds)
+        } catch (e: IllegalArgumentException) {
+            return Result.failure(e)
+        }
         val model = bridge().currentModel()
             ?: return Result.failure(IllegalStateException("Load an on-device model before offering this phone as a node"))
         val ip = lanIpv4()
             ?: return Result.failure(IllegalStateException("No LAN IPv4 address — check Wi‑Fi"))
+        val nonce = UUID.randomUUID().toString()
+        if (!replayGuard.claim(nonce)) {
+            return Result.failure(IllegalStateException("register nonce rejected (replay)"))
+        }
         unregisterLocked()
         val endpoint = try {
             // Bind data plane to this LAN unicast only — never plaintext 0.0.0.0 (CP5).
@@ -59,6 +73,7 @@ class DefaultNodeRegistrationCapability(
             apiBase = apiBase,
             models = listOf(model.id),
             dataPlaneToken = endpoint.dataPlaneToken,
+            registerNonce = nonce,
             contextLength = null,
             approxTokensPerSec = null,
             batteryPct = null,

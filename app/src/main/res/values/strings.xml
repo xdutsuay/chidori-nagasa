@@ -190,8 +190,11 @@
     <!-- Remote chat (PRD.md §6.4) -->
     <string name="chidori_chat_open">Chat through this desktop</string>
     <string name="chidori_chat_action">Chat</string>
+    <string name="chidori_mode_local">Mode: Local</string>
+    <string name="chidori_mode_node">Mode: Node · offering</string>
+    <string name="chidori_mode_node_ready">Mode: Local · can offer as node</string>
     <string name="chidori_node_offer_title">Offer phone as inference node</string>
-    <string name="chidori_node_offer_subtitle">Lets this desktop use your loaded on-device model. Uses battery. Off by default.</string>
+    <string name="chidori_node_offer_subtitle">One tap: this paired desktop may use your loaded on-device model. Uses battery. Off by default.</string>
     <string name="node_notification_channel_name">Inference node</string>
     <string name="node_notification_channel_description">Keeps this phone available as a LAN inference worker for a paired desktop.</string>
     <string name="node_notification_title" translatable="false">chidori-nagasa</string>

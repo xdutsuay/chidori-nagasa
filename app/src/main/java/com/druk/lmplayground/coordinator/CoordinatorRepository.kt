@@ -60,7 +60,7 @@ class CoordinatorRepository(context: Context) {
     val pairingManager: PairingManager = PairingManagerImpl(pairedInstanceStore, api)
 
     val nodeRegistration: NodeRegistrationCapability =
-        DefaultNodeRegistrationCapability(appContext, api)
+        DefaultNodeRegistrationCapability(appContext, api, pairedInstanceStore)
 
     fun observeDiscoveredInstances(): Flow<List<DiscoveredInstance>> =
         discovery.observeDiscoveredInstances()

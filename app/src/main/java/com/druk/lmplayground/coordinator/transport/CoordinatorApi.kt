@@ -175,6 +175,8 @@ data class NodeRegisterPayload(
     val charging: Boolean?,
     val available: Boolean,
     val dataPlaneToken: String,
+    /** Single-use id so desktop can reject captured HTTP replays (CP5). */
+    val registerNonce: String,
 )
 
 private const val JSON_MEDIA_TYPE = "application/json; charset=utf-8"
@@ -690,6 +692,7 @@ class OkHttpCoordinatorApi(
             .put("models", org.json.JSONArray(payload.models))
             .put("available", payload.available)
             .put("data_plane_token", payload.dataPlaneToken)
+            .put("register_nonce", payload.registerNonce)
         payload.contextLength?.let { body.put("context_length", it) }
         payload.approxTokensPerSec?.let { body.put("approx_tokens_per_sec", it) }
         payload.batteryPct?.let { body.put("battery_pct", it) }
