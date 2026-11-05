@@ -140,6 +140,7 @@ All E2-* present · 0 test failures · `cp/cos-desktop` tip reported · Kaustubh
 ## CP3 — Chat history restore + COS hardening
 
 **Branch:** `cp/kma-cp3-history-cos-hardening` off `cp/cos-desktop`.  
+**Status (2026-11-05):** tip `2dbf30e` — suite 1214/0 fail (36 Windows skips); evidence under `nagasa-evidence/cp3/` + handout `CP3-HANDOUT.md`. **Not merged.** Live Stop-at-exact-tool-call + mp4 recording OEM-blocked (frame seq).  
 **Linear:** evidence comments only (no Done).
 
 ### Goal
