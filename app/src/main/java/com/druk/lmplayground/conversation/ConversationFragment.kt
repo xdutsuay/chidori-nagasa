@@ -72,6 +72,8 @@ import androidx.navigation.fragment.findNavController
 import com.druk.lmplayground.App
 import com.druk.lmplayground.MainActivity
 import com.druk.lmplayground.R
+import com.druk.lmplayground.computer.ComputerChromeStatus
+import com.druk.lmplayground.computer.desktop.DesktopBridges
 import com.druk.lmplayground.coordinator.notifications.NeedsYouBadgeStore
 import com.druk.lmplayground.coordinator.ui.ChidoriPendingOpen
 import com.druk.lmplayground.data.UsageAggregator
@@ -732,13 +734,38 @@ class ConversationFragment : Fragment() {
                                     )
                                 }
                             }
-                            if (activeCloud != null) {
-                                RouteProvenanceBanner(
+                            // CP6: always-on provenance — Local GGUF or Cloud API.
+                            // Desktop remote chat keeps its own strip on ChidoriChatScreen.
+                            when {
+                                activeCloud != null -> RouteProvenanceBanner(
                                     text = stringResource(
-                                        R.string.cloud_chat_banner,
+                                        R.string.provenance_cloud,
                                         activeCloud.provider.name,
                                     ),
                                     leavesDevice = true,
+                                )
+                                modelInfo != null -> RouteProvenanceBanner(
+                                    text = stringResource(
+                                        R.string.provenance_local,
+                                        modelInfo!!.name.ifBlank { modelInfo!!.filename },
+                                    ),
+                                    leavesDevice = false,
+                                )
+                            }
+                            val desktopBridge = DesktopBridges.bridge
+                            if (desktopBridge != null) {
+                                val deskState by desktopBridge.state.collectAsStateWithLifecycle()
+                                val chrome = ComputerChromeStatus.from(deskState)
+                                Text(
+                                    text = stringResource(
+                                        R.string.computer_chrome_note,
+                                        ComputerChromeStatus.label(chrome),
+                                    ),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 16.dp, vertical = 4.dp),
                                 )
                             }
                         }

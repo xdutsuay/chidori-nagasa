@@ -184,23 +184,28 @@ private fun ConnectionBanner(
     displayName: String,
     connectionState: CoordinatorConnectionState,
 ) {
-    val (text, container) = when (connectionState) {
+    when (connectionState) {
         CoordinatorConnectionState.CONNECTED ->
-            stringResource(R.string.chidori_chat_via_desktop, displayName) to
-                MaterialTheme.colorScheme.secondaryContainer
+            com.druk.lmplayground.conversation.RouteProvenanceBanner(
+                text = stringResource(R.string.provenance_desktop, displayName),
+                leavesDevice = true,
+            )
         CoordinatorConnectionState.CONNECTING ->
-            stringResource(R.string.chidori_chat_connecting) to
-                MaterialTheme.colorScheme.surfaceVariant
+            Surface(color = MaterialTheme.colorScheme.surfaceVariant, modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    text = stringResource(R.string.chidori_chat_connecting),
+                    style = MaterialTheme.typography.labelMedium,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
+                )
+            }
         else ->
-            stringResource(R.string.chidori_chat_disconnected, displayName) to
-                MaterialTheme.colorScheme.errorContainer
-    }
-    Surface(color = container, modifier = Modifier.fillMaxWidth()) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.labelMedium,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
-        )
+            Surface(color = MaterialTheme.colorScheme.errorContainer, modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    text = stringResource(R.string.chidori_chat_disconnected, displayName),
+                    style = MaterialTheme.typography.labelMedium,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
+                )
+            }
     }
 }
 

@@ -1,5 +1,7 @@
 package com.druk.lmplayground.computer.desktop
 
+import com.druk.lmplayground.computer.ComputerChromeStatus
+
 /**
  * Pure transition function over the shared [DesktopState] (defined in DesktopBridge.kt).
  * [LocalDesktopBridge] and [ScriptedDesktopBridge] move only through [next], so the allowed
@@ -65,6 +67,12 @@ object DesktopStateMachine {
     fun canStop(state: DesktopState): Boolean = state == DesktopState.Starting || state is DesktopState.Running
 
     fun canInstall(state: DesktopState): Boolean = isIdle(state)
+
+    /**
+     * Coarse bucket shared with chat note / hub ([ComputerChromeStatus]).
+     * Prefer this when UI only needs not-installed / installing / running / stopped.
+     */
+    fun chromeStatus(state: DesktopState): ComputerChromeStatus = ComputerChromeStatus.from(state)
 
     /** One-line status for the Computer screen. */
     fun label(state: DesktopState, installMessage: String? = null): String = when (state) {

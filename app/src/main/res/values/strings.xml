@@ -119,6 +119,11 @@
 
     <string name="cloud_chat_banner">Sent to %1$s. This text leaves the phone.</string>
     <string name="route_on_device">On device — chat stays on this phone</string>
+    <string name="provenance_local">Local GGUF · %1$s — stays on this phone</string>
+    <string name="provenance_cloud">Cloud API · %1$s — leaves the phone</string>
+    <string name="provenance_desktop">Desktop · %1$s — leaves the phone</string>
+    <string name="provenance_node">Node · %1$s — LAN inference node</string>
+    <string name="computer_chrome_note">Computer: %1$s</string>
 
     <string name="usage_title">Usage</string>
     <string name="usage_subtitle">Local token and cost totals</string>
