@@ -58,10 +58,15 @@ fun Modifier.desktopInput(
     mapper: () -> DesktopCoordinateMapper,
     sink: (InputCommand) -> Unit,
     enabled: Boolean = true,
+    pointerMode: DesktopPointerMode = DesktopPointerMode.DIRECT,
     config: DesktopGestureRecognizer.Config = DesktopGestureRecognizer.Config(),
-): Modifier = if (!enabled) this else this.pointerInput(config) {
+): Modifier = if (!enabled) this else this.pointerInput(config, pointerMode) {
     val currentMapper = mapper
-    val recognizer = DesktopGestureRecognizer(currentMapper(), sink, config.copy(touchSlopPx = viewConfiguration.touchSlop))
+    val recognizer = DesktopGestureRecognizer(
+        currentMapper(),
+        sink,
+        config.copy(touchSlopPx = viewConfiguration.touchSlop, pointerMode = pointerMode),
+    )
     awaitPointerEventScope {
         var lastTime = 0L
         while (true) {

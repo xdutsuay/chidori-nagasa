@@ -134,8 +134,20 @@ class XdotoolSession internal constructor(
                 droppedMoves++
                 return true
             }
+            if (cmd is InputCommand.MouseMoveRelative && tail != null && !tail.started && tail.sync == null &&
+                tail.cmd is InputCommand.MouseMoveRelative
+            ) {
+                val a = tail.cmd as InputCommand.MouseMoveRelative
+                val merged = InputCommand.MouseMoveRelative(a.dx + cmd.dx, a.dy + cmd.dy)
+                queue[queue.lastIndex] = Item(merged, merged.toArgv(g), null)
+                droppedMoves++
+                return true
+            }
             if (queue.size >= config.queueCapacity) {
-                val i = queue.indexOfFirst { !it.started && it.sync == null && it.cmd is InputCommand.MouseMove }
+                val i = queue.indexOfFirst {
+                    !it.started && it.sync == null &&
+                        (it.cmd is InputCommand.MouseMove || it.cmd is InputCommand.MouseMoveRelative)
+                }
                 if (i >= 0) { queue.removeAt(i); droppedMoves++ } else { rejected++; return false }
             }
             queue.addLast(Item(cmd, argv, null))

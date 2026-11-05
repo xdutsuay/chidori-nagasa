@@ -17,6 +17,13 @@ class InputMappingTest {
         assertEquals(listOf("mousemove", "1279", "0"), InputCommand.MouseMove(5000, -3).toArgv(g))
         assertEquals(listOf("mousemove", "10", "20", "click", "--repeat", "2", "1"), InputCommand.Click(10, 20, count = 2).toArgv(g))
         assertEquals(listOf("mousemove", "10", "20", "click", "3"), InputCommand.Click(10, 20, MouseButton.RIGHT).toArgv(g))
+        assertEquals(
+            listOf("mousemove_relative", "--", "-3", "4"),
+            InputCommand.MouseMoveRelative(-3, 4).toArgv(g),
+        )
+        assertEquals(listOf("click", "1"), InputCommand.ClickAtCursor().toArgv(g))
+        assertEquals(listOf("click", "--repeat", "2", "3"), InputCommand.ClickAtCursor(MouseButton.RIGHT, 2).toArgv(g))
+
         assertEquals(listOf("mousedown", "1"), InputCommand.MouseDown().toArgv(g))
         assertEquals(listOf("mouseup", "1"), InputCommand.MouseUp().toArgv(g))
         assertEquals(listOf("click", "--repeat", "2", "5", "click", "--repeat", "1", "6"), InputCommand.Scroll(-1, 2).toArgv(g))

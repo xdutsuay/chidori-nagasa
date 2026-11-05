@@ -18,6 +18,10 @@ import kotlin.math.hypot
  * | two-finger tap                 | `Click(RIGHT)`                                          |
  * | two-finger pan                 | `MouseMove(centroid)` then `Scroll(dx, dy)` per [Config.scrollStepPx] |
  * | pinch (span changes first)     | nothing: left to the viewer's zoom/pan ([consuming] stays false) |
+ *
+ * [Config.pointerMode] [DesktopPointerMode.TRACKPAD]: one-finger drag emits
+ * [InputCommand.MouseMoveRelative] (no button); taps/long-press use
+ * [InputCommand.ClickAtCursor]. Two-finger scroll unchanged.
  */
 class DesktopGestureRecognizer(
     var mapper: DesktopCoordinateMapper,
@@ -36,6 +40,9 @@ class DesktopGestureRecognizer(
         val naturalScroll: Boolean = true,
         /** Wait [doubleTapMs] before a single click so a double tap is one `click --repeat 2`. */
         val deferSingleTap: Boolean = false,
+        val pointerMode: DesktopPointerMode = DesktopPointerMode.DIRECT,
+        /** View-px → desktop-px gain for trackpad drags. */
+        val trackpadGain: Float = 1.25f,
     )
 
     private data class P(val x: Float, val y: Float)
@@ -80,7 +87,15 @@ class DesktopGestureRecognizer(
     private fun map(p: P) = mapper.toDesktop(p.x, p.y)
     private fun emit(c: InputCommand) = sink(c)
     private fun moveTo(p: P) { val d = map(p); emit(InputCommand.MouseMove(d.x, d.y)) }
-    private fun click(p: P, button: MouseButton, count: Int = 1) { val d = map(p); emit(InputCommand.Click(d.x, d.y, button, count)) }
+    private fun click(p: P, button: MouseButton, count: Int = 1) {
+        if (config.pointerMode == DesktopPointerMode.TRACKPAD) {
+            emit(InputCommand.ClickAtCursor(button, count))
+        } else {
+            val d = map(p)
+            emit(InputCommand.Click(d.x, d.y, button, count))
+        }
+    }
+    private fun trackpad(): Boolean = config.pointerMode == DesktopPointerMode.TRACKPAD
 
     fun onTimer(now: Long) {
         when (val s = state) {
@@ -126,20 +141,33 @@ class DesktopGestureRecognizer(
     fun onMove(id: Long, x: Float, y: Float, t: Long) {
         onTimer(t)
         if (id !in pointers) return
+        val prev = pointers[id]!!
         val p = P(x, y)
         pointers[id] = p
         when (val s = state) {
             is State.Pressed -> if (id == s.id && hypot(x - s.down.x, y - s.down.y) > config.touchSlopPx) {
                 if (s.anchor != null && config.deferSingleTap) click(s.anchor, MouseButton.LEFT)
-                moveTo(s.down)
-                emit(InputCommand.MouseDown(MouseButton.LEFT))
-                moveTo(p)
+                if (trackpad()) {
+                    relativeFrom(s.down, p)
+                } else {
+                    moveTo(s.down)
+                    emit(InputCommand.MouseDown(MouseButton.LEFT))
+                    moveTo(p)
+                }
                 state = State.Dragging(id)
             }
-            is State.Dragging -> if (id == s.id) moveTo(p)
+            is State.Dragging -> if (id == s.id) {
+                if (trackpad()) relativeFrom(prev, p) else moveTo(p)
+            }
             is State.TwoFinger -> twoFingerMove(s)
             else -> Unit
         }
+    }
+
+    private fun relativeFrom(from: P, to: P) {
+        val dx = ((to.x - from.x) * config.trackpadGain).toInt()
+        val dy = ((to.y - from.y) * config.trackpadGain).toInt()
+        if (dx != 0 || dy != 0) emit(InputCommand.MouseMoveRelative(dx, dy))
     }
 
     private fun twoFingerMove(s: State.TwoFinger) {
@@ -186,8 +214,10 @@ class DesktopGestureRecognizer(
                 }
             }
             is State.Dragging -> if (id == s.id) {
-                moveTo(p)
-                emit(InputCommand.MouseUp(MouseButton.LEFT))
+                if (!trackpad()) {
+                    moveTo(p)
+                    emit(InputCommand.MouseUp(MouseButton.LEFT))
+                }
                 state = State.Draining
             }
             is State.TwoFinger -> {

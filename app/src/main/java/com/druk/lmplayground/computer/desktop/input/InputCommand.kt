@@ -18,6 +18,25 @@ sealed interface InputCommand {
         override fun toArgv(geometry: DesktopGeometry) = listOf("mousemove") + clamp(x, y, geometry)
     }
 
+    /**
+     * Relative pointer motion (trackpad mode). Consecutive relatives may be coalesced by
+     * summing dx/dy while still queued. Uses `xdotool mousemove_relative -- dx dy`.
+     */
+    data class MouseMoveRelative(val dx: Int, val dy: Int) : InputCommand {
+        override fun toArgv(geometry: DesktopGeometry) =
+            listOf("mousemove_relative", "--", dx.toString(), dy.toString())
+    }
+
+    /** Click at the current cursor (no prior mousemove) — trackpad taps. */
+    data class ClickAtCursor(val button: MouseButton = MouseButton.LEFT, val count: Int = 1) : InputCommand {
+        init { require(count in 1..3) { "count must be 1..3" } }
+        override fun toArgv(geometry: DesktopGeometry) = buildList {
+            add("click")
+            if (count > 1) { add("--repeat"); add(count.toString()) }
+            add(button.x.toString())
+        }
+    }
+
     data class MouseDown(val button: MouseButton = MouseButton.LEFT) : InputCommand {
         override fun toArgv(geometry: DesktopGeometry) = listOf("mousedown", button.x.toString())
     }

@@ -244,6 +244,9 @@
     <string name="cos_desktop_shot">Shot</string>
     <string name="cos_desktop_retry">Retry</string>
     <string name="cos_desktop_screenshot_cd">Desktop screenshot</string>
+    <string name="cos_desktop_mode_direct">Direct</string>
+    <string name="cos_desktop_mode_trackpad">Trackpad</string>
+    <string name="cos_desktop_rotate">Rotate %1$d°</string>
     <string name="attached_image_fullsize">Full-size image</string>
     <string name="cd_cos_desktop_switch">Computer (COS), switch</string>
     <string name="hub_computer">Computer</string>
