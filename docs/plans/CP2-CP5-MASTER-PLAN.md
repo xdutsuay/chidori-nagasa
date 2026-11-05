@@ -1,6 +1,6 @@
 # CP2 → CP5 master plan (chidori-nagasa)
 
-**Status:** **OK CP2** — M1/M2 + chat tools smoked on-device (E2-8…E2-11). Tip lands on **`cp/cos-desktop-runtime`** (GitHub). Next: fold into `cp/cos-desktop`, CP2 handout, then OK for CP3. Security inventory: `docs/SECURITY-TELEMETRY.md`.  
+**Status:** **CP2 tip on GitHub** — `cp/cos-desktop` = `cp/cos-desktop-runtime` @ `f099e53` (M1/M2 + tools smoked E2-8…E2-11). Next: CP2 handout → God OK → CP3. Security inventory: `docs/SECURITY-TELEMETRY.md`. Dirty `main` WIP on laptop untouched.  
 **Date:** 2026-11-05.  
 **Product name (use case):** **CINDI** — chidori-nagasa driving apps on the on-device Linux desktop (bot-driven COS). Incremental UX; tweak as use cases land.  
 **Sources:** `nagasa-handover/CURSOR-HANDOVER.txt`, `POST-CP2-PLAN.txt`, `docs/cp2-desktop-spike.md`, Gangadhar/LightYagami handovers, `NODE_MODE_SPIKE.md`, `ROADMAP.md`, `UPSTREAM_DIVERGENCE.md`.  
