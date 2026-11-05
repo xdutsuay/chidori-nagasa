@@ -21,6 +21,7 @@ import androidx.compose.material.icons.outlined.Computer
 import androidx.compose.material.icons.outlined.Public
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -37,6 +38,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.unit.dp
 import com.druk.lmplayground.R
+import com.druk.lmplayground.tools.CosConfirmPolicy
 import com.druk.lmplayground.tools.Tool
 
 /**
@@ -84,6 +86,10 @@ fun ToolsScreen(
     enabledStates: Map<String, Boolean>,
     onToolEnabledChanged: (String, Boolean) -> Unit,
     onBackClick: () -> Unit,
+    confirmMode: CosConfirmPolicy.Mode = CosConfirmPolicy.Mode.AUTO,
+    onConfirmModeChanged: (CosConfirmPolicy.Mode) -> Unit = {},
+    evidenceDogfood: Boolean = false,
+    onEvidenceDogfoodChanged: (Boolean) -> Unit = {},
 ) {
     Scaffold(
         topBar = {
@@ -104,6 +110,10 @@ fun ToolsScreen(
             tools = tools,
             enabledStates = enabledStates,
             onToolEnabledChanged = onToolEnabledChanged,
+            confirmMode = confirmMode,
+            onConfirmModeChanged = onConfirmModeChanged,
+            evidenceDogfood = evidenceDogfood,
+            onEvidenceDogfoodChanged = onEvidenceDogfoodChanged,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding),
@@ -117,6 +127,10 @@ fun ToolsContent(
     enabledStates: Map<String, Boolean>,
     onToolEnabledChanged: (String, Boolean) -> Unit,
     modifier: Modifier = Modifier,
+    confirmMode: CosConfirmPolicy.Mode = CosConfirmPolicy.Mode.AUTO,
+    onConfirmModeChanged: (CosConfirmPolicy.Mode) -> Unit = {},
+    evidenceDogfood: Boolean = false,
+    onEvidenceDogfoodChanged: (Boolean) -> Unit = {},
 ) {
     Column(modifier = modifier.verticalScroll(rememberScrollState())) {
         tools.forEach { tool ->
@@ -127,7 +141,93 @@ fun ToolsContent(
             )
             HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
         }
+        ConfirmPolicySection(
+            confirmMode = confirmMode,
+            onConfirmModeChanged = onConfirmModeChanged,
+            evidenceDogfood = evidenceDogfood,
+            onEvidenceDogfoodChanged = onEvidenceDogfoodChanged,
+        )
     }
+}
+
+@Composable
+private fun ConfirmPolicySection(
+    confirmMode: CosConfirmPolicy.Mode,
+    onConfirmModeChanged: (CosConfirmPolicy.Mode) -> Unit,
+    evidenceDogfood: Boolean,
+    onEvidenceDogfoodChanged: (Boolean) -> Unit,
+) {
+    Column(modifier = Modifier.padding(16.dp)) {
+        Text(
+            text = stringResource(R.string.tools_confirm_section_title),
+            style = MaterialTheme.typography.titleMedium,
+        )
+        Spacer(Modifier.height(4.dp))
+        Text(
+            text = stringResource(R.string.tools_confirm_section_blurb),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.height(12.dp))
+        Row(modifier = Modifier.fillMaxWidth()) {
+            ConfirmModeChip(
+                label = stringResource(R.string.tools_confirm_mode_auto),
+                selected = confirmMode == CosConfirmPolicy.Mode.AUTO,
+                onClick = { onConfirmModeChanged(CosConfirmPolicy.Mode.AUTO) },
+            )
+            Spacer(Modifier.width(8.dp))
+            ConfirmModeChip(
+                label = stringResource(R.string.tools_confirm_mode_ask_once),
+                selected = confirmMode == CosConfirmPolicy.Mode.ASK_ONCE,
+                onClick = { onConfirmModeChanged(CosConfirmPolicy.Mode.ASK_ONCE) },
+            )
+            Spacer(Modifier.width(8.dp))
+            ConfirmModeChip(
+                label = stringResource(R.string.tools_confirm_mode_always),
+                selected = confirmMode == CosConfirmPolicy.Mode.ALWAYS,
+                onClick = { onConfirmModeChanged(CosConfirmPolicy.Mode.ALWAYS) },
+            )
+        }
+        Spacer(Modifier.height(16.dp))
+        HorizontalDivider()
+        Spacer(Modifier.height(16.dp))
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { onEvidenceDogfoodChanged(!evidenceDogfood) },
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = stringResource(R.string.tools_evidence_dogfood_title),
+                    style = MaterialTheme.typography.titleMedium,
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = stringResource(R.string.tools_evidence_dogfood_blurb),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Switch(
+                checked = evidenceDogfood,
+                onCheckedChange = onEvidenceDogfoodChanged,
+            )
+        }
+    }
+}
+
+@Composable
+private fun ConfirmModeChip(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    FilterChip(
+        selected = selected,
+        onClick = onClick,
+        label = { Text(label) },
+    )
 }
 
 @Composable
@@ -152,7 +252,7 @@ private fun ToolRow(
             )
             Spacer(Modifier.width(16.dp))
         }
-        Column(Modifier.weight(1f)) {
+        Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = if (ui != null) stringResource(ui.titleRes) else tool.name,
                 style = MaterialTheme.typography.titleMedium,

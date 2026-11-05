@@ -5,6 +5,7 @@ import com.druk.lmplayground.computer.desktop.DesktopBridge
 import com.druk.lmplayground.computer.desktop.DesktopGeometry
 import com.druk.lmplayground.computer.desktop.input.XdotoolSession
 import com.druk.lmplayground.computer.desktop.ShellQuote
+import com.druk.lmplayground.storage.StoragePreferences
 import kotlinx.coroutines.CancellationException
 import org.json.JSONObject
 import kotlin.time.Duration.Companion.seconds
@@ -30,8 +31,13 @@ import kotlin.time.Duration.Companion.seconds
 class CosGuiTool internal constructor(
     private val desktop: DesktopToolContext,
     private val sessionFor: (DesktopBridge) -> XdotoolSession? = { XdotoolSession.shared(it) },
+    private val confirmMode: () -> CosConfirmPolicy.Mode = { CosConfirmPolicy.Mode.AUTO },
+    private val askOnceApproved: () -> Boolean = { CosConfirmSession.isAskOnceApproved() },
 ) : Tool {
-    constructor(context: Context, desktop: DesktopToolContext = DesktopToolContext.forApp(context)) : this(desktop)
+    constructor(context: Context, desktop: DesktopToolContext = DesktopToolContext.forApp(context)) : this(
+        desktop = desktop,
+        confirmMode = { StoragePreferences(context).getCosConfirmMode() },
+    )
 
     override val name = CosToolDefaults.COS_GUI
     override val description =
@@ -50,6 +56,15 @@ class CosGuiTool internal constructor(
 
     override fun execute(arguments: String): String {
         if (!desktop.isComputerEnabled()) return CosDesktopFormatter.disabledJson(name)
+        if (CosConfirmPolicy.needsConfirm(
+                toolName = name,
+                argumentsJson = arguments,
+                mode = confirmMode(),
+                askOnceAlreadyApproved = askOnceApproved(),
+            )
+        ) {
+            return CosConfirmPolicy.confirmationDeniedJson(name)
+        }
         val bridge = desktop.bridge()
         val running = desktop.running()
         if (bridge == null || running == null) return CosDesktopFormatter.desktopNotRunningJson(name)

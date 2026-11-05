@@ -10,8 +10,8 @@ import org.json.JSONObject
  *
  * Field-for-field with [ToolCallInfo]: name, arguments, result, durationMs,
  * precedingThinking, precedingThinkingDurationSeconds, precedingThinkingTokens,
- * stopped. Missing fields decode to the data-class defaults, so rows saved
- * before a field existed still load.
+ * stopped, exitCode. Missing fields decode to the data-class defaults, so rows
+ * saved before a field existed still load.
  */
 object ToolCallInfoCodec {
 
@@ -19,17 +19,19 @@ object ToolCallInfoCodec {
         if (toolCalls.isNullOrEmpty()) return null
         val arr = JSONArray()
         for (call in toolCalls) {
-            arr.put(
-                JSONObject()
-                    .put("name", call.name)
-                    .put("arguments", call.arguments)
-                    .put("result", call.result)
-                    .put("durationMs", call.durationMs)
-                    .put("precedingThinking", call.precedingThinking)
-                    .put("precedingThinkingDurationSeconds", call.precedingThinkingDurationSeconds)
-                    .put("precedingThinkingTokens", call.precedingThinkingTokens)
-                    .put("stopped", call.stopped)
-            )
+            val obj = JSONObject()
+                .put("name", call.name)
+                .put("arguments", call.arguments)
+                .put("result", call.result)
+                .put("durationMs", call.durationMs)
+                .put("precedingThinking", call.precedingThinking)
+                .put("precedingThinkingDurationSeconds", call.precedingThinkingDurationSeconds)
+                .put("precedingThinkingTokens", call.precedingThinkingTokens)
+                .put("stopped", call.stopped)
+            if (call.exitCode != null) {
+                obj.put("exitCode", call.exitCode)
+            }
+            arr.put(obj)
         }
         return arr.toString()
     }
@@ -49,6 +51,7 @@ object ToolCallInfoCodec {
                 precedingThinkingDurationSeconds = obj.optInt("precedingThinkingDurationSeconds"),
                 precedingThinkingTokens = obj.optInt("precedingThinkingTokens"),
                 stopped = obj.optBoolean("stopped"),
+                exitCode = if (obj.has("exitCode")) obj.optInt("exitCode") else null,
             )
         }
     }

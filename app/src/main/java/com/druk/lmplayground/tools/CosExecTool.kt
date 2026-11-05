@@ -3,6 +3,7 @@ package com.druk.lmplayground.tools
 import android.content.Context
 import com.druk.lmplayground.computer.ComputerExecResult
 import com.druk.lmplayground.computer.CosAgentBridge
+import com.druk.lmplayground.storage.StoragePreferences
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -21,8 +22,15 @@ import java.util.concurrent.ConcurrentHashMap
  */
 class CosExecTool internal constructor(
     private val runner: suspend (String) -> ComputerExecResult,
+    private val confirmMode: () -> CosConfirmPolicy.Mode = { CosConfirmPolicy.Mode.AUTO },
+    private val askOnceApproved: () -> Boolean = { CosConfirmSession.isAskOnceApproved() },
 ) : Tool {
-    constructor(context: Context) : this({ command -> CosAgentBridge.exec(context, command) })
+    constructor(context: Context) : this(
+        runner = { command -> CosAgentBridge.exec(context, command) },
+        confirmMode = {
+            StoragePreferences(context).getCosConfirmMode()
+        },
+    )
 
     override val name = "cos_exec"
     override val description =
@@ -43,6 +51,15 @@ class CosExecTool internal constructor(
                 ?: return CosExecFormatter.errorJson("Missing required argument: command")
             if (command.isBlank()) {
                 return CosExecFormatter.errorJson("empty command")
+            }
+            if (CosConfirmPolicy.needsConfirm(
+                    toolName = name,
+                    argumentsJson = arguments,
+                    mode = confirmMode(),
+                    askOnceAlreadyApproved = askOnceApproved(),
+                )
+            ) {
+                return CosConfirmPolicy.confirmationDeniedJson(name)
             }
             val result = runBlocking {
                 val job = async(Dispatchers.IO) { runner(command) }

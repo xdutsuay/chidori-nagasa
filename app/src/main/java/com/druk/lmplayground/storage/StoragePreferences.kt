@@ -6,6 +6,7 @@ import androidx.core.content.edit
 import androidx.core.net.toUri
 import com.druk.lmplayground.computer.ComputerPrefs
 import com.druk.lmplayground.computer.CosConstants
+import com.druk.lmplayground.tools.CosConfirmPolicy
 import com.druk.lmplayground.tools.CosToolDefaults
 
 class StoragePreferences(context: Context) {
@@ -159,6 +160,22 @@ class StoragePreferences(context: Context) {
 
     fun setVisionModuleHintShown(filename: String) {
         prefs.edit { putBoolean("vision_hint_$filename", true) }
+    }
+
+    /** CP7: Auto / Ask once / Always for cos_gui and destructive cos_exec. */
+    fun getCosConfirmMode(): CosConfirmPolicy.Mode =
+        CosConfirmPolicy.Mode.fromStorage(ComputerPrefs.getConfirmMode(computerPrefs))
+
+    fun setCosConfirmMode(mode: CosConfirmPolicy.Mode) {
+        ComputerPrefs.setConfirmMode(computerPrefs, mode.storageValue())
+    }
+
+    /** CP7: evidence-first dogfood toggle. */
+    fun isEvidenceDogfoodEnabled(): Boolean =
+        ComputerPrefs.isEvidenceDogfoodEnabled(computerPrefs)
+
+    fun setEvidenceDogfoodEnabled(enabled: Boolean) {
+        ComputerPrefs.setEvidenceDogfoodEnabled(computerPrefs, enabled)
     }
 
     fun clear() {

@@ -287,7 +287,7 @@ class ProotTerminationTest {
     fun `chat Stop during cos_exec returns a cancelled tool result within seconds`() = runBlocking {
         val rt = runtime(timeoutMs = 120_000)
         val registry = ToolRegistry().apply {
-            register(CosExecTool { command -> CosAgentBridge.exec(rt, command) })
+            register(CosExecTool(runner = { command -> CosAgentBridge.exec(rt, command) }))
             setToolEnabled("cos_exec", true)
         }
         val calls = JSONArray().put(

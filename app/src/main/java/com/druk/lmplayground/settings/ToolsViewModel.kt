@@ -5,6 +5,7 @@ import androidx.lifecycle.AndroidViewModel
 import com.druk.lmplayground.storage.StoragePreferences
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import com.druk.lmplayground.tools.CosConfirmPolicy
 import com.druk.lmplayground.tools.Tool
 import com.druk.lmplayground.tools.ToolRegistry
 
@@ -33,8 +34,24 @@ class ToolsViewModel(app: Application) : AndroidViewModel(app) {
     )
     val enabled: StateFlow<Map<String, Boolean>> = _enabled
 
+    private val _confirmMode = MutableStateFlow(prefs.getCosConfirmMode())
+    val confirmMode: StateFlow<CosConfirmPolicy.Mode> = _confirmMode
+
+    private val _evidenceDogfood = MutableStateFlow(prefs.isEvidenceDogfoodEnabled())
+    val evidenceDogfood: StateFlow<Boolean> = _evidenceDogfood
+
     fun setEnabled(toolName: String, value: Boolean) {
         prefs.setToolEnabledDefault(toolName, value)
         _enabled.value = _enabled.value.toMutableMap().apply { put(toolName, value) }
+    }
+
+    fun setConfirmMode(mode: CosConfirmPolicy.Mode) {
+        prefs.setCosConfirmMode(mode)
+        _confirmMode.value = mode
+    }
+
+    fun setEvidenceDogfood(enabled: Boolean) {
+        prefs.setEvidenceDogfoodEnabled(enabled)
+        _evidenceDogfood.value = enabled
     }
 }

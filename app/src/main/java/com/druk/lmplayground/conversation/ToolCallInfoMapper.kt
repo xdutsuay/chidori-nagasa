@@ -26,12 +26,14 @@ object ToolCallInfoMapper {
         return (0 until calls.length()).map { i ->
             val call = calls.getJSONObject(i)
             val id = call.getString("id")
+            val result = resultMap[id] ?: ""
             ToolCallInfo(
                 name = call.getString("name"),
                 arguments = call.getString("arguments"),
-                result = resultMap[id] ?: "",
+                result = result,
                 durationMs = perCallMs,
-                stopped = isStoppedResult(resultMap[id]),
+                stopped = isStoppedResult(result),
+                exitCode = parseExitCode(result),
             )
         }
     }
@@ -45,5 +47,13 @@ object ToolCallInfoMapper {
         val obj = runCatching { JSONObject(result) }.getOrNull() ?: return false
         return obj.optBoolean("cancelled", false) ||
             obj.optString("error").startsWith("cancelled:")
+    }
+
+    /** `exit_code` from cos_exec / cos_gui JSON, or null if absent / non-JSON. */
+    fun parseExitCode(result: String?): Int? {
+        if (result.isNullOrBlank()) return null
+        val obj = runCatching { JSONObject(result) }.getOrNull() ?: return null
+        if (!obj.has("exit_code")) return null
+        return obj.optInt("exit_code")
     }
 }

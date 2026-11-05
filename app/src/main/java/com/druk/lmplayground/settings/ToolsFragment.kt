@@ -27,11 +27,17 @@ class ToolsFragment : Fragment() {
         setContent {
             PlaygroundTheme {
                 val enabled by toolsViewModel.enabled.collectAsStateWithLifecycle()
+                val confirmMode by toolsViewModel.confirmMode.collectAsStateWithLifecycle()
+                val evidenceDogfood by toolsViewModel.evidenceDogfood.collectAsStateWithLifecycle()
                 ToolsScreen(
                     tools = toolsViewModel.tools,
                     enabledStates = enabled,
                     onToolEnabledChanged = { name, value -> toolsViewModel.setEnabled(name, value) },
                     onBackClick = { findNavController().popBackStack() },
+                    confirmMode = confirmMode,
+                    onConfirmModeChanged = toolsViewModel::setConfirmMode,
+                    evidenceDogfood = evidenceDogfood,
+                    onEvidenceDogfoodChanged = toolsViewModel::setEvidenceDogfood,
                 )
             }
         }

@@ -9,6 +9,7 @@ import com.druk.lmplayground.R
 import com.druk.lmplayground.computer.CosPromptNote
 import com.druk.lmplayground.inference.ModelRuntime
 import com.druk.lmplayground.storage.StoragePreferences
+import com.druk.lmplayground.tools.CosConfirmSession
 import com.druk.lmplayground.tools.CosToolDefaults
 import com.druk.lmplayground.tools.ToolRegistry
 import kotlinx.coroutines.Dispatchers
@@ -105,6 +106,7 @@ class GenerationCoordinator(
         ourJob: Job?,
     ) = withContext(Dispatchers.Default) {
         val llamaSession = runtime.session ?: return@withContext
+        CosConfirmSession.reset()
 
         // Read + downscale the picked image off the binder thread so
         // setImageData (below) can hand the encoded bytes to the

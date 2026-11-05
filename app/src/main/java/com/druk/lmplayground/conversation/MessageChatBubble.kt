@@ -107,7 +107,15 @@ fun ChatItemBubble(
                         if (toolCall.durationMs > 0) 1 else 0
                     )
                     CollapsibleSection(
-                        label = "${toolDisplayName(toolCall.name)} \u00B7 ${formatDuration(durationSec)}",
+                        label = buildString {
+                            append(toolDisplayName(toolCall.name))
+                            append(" \u00B7 ")
+                            append(formatDuration(durationSec))
+                            toolCall.exitCode?.let { code ->
+                                append(" \u00B7 exit ")
+                                append(code)
+                            }
+                        },
                         stoppedChip = toolCall.stopped,
                         content = buildString {
                             if (toolCall.arguments.isNotBlank()) {

@@ -378,10 +378,16 @@ class SettingsFragment : Fragment() {
     @androidx.compose.runtime.Composable
     private fun ToolsDetailPane() {
         val enabled by toolsViewModel.enabled.collectAsStateWithLifecycle()
+        val confirmMode by toolsViewModel.confirmMode.collectAsStateWithLifecycle()
+        val evidenceDogfood by toolsViewModel.evidenceDogfood.collectAsStateWithLifecycle()
         ToolsContent(
             tools = toolsViewModel.tools,
             enabledStates = enabled,
             onToolEnabledChanged = { name, value -> toolsViewModel.setEnabled(name, value) },
+            confirmMode = confirmMode,
+            onConfirmModeChanged = toolsViewModel::setConfirmMode,
+            evidenceDogfood = evidenceDogfood,
+            onEvidenceDogfoodChanged = toolsViewModel::setEvidenceDogfood,
         )
     }
 

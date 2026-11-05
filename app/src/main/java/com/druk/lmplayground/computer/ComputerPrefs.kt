@@ -15,8 +15,33 @@ object ComputerPrefs {
     /** CP4 first-run COS explainer dismissed. */
     const val KEY_FIRST_RUN_SEEN = "computer.first_run_seen"
 
+    /**
+     * CP7 review-before-act for `cos_gui` / destructive `cos_exec`:
+     * `auto` | `ask_once` | `always` (see [com.druk.lmplayground.tools.CosConfirmPolicy.Mode]).
+     */
+    const val KEY_CONFIRM_MODE = "computer.confirm_mode"
+    const val DEFAULT_CONFIRM_MODE = "auto"
+
+    /** CP7 evidence-first dogfood: done claims must attach proof paths. */
+    const val KEY_EVIDENCE_DOGFOOD = "computer.evidence_dogfood"
+    const val DEFAULT_EVIDENCE_DOGFOOD = false
+
     fun isComputerEnabled(prefs: SharedPreferences): Boolean =
         prefs.getBoolean(KEY_COMPUTER_ENABLED, DEFAULT_ENABLED)
+
+    fun getConfirmMode(prefs: SharedPreferences): String =
+        prefs.getString(KEY_CONFIRM_MODE, DEFAULT_CONFIRM_MODE) ?: DEFAULT_CONFIRM_MODE
+
+    fun setConfirmMode(prefs: SharedPreferences, mode: String) {
+        prefs.edit().putString(KEY_CONFIRM_MODE, mode).apply()
+    }
+
+    fun isEvidenceDogfoodEnabled(prefs: SharedPreferences): Boolean =
+        prefs.getBoolean(KEY_EVIDENCE_DOGFOOD, DEFAULT_EVIDENCE_DOGFOOD)
+
+    fun setEvidenceDogfoodEnabled(prefs: SharedPreferences, enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_EVIDENCE_DOGFOOD, enabled).apply()
+    }
 
     fun setComputerEnabled(prefs: SharedPreferences, enabled: Boolean) {
         prefs.edit().putBoolean(KEY_COMPUTER_ENABLED, enabled).apply()

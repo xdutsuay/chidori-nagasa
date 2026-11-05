@@ -124,7 +124,9 @@ data class ToolCallInfo(
     val precedingThinkingTokens: Int = 0,
     // The user pressed Stop while this call was pending or running (result has
     // cancelled:true / "cancelled: ..."); the tool row shows a "Stopped" chip.
-    val stopped: Boolean = false
+    val stopped: Boolean = false,
+    /** Parsed from cos_exec / cos_gui JSON `exit_code` when present. */
+    val exitCode: Int? = null,
 )
 
 @Immutable

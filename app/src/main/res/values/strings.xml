@@ -546,6 +546,13 @@
     <string name="tool_cos_exec_title">Run COS command</string>
     <string name="tool_cos_exec_desc">Runs a shell command inside the on-device Computer (COS) environment and returns stdout, stderr, and exit code. Requires Computer (COS) enabled in Settings.</string>
     <string name="tool_cos_exec_example">\"List files in the COS home directory.\"</string>
+    <string name="tools_confirm_section_title">Review before act</string>
+    <string name="tools_confirm_section_blurb">Require approval before cos_gui and destructive cos_exec (rm, dd, reboot, …).</string>
+    <string name="tools_confirm_mode_auto">Auto</string>
+    <string name="tools_confirm_mode_ask_once">Ask once</string>
+    <string name="tools_confirm_mode_always">Always ask</string>
+    <string name="tools_evidence_dogfood_title">Evidence-first dogfood</string>
+    <string name="tools_evidence_dogfood_blurb">When on, treat done claims without proof paths as incomplete.</string>
 
     <!-- Inference engine service notification (foreground service while a
          model is loaded so the OS does not evict the :llama process). -->
