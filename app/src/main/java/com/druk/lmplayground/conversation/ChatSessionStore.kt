@@ -105,7 +105,8 @@ class ChatSessionStore(
                 responseTokens = message.responseTokens,
                 responseDurationSeconds = message.responseDurationSeconds,
                 timestamp = message.timestamp,
-                imagePath = imagePath
+                imagePath = imagePath,
+                toolCallsJson = ToolCallInfoCodec.encode(message.toolCalls)
             )
         )
     }
@@ -147,7 +148,8 @@ class ChatSessionStore(
                 responseTokens = entity.responseTokens,
                 responseDurationSeconds = entity.responseDurationSeconds,
                 timestamp = entity.timestamp,
-                imageUri = imageUri
+                imageUri = imageUri,
+                toolCalls = ToolCallInfoCodec.decode(entity.toolCallsJson)
             )
         }
     }

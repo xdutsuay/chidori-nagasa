@@ -46,6 +46,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
@@ -83,6 +85,7 @@ fun ComputerScreen(
     /** Temporary CP2 Desktop debug section, shown under the status line when set. */
     desktopPanel: (@Composable () -> Unit)? = null,
 ) {
+    val cosSwitchCd = stringResource(R.string.cd_cos_desktop_switch)
     Scaffold(
         topBar = {
             TopAppBar(
@@ -105,7 +108,9 @@ fun ComputerScreen(
                     Switch(
                         checked = state.enabled,
                         onCheckedChange = onEnabledChange,
-                        modifier = Modifier.testTag(TAG_ENABLE),
+                        modifier = Modifier
+                            .testTag(TAG_ENABLE)
+                            .semantics { contentDescription = cosSwitchCd },
                     )
                     ComputerOverflowMenu(
                         state = state,

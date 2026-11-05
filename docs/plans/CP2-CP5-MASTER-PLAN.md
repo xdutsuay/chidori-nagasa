@@ -1,10 +1,10 @@
 # CP2 → CP5 master plan (chidori-nagasa)
 
-**Status:** **CP2 tip on GitHub** — `cp/cos-desktop` = `cp/cos-desktop-runtime` @ `f099e53` (M1/M2 + tools smoked E2-8…E2-11). Next: CP2 handout → God OK → CP3. Security inventory: `docs/SECURITY-TELEMETRY.md`. Dirty `main` WIP on laptop untouched.  
+**Status:** **CP2 on `origin/main`** @ `27c7528` (FF from `cp/cos-desktop`). **CP3 in progress** on `cp/kma-cp3-history-cos-hardening` (worktree `chidori-nagasa-cp3`). Branch map: `docs/BRANCH-SANITY.md`. Security: `docs/SECURITY-TELEMETRY.md`. Dirty laptop `main` WIP @ `6fbacc7` untouched.  
 **Date:** 2026-11-05.  
 **Product name (use case):** **CINDI** — chidori-nagasa driving apps on the on-device Linux desktop (bot-driven COS). Incremental UX; tweak as use cases land.  
 **Sources:** `nagasa-handover/CURSOR-HANDOVER.txt`, `POST-CP2-PLAN.txt`, `docs/cp2-desktop-spike.md`, Gangadhar/LightYagami handovers, `NODE_MODE_SPIKE.md`, `ROADMAP.md`, `UPSTREAM_DIVERGENCE.md`.  
-**Repo:** `C:\Users\kaust\AndroidStudioProjects\chidori-nagasa` · origin `xdutsuay/chidori-nagasa` · `main` = `6995f0e` (CP1 / PR #3).
+**Repo:** `C:\Users\kaust\AndroidStudioProjects\chidori-nagasa` · origin `xdutsuay/chidori-nagasa` · `origin/main` = `27c7528`.
 
 ### Decisions locked (2026-11-05)
 

@@ -107,6 +107,56 @@ class ChatSessionStoreTest {
     }
 
     @Test
+    fun persistAndLoadRestoresToolCalls() = runBlocking {
+        val id = runCreateSession()
+        // User row: no tool calls — must stay null after round-trip.
+        store.persistMessage(id, Message(author = "User", content = "q"))
+        store.persistMessage(
+            id,
+            Message(
+                author = "Assistant",
+                content = "done",
+                toolCalls = listOf(
+                    ToolCallInfo(
+                        name = "web_search",
+                        arguments = "{\"query\":\"a\"}",
+                        result = "{\"hits\":2}",
+                        durationMs = 800L,
+                        precedingThinking = "searching",
+                        precedingThinkingDurationSeconds = 1,
+                        precedingThinkingTokens = 9,
+                    ),
+                    ToolCallInfo(
+                        name = "cos_exec",
+                        arguments = "{\"cmd\":\"ls\"}",
+                        result = "{\"cancelled\":true}",
+                        durationMs = 100L,
+                        stopped = true,
+                    ),
+                ),
+            )
+        )
+
+        val messages = store.loadSessionMessages(id)!!
+        assertEquals(2, messages.size)
+        assertNull(messages[0].toolCalls)
+
+        val restored = messages[1].toolCalls!!
+        assertEquals(2, restored.size)
+        assertEquals("web_search", restored[0].name)
+        assertEquals("{\"query\":\"a\"}", restored[0].arguments)
+        assertEquals("{\"hits\":2}", restored[0].result)
+        assertEquals(800L, restored[0].durationMs)
+        assertEquals("searching", restored[0].precedingThinking)
+        assertEquals(1, restored[0].precedingThinkingDurationSeconds)
+        assertEquals(9, restored[0].precedingThinkingTokens)
+        assertFalse(restored[0].stopped)
+        assertEquals("cos_exec", restored[1].name)
+        assertTrue(restored[1].stopped)
+        assertEquals("{\"cancelled\":true}", restored[1].result)
+    }
+
+    @Test
     fun loadDropsImageUriWhenFileIsGone() = runBlocking {
         val id = runCreateSession()
         store.persistMessage(

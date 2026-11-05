@@ -44,6 +44,8 @@ class LocalDesktopBridge internal constructor(
     private val log: (String) -> Unit = { msg -> runCatching { android.util.Log.i(LocalComputerRuntime.LOG_TAG, msg) } },
     private val installTimeoutMs: Long = INSTALL_TIMEOUT_MS,
     private val readyTimeoutMs: Long = DesktopSession.READY_TIMEOUT_MS,
+    /** Application context for desktop FGS keep-alive; null in JVM unit tests. */
+    private val appContext: Context? = null,
 ) : DesktopBridge {
 
     private val mutex = Mutex()
@@ -177,6 +179,7 @@ class LocalDesktopBridge internal constructor(
             return Result.failure(IllegalStateException("cannot start desktop while ${DesktopStateMachine.label(_state.value)}"))
         }
         move(DesktopStateMachine.Event.StartRequested)
+        DesktopStaleCleanup.removeXLocks(runtime.hostRootfsDir, config.display)
         val s = DesktopSession(
             runtime = runtime,
             config = config,
@@ -185,6 +188,7 @@ class LocalDesktopBridge internal constructor(
             onUnexpectedExit = { msg ->
                 session = null
                 move(DesktopStateMachine.Event.Exited(msg))
+                endDesktopFgs()
             },
         )
         return when (val o = s.start()) {
@@ -200,6 +204,7 @@ class LocalDesktopBridge internal constructor(
                     vncSocketHostPath = null,
                 )
                 move(DesktopStateMachine.Event.Ready(running))
+                startDesktopFgs()
                 Result.success(running)
             }
             is DesktopSession.Outcome.Failed -> {
@@ -220,11 +225,29 @@ class LocalDesktopBridge internal constructor(
         session = null
         if (s == null) {
             if (_state.value is DesktopState.Running) move(DesktopStateMachine.Event.Exited("session lost"))
+            endDesktopFgs()
             return _state.value
         }
         move(DesktopStateMachine.Event.StopRequested)
         s.stop(reason)
-        return move(DesktopStateMachine.Event.Stopped)
+        DesktopStaleCleanup.removeXLocks(runtime.hostRootfsDir, config.display)
+        val next = move(DesktopStateMachine.Event.Stopped)
+        endDesktopFgs()
+        return next
+    }
+
+    private fun startDesktopFgs() {
+        val ctx = appContext ?: return
+        runCatching {
+            com.druk.lmplayground.computer.CosComputerService.startDesktop(ctx)
+        }.onFailure { log("desktop FGS start failed: ${it.message}") }
+    }
+
+    private fun endDesktopFgs() {
+        val ctx = appContext ?: return
+        runCatching {
+            com.druk.lmplayground.computer.CosComputerService.endDesktop(ctx)
+        }.onFailure { log("desktop FGS end failed: ${it.message}") }
     }
 
     /** Fire-and-forget stop (Computer disabled, app teardown). */
@@ -353,7 +376,10 @@ class LocalDesktopBridge internal constructor(
         /** Process-wide bridge (display [DesktopConfig.DEFAULT]); also published as [DesktopBridges.bridge]. */
         fun get(context: Context): LocalDesktopBridge =
             instance ?: synchronized(this) {
-                instance ?: LocalDesktopBridge(LocalComputerRuntime.create(context.applicationContext)).also {
+                instance ?: LocalDesktopBridge(
+                    runtime = LocalComputerRuntime.create(context.applicationContext),
+                    appContext = context.applicationContext,
+                ).also {
                     instance = it
                     DesktopBridges.bridge = it
                 }

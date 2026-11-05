@@ -13,6 +13,7 @@ import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import com.druk.lmplayground.MainActivity
 import com.druk.lmplayground.R
+import com.druk.lmplayground.computer.desktop.LocalDesktopBridge
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -21,22 +22,44 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 
 /**
- * Foreground service for long COS exec / ensureRootfs so Android is less likely
- * to kill the work mid-flight. Opt-in Computer feature only.
+ * Foreground service for long COS exec / ensureRootfs / **desktop session** so Android
+ * is less likely to kill proot/Xvfb when the UI is backgrounded. Opt-in Computer feature only.
  */
 class CosComputerService : Service() {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var job: Job? = null
 
+    /** True while [ACTION_DESKTOP] is holding the FGS open for a running desktop. */
+    @Volatile private var desktopKeepAlive = false
+
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
             ACTION_STOP -> {
+                desktopKeepAlive = false
+                LocalDesktopBridge.peek()?.stopAsync("cos-service-stop")
                 LocalComputerRuntime.create(this).stop()
                 stopForeground(STOP_FOREGROUND_REMOVE)
                 stopSelf()
+                return START_NOT_STICKY
+            }
+            ACTION_DESKTOP -> {
+                ensureChannel()
+                desktopKeepAlive = true
+                startAsForeground(getString(R.string.cos_notification_desktop))
+                return START_STICKY
+            }
+            ACTION_DESKTOP_END -> {
+                desktopKeepAlive = false
+                // If an exec/prune job is still running, keep the notification for that work.
+                if (job?.isActive != true) {
+                    stopForeground(STOP_FOREGROUND_REMOVE)
+                    stopSelf()
+                } else {
+                    startAsForeground(getString(R.string.cos_notification_running))
+                }
                 return START_NOT_STICKY
             }
             ACTION_PRUNE -> {
@@ -45,8 +68,12 @@ class CosComputerService : Service() {
                 job?.cancel()
                 job = scope.launch {
                     LocalComputerRuntime.create(this@CosComputerService).pruneIfNeeded()
-                    stopForeground(STOP_FOREGROUND_REMOVE)
-                    stopSelf()
+                    if (!desktopKeepAlive) {
+                        stopForeground(STOP_FOREGROUND_REMOVE)
+                        stopSelf()
+                    } else {
+                        startAsForeground(getString(R.string.cos_notification_desktop))
+                    }
                 }
                 return START_STICKY
             }
@@ -60,8 +87,12 @@ class CosComputerService : Service() {
                     if (argv.isNotEmpty()) {
                         runtime.exec(argv)
                     }
-                    stopForeground(STOP_FOREGROUND_REMOVE)
-                    stopSelf()
+                    if (!desktopKeepAlive) {
+                        stopForeground(STOP_FOREGROUND_REMOVE)
+                        stopSelf()
+                    } else {
+                        startAsForeground(getString(R.string.cos_notification_desktop))
+                    }
                 }
                 return START_STICKY
             }
@@ -111,6 +142,8 @@ class CosComputerService : Service() {
         const val NOTIF_ID = 71027
         const val ACTION_STOP = "com.druk.lmplayground.computer.STOP"
         const val ACTION_PRUNE = "com.druk.lmplayground.computer.PRUNE"
+        const val ACTION_DESKTOP = "com.druk.lmplayground.computer.DESKTOP"
+        const val ACTION_DESKTOP_END = "com.druk.lmplayground.computer.DESKTOP_END"
         const val EXTRA_ARGV = "argv"
 
         fun startExec(context: Context, argv: List<String>) {
@@ -122,6 +155,17 @@ class CosComputerService : Service() {
         fun startPrune(context: Context) {
             val i = Intent(context, CosComputerService::class.java).setAction(ACTION_PRUNE)
             context.startForegroundService(i)
+        }
+
+        /** Hold FGS while the CINDI/COS desktop (Xvfb) is Running. */
+        fun startDesktop(context: Context) {
+            val i = Intent(context, CosComputerService::class.java).setAction(ACTION_DESKTOP)
+            context.startForegroundService(i)
+        }
+
+        fun endDesktop(context: Context) {
+            val i = Intent(context, CosComputerService::class.java).setAction(ACTION_DESKTOP_END)
+            context.startService(i)
         }
 
         fun stop(context: Context) {
