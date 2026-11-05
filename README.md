@@ -102,6 +102,9 @@ after ⋮ → Install rootfs (“Ready · Rootfs: alpine · 16.4 MB · proot”)
 ### COS in 5 minutes (CINDI)
 
 1. Drawer → **Computer** → toggle **Computer (COS)** on (TalkBack: “Computer (COS), switch”).
+   Dogfood/adb (no BACK taps):  
+   `adb shell am start -a android.intent.action.VIEW -d "chidori-nagasa://computer" -p com.xdutsuay.chidori.nagasa.debug`  
+   (helper: `scripts/adb-open-computer.ps1` — aborts if focus leaves this package).
 2. **⋮ → Install rootfs**, wait until status is Ready.
 3. **⋮ → Install desktop** (Xvfb + Openbox; confirm size prompt).
 4. On the Desktop panel: **Start**, then use the live viewer.
