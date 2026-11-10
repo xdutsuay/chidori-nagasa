@@ -279,6 +279,16 @@ class ConversationFragment : Fragment() {
                 var usageFooterText by remember { mutableStateOf<String?>(null) }
                 val needsYouBadgeCount by NeedsYouBadgeStore.count.collectAsStateWithLifecycle()
 
+                val checkInLink by com.druk.lmplayground.checkin.CheckInPendingHold.pending
+                    .collectAsStateWithLifecycle()
+                LaunchedEffect(checkInLink) {
+                    val link = checkInLink ?: return@LaunchedEffect
+                    if (link.source == com.druk.lmplayground.checkin.OpenItemSource.CHAT.storageValue()) {
+                        link.sessionId?.let { viewModel.loadSession(it) }
+                    }
+                    com.druk.lmplayground.checkin.CheckInPendingHold.consume()
+                }
+
                 LaunchedEffect(Unit) {
                     val app = requireContext().applicationContext as App
                     val startOfDay = Calendar.getInstance().apply {

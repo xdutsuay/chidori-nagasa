@@ -6,6 +6,18 @@ import android.content.ComponentName
 import android.os.Bundle
 import com.druk.llamacpp.InferenceClient
 import com.druk.llamacpp.LlamaCpp
+import com.druk.lmplayground.checkin.BackgroundActivityPause
+import com.druk.lmplayground.checkin.CheckInCompleter
+import com.druk.lmplayground.checkin.CheckInPreferences
+import com.druk.lmplayground.checkin.CheckInScheduler
+import com.druk.lmplayground.checkin.CloudCheckInCompleter
+import com.druk.lmplayground.checkin.LocalCheckInCompleter
+import com.druk.lmplayground.checkin.OpenItemCapture
+import com.druk.lmplayground.checkin.OpenItemHooks
+import com.druk.lmplayground.checkin.OpenItemRepository
+import com.druk.lmplayground.checkin.PreferencesPendingStore
+import com.druk.lmplayground.checkin.RoutingCheckInCompleter
+import com.druk.lmplayground.checkin.TeamHandoffIngest
 import com.druk.lmplayground.cloud.CloudClient
 import com.druk.lmplayground.cloud.CloudKeyStore
 import com.druk.lmplayground.cloud.CloudProviderRepository
@@ -17,6 +29,7 @@ import com.druk.lmplayground.data.AppDatabase
 import com.druk.lmplayground.data.ChatRepository
 import com.druk.lmplayground.data.SystemPromptRepository
 import com.druk.lmplayground.data.UsageRepository
+import com.druk.lmplayground.team.TeamHandoffEvents
 import com.druk.lmplayground.download.DownloadNotificationManager
 import com.druk.lmplayground.inference.LlamaService
 import com.druk.lmplayground.inference.ProcessUtils
@@ -24,6 +37,7 @@ import com.druk.lmplayground.storage.LegacyDownloadCleanup
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import kotlin.concurrent.thread
 
 class App : Application() {
@@ -41,6 +55,12 @@ class App : Application() {
     lateinit var cloudProviderRepository: CloudProviderRepository
         private set
     lateinit var usageRepository: UsageRepository
+        private set
+    lateinit var openItemRepository: OpenItemRepository
+        private set
+    var openItemCapture: OpenItemCapture? = null
+        private set
+    var checkInCompleter: CheckInCompleter? = null
         private set
     lateinit var cloudClient: CloudClient
         private set
@@ -124,13 +144,56 @@ class App : Application() {
             cloudKeyStore,
         )
         usageRepository = UsageRepository(database.usageEventDao())
+        openItemRepository = OpenItemRepository(database.openItemDao())
         cloudClient = CloudClient()
 
+        val checkInPreferences = CheckInPreferences(this)
+        val completer = RoutingCheckInCompleter(
+            local = LocalCheckInCompleter(),
+            cloud = CloudCheckInCompleter(
+                provider = { cloudProviderRepository.getAll().firstOrNull { it.defaultModel.isNotBlank() } },
+                apiKey = { cloudKeyStore.getKey(it) },
+                client = cloudClient,
+            ),
+            hybridEnabled = { checkInPreferences.hybridCloudEnabled },
+        )
+        checkInCompleter = completer
+        openItemCapture = OpenItemCapture(
+            scope = appScope,
+            repository = openItemRepository,
+            sessionCommands = openItemRepository,
+            messages = { sessionId -> chatRepository.getMessages(sessionId) },
+            completer = completer,
+            enabled = { checkInPreferences.enabled },
+            pending = PreferencesPendingStore(this),
+        ).also { capture ->
+            OpenItemHooks.onPersisted = { capture.onPersisted(it) }
+        }
+        TeamHandoffEvents.listener = { room, handoff ->
+            appScope.launch {
+                runCatching {
+                    TeamHandoffIngest.onHandoff(
+                        handoff,
+                        room,
+                        openItemRepository,
+                        System.currentTimeMillis(),
+                    )
+                }
+            }
+        }
+
         coordinatorRepository = CoordinatorRepository(this)
+        val backgroundPause = BackgroundActivityPause(this)
         needsYouBadgePoller = NeedsYouBadgePoller(
             coordinator = coordinatorRepository,
             scope = appScope,
             isAppInForeground = { isAppInForeground },
+            isPaused = { backgroundPause.isPaused },
         ).also { it.start() }
+
+        // Default off: a fresh install does not touch WorkManager.
+        if (checkInPreferences.enabled) {
+            runCatching { CheckInScheduler.sync(this) }
+        }
     }
 }

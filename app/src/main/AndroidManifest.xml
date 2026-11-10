@@ -115,6 +115,16 @@
             </intent-filter>
         </receiver>
 
+        <receiver
+            android:name="com.druk.lmplayground.checkin.CheckInActionReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.xdutsuay.chidori.nagasa.action.CHECK_IN_DONE" />
+                <action android:name="com.xdutsuay.chidori.nagasa.action.CHECK_IN_PARK" />
+                <action android:name="com.xdutsuay.chidori.nagasa.action.CHECK_IN_LATER" />
+            </intent-filter>
+        </receiver>
+
         <!-- Image sharing for vision input: exposes copied chat images to the
              system photo picker / share targets via a content:// URI. -->
         <provider

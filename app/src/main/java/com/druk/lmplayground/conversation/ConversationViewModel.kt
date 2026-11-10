@@ -921,6 +921,9 @@ class ConversationViewModel(val app: Application) : AndroidViewModel(app) {
                             ),
                         )
                     } catch (_: Throwable) { /* best-effort */ }
+                    runCatching {
+                        com.druk.lmplayground.checkin.CheckInPreferences(app).hybridCloudEnabled = true
+                    }
                 }
             } catch (e: CloudClientException) {
                 _userError.postValue(e.error.userMessage())

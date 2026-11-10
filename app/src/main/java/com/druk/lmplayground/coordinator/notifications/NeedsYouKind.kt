@@ -12,6 +12,12 @@ enum class NeedsYouKind {
     STOP_AT_RISK,
     CELLULAR_INSTALL,
     NODE_OFFER,
+    /**
+     * Proactive check-in (KMA-333). Set by the check-in notifier itself.
+     * [classifyNeedsYouKind] does not infer this, so a run summary cannot
+     * be stolen into the check-in bucket.
+     */
+    CHECK_IN,
 }
 
 /**

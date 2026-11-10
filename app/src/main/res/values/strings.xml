@@ -595,4 +595,34 @@
     <string name="debug_crash_engine_not_connected" translatable="false">Inference engine isn\'t connected.</string>
     <string name="debug_crash_engine_done" translatable="false">Crash injected — check the chat for the recovery message.</string>
 
+    <string name="check_ins">Check-ins</string>
+    <string name="check_ins_subtitle">A quiet nudge when something is actually new</string>
+    <string name="check_ins_blurb">After you have been away, Nagasa looks at open threads and sends one short note only when there is real news or something is coming due. Otherwise it stays quiet.</string>
+    <string name="check_ins_enable">Enable check-ins</string>
+    <string name="check_ins_enable_desc">Off until you turn this on.</string>
+    <string name="check_ins_frequency">Frequency</string>
+    <string name="check_ins_freq_6h">6h</string>
+    <string name="check_ins_freq_12h">12h</string>
+    <string name="check_ins_freq_daily">Daily</string>
+    <string name="check_ins_freq_weekly">Weekly</string>
+    <string name="check_ins_inactivity">Inactivity</string>
+    <string name="check_ins_inactive_30m">30m</string>
+    <string name="check_ins_inactive_1h">1h</string>
+    <string name="check_ins_inactive_2h">2h</string>
+    <string name="check_ins_inactive_6h">6h</string>
+    <string name="check_ins_quiet_hours">Quiet hours</string>
+    <string name="check_ins_quiet_start">From</string>
+    <string name="check_ins_quiet_end">Until</string>
+    <string name="check_ins_hour_minus">−1h</string>
+    <string name="check_ins_hour_plus">+1h</string>
+    <string name="pause_background_title">Pause background activity</string>
+    <string name="pause_background_desc">Stops check-ins and the needs-you badge poll. Future routines must honour this switch too.</string>
+    <string name="check_ins_open_items">Open items</string>
+    <string name="check_ins_open_items_empty">No open items.</string>
+    <string name="check_in_notification_title">Check-in</string>
+    <string name="check_in_action_done">Done</string>
+    <string name="check_in_action_park">Park</string>
+    <string name="check_in_action_later">Later</string>
+    <string name="check_in_action_close">Close</string>
+
 </resources>
