@@ -12,8 +12,10 @@ class ChatRepository(private val dao: ChatDao) {
     suspend fun insertSession(session: ChatSessionEntity) =
         dao.insertSession(session)
 
-    suspend fun insertMessage(message: ChatMessageEntity) =
+    suspend fun insertMessage(message: ChatMessageEntity): Long =
         dao.insertMessage(message)
+
+    suspend fun latestMessageTimestamp(): Long? = dao.latestMessageTimestamp()
 
     suspend fun updateSessionTimestamp(sessionId: String, updatedAt: Long) =
         dao.updateSessionTimestamp(sessionId, updatedAt)

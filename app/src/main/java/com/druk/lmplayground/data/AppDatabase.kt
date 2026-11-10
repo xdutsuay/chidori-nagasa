@@ -6,6 +6,8 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
+import com.druk.lmplayground.checkin.OpenItemDao
+import com.druk.lmplayground.checkin.OpenItemEntity
 import com.druk.lmplayground.cloud.CloudProviderDao
 import com.druk.lmplayground.cloud.CloudProviderEntity
 
@@ -17,8 +19,9 @@ import com.druk.lmplayground.cloud.CloudProviderEntity
         PromptUsage::class,
         CloudProviderEntity::class,
         UsageEventEntity::class,
+        OpenItemEntity::class,
     ],
-    version = 9,
+    version = 10,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -30,6 +33,8 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun cloudProviderDao(): CloudProviderDao
 
     abstract fun usageEventDao(): UsageEventDao
+
+    abstract fun openItemDao(): OpenItemDao
 
     companion object {
         @Volatile
@@ -162,6 +167,52 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        /**
+         * KMA-333 open-items ledger. Column order matches [OpenItemEntity] so
+         * Room's post-migration schema check accepts the table.
+         */
+        val MIGRATION_9_10 = object : Migration(9, 10) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `open_items` (" +
+                        "`id` TEXT NOT NULL, " +
+                        "`source` TEXT NOT NULL, " +
+                        "`sourceId` TEXT NOT NULL, " +
+                        "`sessionId` TEXT, " +
+                        "`sourceMessageId` INTEGER, " +
+                        "`kind` TEXT NOT NULL, " +
+                        "`summary` TEXT NOT NULL, " +
+                        "`dueAt` INTEGER, " +
+                        "`probeJson` TEXT NOT NULL, " +
+                        "`status` TEXT NOT NULL, " +
+                        "`lastRaisedAt` INTEGER, " +
+                        "`lastProbeState` TEXT NOT NULL, " +
+                        "`initialProbeState` TEXT NOT NULL, " +
+                        "`stateAtLastRaise` TEXT, " +
+                        "`fingerprint` TEXT NOT NULL, " +
+                        "`fresh` INTEGER NOT NULL, " +
+                        "`doneReason` TEXT, " +
+                        "`createdAt` INTEGER NOT NULL, " +
+                        "`updatedAt` INTEGER NOT NULL, " +
+                        "PRIMARY KEY(`id`))"
+                )
+                db.execSQL(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS `index_open_items_fingerprint` " +
+                        "ON `open_items` (`fingerprint`)"
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS `index_open_items_status` ON `open_items` (`status`)"
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS `index_open_items_source` ON `open_items` (`source`)"
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS `index_open_items_source_sourceId` " +
+                        "ON `open_items` (`source`, `sourceId`)"
+                )
+            }
+        }
+
         fun getInstance(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 INSTANCE ?: Room.databaseBuilder(
@@ -178,6 +229,7 @@ abstract class AppDatabase : RoomDatabase() {
                         MIGRATION_6_7,
                         MIGRATION_7_8,
                         MIGRATION_8_9,
+                        MIGRATION_9_10,
                     )
                     .build().also { INSTANCE = it }
             }

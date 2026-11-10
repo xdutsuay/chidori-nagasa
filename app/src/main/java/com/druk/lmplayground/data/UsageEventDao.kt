@@ -20,4 +20,7 @@ interface UsageEventDao {
 
     @Query("DELETE FROM usage_events")
     suspend fun deleteAll()
+
+    @Query("SELECT MAX(createdAt) FROM usage_events")
+    suspend fun latestCreatedAt(): Long?
 }

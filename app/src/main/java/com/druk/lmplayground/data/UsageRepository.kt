@@ -8,4 +8,6 @@ class UsageRepository(private val dao: UsageEventDao) {
     suspend fun since(sinceMs: Long): List<UsageEventEntity> = dao.since(sinceMs)
 
     suspend fun clear() = dao.deleteAll()
+
+    suspend fun latestCreatedAt(): Long? = dao.latestCreatedAt()
 }

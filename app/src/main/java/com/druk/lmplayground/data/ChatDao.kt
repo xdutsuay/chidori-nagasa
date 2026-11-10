@@ -19,7 +19,7 @@ interface ChatDao {
     suspend fun insertSession(session: ChatSessionEntity)
 
     @Insert
-    suspend fun insertMessage(message: ChatMessageEntity)
+    suspend fun insertMessage(message: ChatMessageEntity): Long
 
     @Query("UPDATE chat_sessions SET updatedAt = :updatedAt WHERE id = :sessionId")
     suspend fun updateSessionTimestamp(sessionId: String, updatedAt: Long)
@@ -53,6 +53,9 @@ interface ChatDao {
 
     @Query("SELECT * FROM chat_sessions WHERE id = :sessionId")
     suspend fun getSession(sessionId: String): ChatSessionEntity?
+
+    @Query("SELECT MAX(timestamp) FROM chat_messages")
+    suspend fun latestMessageTimestamp(): Long?
 
     @Query("DELETE FROM chat_sessions WHERE id = :sessionId")
     suspend fun deleteSession(sessionId: String)
