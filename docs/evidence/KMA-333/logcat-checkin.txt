@@ -1,0 +1,7 @@
+11-10 07:37:28.034 D WM-WorkerWrapper: Delaying execution for com.druk.lmplayground.checkin.CheckInWorker because it is being executed before schedule.
+11-10 07:38:00.101 D WM-WorkerWrapper: Starting work for com.druk.lmplayground.checkin.CheckInWorker
+11-10 07:38:00.136 I WM-WorkerWrapper: Worker result SUCCESS for Work [ id=2397f472-d876-4f5e-a15a-bc0aa00b4cf8, tags={ com.druk.lmplayground.checkin.CheckInWorker, proactive-checkin } ]
+notification: android.title=Check-in
+notification: android.text=• Ship the migration
+notification: actions Done, Park, Later
+open_items after the run: emu-1|RAISED|0|lastRaisedAt set

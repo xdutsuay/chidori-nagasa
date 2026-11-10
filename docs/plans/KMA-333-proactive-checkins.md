@@ -179,7 +179,8 @@ Documented in `docs/PROACTIVE_CHECKINS.md`. No cloud call unless hybrid/cloud ha
 - `app/src/main/java/com/druk/lmplayground/data/AppDatabase.kt` — version 10, entity, DAO, migration
 - `app/src/main/java/com/druk/lmplayground/data/ChatDao.kt` — latest message timestamp
 - `app/src/main/java/com/druk/lmplayground/data/UsageEventDao.kt` — latest usage timestamp
-- `app/src/main/java/com/druk/lmplayground/data/ChatRepository.kt` — pass through the new timestamp query if the repository owns DAO access for capture
+- `app/src/main/java/com/druk/lmplayground/data/ChatRepository.kt` — latest message timestamp, insert returns the row id
+- `app/src/main/java/com/druk/lmplayground/data/UsageRepository.kt` — latest usage timestamp
 - `app/src/main/java/com/druk/lmplayground/App.kt` — repository, capture hook, team-room sink, schedule when enabled
 - `app/src/main/java/com/druk/lmplayground/coordinator/notifications/NeedsYouKind.kt` — `CHECK_IN`
 - `app/src/main/java/com/druk/lmplayground/coordinator/notifications/NeedsYouBadgePoller.kt` — honour pause

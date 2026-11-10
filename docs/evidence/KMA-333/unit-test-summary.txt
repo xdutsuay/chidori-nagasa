@@ -1,0 +1,31 @@
+KMA-333 unit tests
+Date: 2026-11-10
+Command: ./gradlew testDebugUnitTest -PskipScreenshots -PggmlVulkan=off
+SDK: /opt/android-sdk (platform 36, build-tools 35.0.0, NDK 27.2.12479018, CMake 3.31.6)
+Vulkan: -PggmlVulkan=off because this VM has no vulkan.hpp / SPIRV-Headers package. The switch is the project's own ggmlVulkan property. It does not change product source.
+
+Check-in tests (com.druk.lmplayground.checkin): 34 run, 34 passed, 0 failed
+  CheckInGatesTest            12
+  OpenItemExtractorTest        6
+  CheckInRunnerTest            4
+  SourceIngestTest             4
+  CheckInPreferencesTest       2
+  OpenItemMigrationTest        2
+  CheckInDeepLinkTest          2
+  CheckInSchedulerTest         1
+  CheckInsScreenTest           1
+
+Full suite with -PskipScreenshots (the repo's CI equivalent; Paparazzi goldens are not git-tracked):
+  736 tests, 2 failed, 1 skipped
+
+The two failures are not from this change:
+  PidReflectionGateTest — ProcessBuilder("cmd", "/c", "exit", "0") fails on Linux (no cmd).
+  DesktopSessionTest "get publishes the process-wide bridge" — App.onCreate already calls
+    LocalDesktopBridge.get, so a later test that nulls DesktopBridges.bridge and expects
+    get() to republish it sees the cached singleton. That startup thread predates KMA-333.
+
+Without -PskipScreenshots the same run reports 1412 tests and 678 failures, almost all
+Paparazzi/screenshot tests (missing goldens / Paparazzi SDK). CI excludes **/screenshots/**.
+
+assembleDebug: BUILD SUCCESSFUL (app-x86_64-debug.apk and app-universal-debug.apk).
+Native configure used GGML_VULKAN=OFF for the reason above.
