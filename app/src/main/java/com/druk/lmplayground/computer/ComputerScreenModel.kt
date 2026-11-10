@@ -53,7 +53,8 @@ object ComputerScreenModel {
     }
 
     /**
-     * Compact single line, e.g. `Ready · Rootfs: alpine · 3.1 MB · / · proot · #ab12cd34`.
+     * Compact single line, e.g. `Ready · alpine · COS storage 3.1 MB · /`.
+     * Runtime mode and session id stay out of it (see [runtimeLabel]).
      * Never contains a newline (status messages are flattened); the UI ellipsizes it.
      */
     fun statusLine(state: ComputerUiState): String {
@@ -61,8 +62,6 @@ object ComputerScreenModel {
             add(statusLabel(state.status))
             add(CosRootfsInfo.statusLine(state.rootfsMode, state.rootfsUsedBytes))
             add(CosCwd.promptLabel(state.cwd).removePrefix("cos:").removeSuffix(" $"))
-            add(runtimeLabel(state))
-            if (state.sessionId.isNotBlank()) add("#" + state.sessionId.take(8))
         }
         return parts.joinToString(" · ").replace(Regex("\\s*[\\r\\n]+\\s*"), " ")
     }

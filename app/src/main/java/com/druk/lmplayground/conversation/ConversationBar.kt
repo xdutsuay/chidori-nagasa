@@ -52,6 +52,8 @@ fun ConversationBar(
      * default (64dp), but the title content drops from ~50dp to ~28dp tall.
      */
     compact: Boolean = false,
+    /** Short Computer (COS) state shown under the model name; null hides it. */
+    computerStatus: String? = null,
     onModelNamePressed: () -> Unit = { },
     onNavIconPressed: () -> Unit = { },
     onNewSessionPressed: () -> Unit = { }
@@ -83,7 +85,10 @@ fun ConversationBar(
                                 color = MaterialTheme.colorScheme.onSurface,
                                 maxLines = 1
                             )
-                            val status = modelStatus ?: modelInfo.description
+                            val status = listOfNotNull(
+                                (modelStatus ?: modelInfo.description).takeIf { it.isNotBlank() },
+                                computerStatus,
+                            ).joinToString("  ·  ")
                             if (status.isNotBlank()) {
                                 Text(
                                     text = "  ·  $status",
@@ -118,10 +123,14 @@ fun ConversationBar(
                                 )
                             }
                             Text(
-                                text = modelStatus ?: modelInfo.description,
+                                text = listOfNotNull(
+                                    (modelStatus ?: modelInfo.description).takeIf { it.isNotBlank() },
+                                    computerStatus,
+                                ).joinToString("  ·  "),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                textAlign = TextAlign.Center
+                                textAlign = TextAlign.Center,
+                                maxLines = 1
                             )
                         }
                     }
@@ -132,20 +141,33 @@ fun ConversationBar(
                     shape = RoundedCornerShape(20.dp),
                     color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0f),
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.padding(
+                            horizontal = 12.dp,
+                            vertical = if (computerStatus == null || compact) 8.dp else 4.dp,
+                        )
                     ) {
-                        Text(
-                            text = stringResource(R.string.select_model),
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onSurface,
-                        )
-                        Icon(
-                            imageVector = Icons.Outlined.ArrowDropDown,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            contentDescription = null
-                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = stringResource(R.string.select_model),
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
+                            Icon(
+                                imageVector = Icons.Outlined.ArrowDropDown,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                contentDescription = null
+                            )
+                        }
+                        if (computerStatus != null && !compact) {
+                            Text(
+                                text = computerStatus,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1
+                            )
+                        }
                     }
                 }
             }

@@ -29,5 +29,8 @@ enum class ComputerChromeStatus {
             RUNNING -> "running"
             STOPPED -> "stopped"
         }
+
+        /** The chat header chip is hidden until a desktop has been installed. */
+        fun showInHeader(status: ComputerChromeStatus): Boolean = status != NOT_INSTALLED
     }
 }

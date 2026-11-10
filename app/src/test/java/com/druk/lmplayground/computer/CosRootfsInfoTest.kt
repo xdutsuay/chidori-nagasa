@@ -1,6 +1,7 @@
 package com.druk.lmplayground.computer
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Test
 
@@ -53,22 +54,26 @@ class CosRootfsInfoTest {
     }
 
     @Test
-    fun `statusLine matches Rootfs alpine stub pattern`() {
+    fun `statusLine matches COS storage alpine stub pattern`() {
         assertEquals(
-            "Rootfs: alpine · 12.4 MB",
+            "alpine · COS storage 12.4 MB",
             CosRootfsInfo.statusLine(
                 CosRootfsInfo.MODE_ALPINE_TAR,
                 (12.4 * 1024 * 1024).toLong(),
             ),
         )
         assertEquals(
-            "Rootfs: stub · 8 B",
+            "stub · COS storage 8 B",
             CosRootfsInfo.statusLine(CosRootfsInfo.MODE_OFFLINE_STUB, 8),
         )
         assertEquals(
-            "Rootfs: none · 0 B",
+            "none · COS storage 0 B",
             CosRootfsInfo.statusLine(null, 0),
         )
+        val line = CosRootfsInfo.statusLine(CosRootfsInfo.MODE_ALPINE_TAR, 0)
+        assertFalse(line.contains("Rootfs"))
+        assertFalse(line.contains("RAM"))
+        assertFalse(line.contains("memory", ignoreCase = true))
     }
 
     @Test

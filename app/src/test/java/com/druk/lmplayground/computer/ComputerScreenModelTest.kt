@@ -55,26 +55,30 @@ class ComputerScreenModelTest {
     }
 
     @Test
-    fun `status line is one compact line with state cwd and runtime`() {
+    fun `status line is one compact line with state and cwd`() {
         val line = ComputerScreenModel.statusLine(ready)
-        assertEquals("Ready · Rootfs: alpine · 3.0 MB · /root · proot · #abcdef01", line)
+        assertEquals("Ready · alpine · COS storage 3.0 MB · /root", line)
+        assertFalse(line.contains("Rootfs"))
+        assertFalse(line.contains("proot"))
+        assertFalse(line.contains("#"))
     }
 
     @Test
-    fun `status line flattens multi-line errors and shows no-seccomp mode`() {
+    fun `status line flattens multi-line errors and hides runtime details`() {
         val line = ComputerScreenModel.statusLine(
             ready.copy(status = ComputerStatus.Error("boom\nsecond line\r\nthird"), prootNoSeccomp = true),
         )
         assertFalse(line.contains('\n'))
         assertFalse(line.contains('\r'))
         assertTrue(line.startsWith("Error: boom second line third · "))
-        assertTrue(line.contains(" · proot·no-seccomp · "))
+        assertFalse(line.contains("proot"))
+        assertFalse(line.contains('#'))
     }
 
     @Test
     fun `status line when disabled and not set up`() {
         assertTrue(
-            ComputerScreenModel.statusLine(ComputerUiState()).startsWith("Off · Rootfs: "),
+            ComputerScreenModel.statusLine(ComputerUiState()).startsWith("Off · none · COS storage "),
         )
         assertEquals("—", ComputerScreenModel.runtimeLabel(ComputerUiState()))
         assertEquals(

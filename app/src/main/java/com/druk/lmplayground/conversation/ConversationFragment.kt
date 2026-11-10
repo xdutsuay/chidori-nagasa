@@ -680,8 +680,24 @@ class ConversationFragment : Fragment() {
                                 .align(Alignment.TopCenter)
                                 .onSizeChanged { topBarHeightPx = it.height }
                         ) {
+                            val desktopBridge = DesktopBridges.bridge
+                            val computerStatus = if (desktopBridge != null) {
+                                val deskState by desktopBridge.state.collectAsStateWithLifecycle()
+                                val chrome = ComputerChromeStatus.from(deskState)
+                                if (ComputerChromeStatus.showInHeader(chrome)) {
+                                    stringResource(
+                                        R.string.computer_chrome_note,
+                                        ComputerChromeStatus.label(chrome),
+                                    )
+                                } else {
+                                    null
+                                }
+                            } else {
+                                null
+                            }
                             ConversationBar(
                                 modelInfo = activeCloud?.displayModelInfo() ?: modelInfo,
+                                computerStatus = computerStatus,
                                 modelStatus = if (activeCloud != null) {
                                     activeCloud.model
                                 } else {
@@ -750,22 +766,6 @@ class ConversationFragment : Fragment() {
                                         modelInfo!!.name.ifBlank { modelInfo!!.filename },
                                     ),
                                     leavesDevice = false,
-                                )
-                            }
-                            val desktopBridge = DesktopBridges.bridge
-                            if (desktopBridge != null) {
-                                val deskState by desktopBridge.state.collectAsStateWithLifecycle()
-                                val chrome = ComputerChromeStatus.from(deskState)
-                                Text(
-                                    text = stringResource(
-                                        R.string.computer_chrome_note,
-                                        ComputerChromeStatus.label(chrome),
-                                    ),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 16.dp, vertical = 4.dp),
                                 )
                             }
                         }

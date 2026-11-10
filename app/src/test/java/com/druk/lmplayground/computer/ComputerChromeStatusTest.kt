@@ -2,6 +2,8 @@ package com.druk.lmplayground.computer
 
 import com.druk.lmplayground.computer.desktop.DesktopState
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
 
@@ -88,6 +90,18 @@ class ComputerChromeStatusTest {
                 ComputerChromeStatus.label(expected),
                 ComputerChromeStatus.label(status),
             )
+        }
+    }
+
+    @Test
+    fun `showInHeader is exhaustive over every chrome status`() {
+        assertFalse(ComputerChromeStatus.showInHeader(ComputerChromeStatus.NOT_INSTALLED))
+        assertTrue(ComputerChromeStatus.showInHeader(ComputerChromeStatus.INSTALLING))
+        assertTrue(ComputerChromeStatus.showInHeader(ComputerChromeStatus.RUNNING))
+        assertTrue(ComputerChromeStatus.showInHeader(ComputerChromeStatus.STOPPED))
+        ComputerChromeStatus.entries.forEach { status ->
+            val expected = status != ComputerChromeStatus.NOT_INSTALLED
+            assertEquals("showInHeader($status)", expected, ComputerChromeStatus.showInHeader(status))
         }
     }
 }

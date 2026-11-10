@@ -10,7 +10,7 @@ object CosRootfsInfo {
     const val MODE_ALPINE_TAR = "alpine-tar"
     const val MODE_OFFLINE_STUB = "offline-stub"
 
-    /** Short UI labels matching `Rootfs: alpine|stub · …`. */
+    /** Short UI labels matching `alpine|stub · COS storage …`. */
     const val LABEL_ALPINE = "alpine"
     const val LABEL_STUB = "stub"
     const val LABEL_NONE = "none"
@@ -47,9 +47,12 @@ object CosRootfsInfo {
         return String.format(Locale.US, "%.1f GB", gb)
     }
 
-    /** Status line: `Rootfs: alpine|stub · 12.4 MB`. */
+    /**
+     * Status line: `alpine|stub · COS storage 12.4 MB`. The byte count totals
+     * everything under `files/cos` (rootfs, desktop, caches), not RAM.
+     */
     fun statusLine(mode: String?, usedBytes: Long): String =
-        "Rootfs: ${shortModeLabel(mode)} · ${formatBytes(usedBytes)}"
+        "${shortModeLabel(mode)} · COS storage ${formatBytes(usedBytes)}"
 }
 
 /** Snapshot for the Computer screen (mode from marker + used bytes under cos/). */
