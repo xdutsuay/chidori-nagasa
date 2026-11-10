@@ -20,6 +20,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -35,6 +36,9 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
 import com.druk.lmplayground.R
 import com.druk.lmplayground.computer.desktop.input.DesktopKeyboardBar
 import com.druk.lmplayground.computer.desktop.input.DesktopPointerMode
@@ -61,25 +65,41 @@ fun DesktopViewer(
     val session = remember(bridge) { XdotoolSession.shared(bridge) }
 
     var frame by remember { mutableStateOf<Bitmap?>(null) }
+    var frameVersion by remember { mutableIntStateOf(0) }
+    val pacer = remember { AdaptiveFramePacer(minIntervalMs = FRAME_INTERVAL_MS, maxIntervalMs = IDLE_FRAME_INTERVAL_MS) }
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
     var viewSize by remember { mutableStateOf(IntSize.Zero) }
     var zoom by remember { mutableFloatStateOf(1f) }
     var pan by remember { mutableStateOf(Offset.Zero) }
     var pointerMode by remember { mutableStateOf(DesktopPointerMode.DIRECT) }
     var rotation by remember { mutableStateOf(DesktopRotation.NONE) }
 
-    LaunchedEffect(running.framebufferHostFile) {
-        while (isActive) {
-            val bmp = withContext(Dispatchers.IO) {
-                runCatching {
-                    val image = XwdDecoder.decode(running.framebufferHostFile)
-                    Bitmap.createBitmap(image.argb, image.width, image.height, Bitmap.Config.ARGB_8888)
-                }.getOrNull()
+    LaunchedEffect(running.framebufferHostFile, lifecycle) {
+        val detector = FrameChangeDetector()
+        lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            detector.reset()
+            while (isActive) {
+                val image = withContext(Dispatchers.IO) {
+                    runCatching { XwdDecoder.decode(running.framebufferHostFile) }
+                        .getOrNull()
+                        ?.takeIf { detector.isNew(it.width, it.height, it.argb) }
+                }
+                if (image != null) {
+                    val current = frame
+                    if (current != null && !current.isRecycled &&
+                        current.width == image.width && current.height == image.height
+                    ) {
+                        current.setPixels(image.argb, 0, image.width, 0, 0, image.width, image.height)
+                    } else {
+                        val bmp = Bitmap.createBitmap(image.width, image.height, Bitmap.Config.ARGB_8888)
+                        bmp.setPixels(image.argb, 0, image.width, 0, 0, image.width, image.height)
+                        frame = bmp
+                        current?.recycle()
+                    }
+                    frameVersion++
+                }
+                delay(pacer.onFrame(changed = image != null))
             }
-            if (bmp != null) {
-                frame?.recycle()
-                frame = bmp
-            }
-            delay(FRAME_INTERVAL_MS)
         }
     }
 
@@ -123,11 +143,12 @@ fun DesktopViewer(
                 .onSizeChanged { viewSize = it },
         ) {
             val bmp = frame
-            if (bmp != null && !bmp.isRecycled) {
+            val imageBitmap = remember(bmp, frameVersion) { bmp?.asImageBitmap() }
+            if (bmp != null && !bmp.isRecycled && imageBitmap != null) {
                 val vw = viewSize.width.coerceAtLeast(1).toFloat()
                 val vh = viewSize.height.coerceAtLeast(1).toFloat()
                 Image(
-                    bitmap = bmp.asImageBitmap(),
+                    bitmap = imageBitmap,
                     contentDescription = stringResource(R.string.cos_desktop_screenshot_cd),
                     modifier = Modifier
                         .fillMaxWidth()
@@ -144,7 +165,10 @@ fun DesktopViewer(
                                 )
                                 RotatingMapper(letterbox, rotation, vw, vh)
                             },
-                            sink = { session.send(it) },
+                            sink = {
+                                pacer.onInput()
+                                session.send(it)
+                            },
                             pointerMode = pointerMode,
                         )
                         .pointerInput(Unit) {
@@ -163,11 +187,17 @@ fun DesktopViewer(
                 )
             }
         }
-        DesktopKeyboardBar(sink = { session.send(it) })
+        DesktopKeyboardBar(
+            sink = {
+                pacer.onInput()
+                session.send(it)
+            },
+        )
     }
 }
 
 private const val FRAME_INTERVAL_MS = 66L
+private const val IDLE_FRAME_INTERVAL_MS = 500L
 internal const val TAG_MODE_DIRECT = "cos_desktop_mode_direct"
 internal const val TAG_MODE_TRACKPAD = "cos_desktop_mode_trackpad"
 internal const val TAG_ROTATE = "cos_desktop_rotate"
