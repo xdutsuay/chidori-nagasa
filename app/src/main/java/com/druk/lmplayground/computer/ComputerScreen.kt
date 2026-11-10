@@ -22,6 +22,24 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.outlined.BarChart
+import androidx.compose.material.icons.outlined.DesktopWindows
+import androidx.compose.material.icons.outlined.DeveloperBoard
+import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.Memory
+import androidx.compose.material.icons.outlined.Storage
+import androidx.compose.material.icons.outlined.Terminal
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.VerticalDivider
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -82,20 +100,37 @@ fun ComputerScreen(
     installDesktopLabel: String = "Install desktop",
     desktopIdle: Boolean = true,
     onInstallDesktop: () -> Unit = {},
-    /** Temporary CP2 Desktop debug section, shown under the status line when set. */
+    /** Desktop tab content (controls + live viewer). */
     desktopPanel: (@Composable () -> Unit)? = null,
+    /** Activity tab content; an empty-state message is shown when null. */
+    activityPanel: (@Composable () -> Unit)? = null,
+    /** Pill next to the title, e.g. "Running"; hidden when null. */
+    headerStatus: String? = null,
+    headerActive: Boolean = false,
+    /** Primary desktop action in the top bar (Start / Stop). */
+    headerAction: (@Composable () -> Unit)? = null,
+    resources: CosResourceStrip? = null,
 ) {
     val cosSwitchCd = stringResource(R.string.cd_cos_desktop_switch)
+    var tab by rememberSaveable { mutableStateOf(ComputerTab.DESKTOP) }
     CosFirstRunDialogHost()
     Scaffold(
         topBar = {
             TopAppBar(
                 title = {
-                    Text(
-                        stringResource(R.string.cos_computer_title),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
+                        Text(
+                            stringResource(R.string.cos_header_title),
+                            style = MaterialTheme.typography.titleLarge,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f, fill = false),
+                        )
+                        if (headerStatus != null) StatusPill(headerStatus, headerActive)
+                    }
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
@@ -106,14 +141,23 @@ fun ComputerScreen(
                     }
                 },
                 actions = {
-                    Switch(
-                        checked = state.enabled,
-                        onCheckedChange = onEnabledChange,
-                        modifier = Modifier
-                            .testTag(TAG_ENABLE)
-                            .semantics { contentDescription = cosSwitchCd },
-                    )
+                    if (state.enabled && headerAction != null) {
+                        headerAction()
+                    } else if (!state.enabled) {
+                        Switch(
+                            checked = false,
+                            onCheckedChange = onEnabledChange,
+                            modifier = Modifier
+                                .testTag(TAG_ENABLE)
+                                .semantics { contentDescription = cosSwitchCd },
+                        )
+                    }
                     ComputerOverflowMenu(
+                        onTurnOff = if (state.enabled) {
+                            { onEnabledChange(false) }
+                        } else {
+                            null
+                        },
                         state = state,
                         onEnsureRootfs = onEnsureRootfs,
                         onReinstallRootfs = onReinstallRootfs,
@@ -137,25 +181,79 @@ fun ComputerScreen(
                 .consumeWindowInsets(padding)
                 .imePadding(),
         ) {
-            Text(
-                text = ComputerScreenModel.statusLine(state),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                softWrap = false,
-                overflow = TextOverflow.Ellipsis,
+            val isError = state.status is ComputerStatus.Error
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 2.dp)
-                    .testTag(TAG_STATUS),
-            )
-            desktopPanel?.invoke()
-            CosTerminalOutput(
-                text = state.terminal,
-                modifier = Modifier
+                    .padding(horizontal = 16.dp, vertical = 2.dp),
+            ) {
+                Icon(
+                    Icons.Outlined.Lock,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(14.dp),
+                )
+                Text(
+                    text = if (isError) {
+                        ComputerScreenModel.statusLine(state)
+                    } else {
+                        stringResource(R.string.cos_header_subtitle)
+                    },
+                    style = MaterialTheme.typography.labelMedium,
+                    color = if (isError) {
+                        MaterialTheme.colorScheme.error
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+                    maxLines = 1,
+                    softWrap = false,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.testTag(TAG_STATUS),
+                )
+            }
+            if (resources != null) ResourceStripRow(resources)
+            ComputerTabRow(tab = tab, onTab = { tab = it })
+            Box(
+                Modifier
                     .weight(1f)
                     .fillMaxWidth(),
-            )
+            ) {
+                when (tab) {
+                    ComputerTab.DESKTOP -> Column(Modifier.fillMaxSize()) {
+                        Box(
+                            Modifier
+                                .weight(1f)
+                                .fillMaxWidth(),
+                        ) {
+                            desktopPanel?.invoke()
+                        }
+                        CollapsedTerminalRow(
+                            lastLine = ComputerScreenModel.lastTerminalLine(state.terminal),
+                            onExpand = { tab = ComputerTab.TERMINAL },
+                        )
+                    }
+                    ComputerTab.TERMINAL -> CosTerminalOutput(
+                        text = state.terminal,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                    ComputerTab.ACTIVITY -> Column(
+                        Modifier
+                            .fillMaxSize()
+                            .verticalScroll(rememberScrollState())
+                            .padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        Text(
+                            stringResource(R.string.cos_activity_empty),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        activityPanel?.invoke()
+                    }
+                }
+            }
             CosCommandRow(
                 state = state,
                 onInputChange = onInputChange,
@@ -170,6 +268,7 @@ fun ComputerScreen(
 
 @Composable
 private fun ComputerOverflowMenu(
+    onTurnOff: (() -> Unit)?,
     state: ComputerUiState,
     onEnsureRootfs: () -> Unit,
     onReinstallRootfs: () -> Unit,
@@ -263,9 +362,149 @@ private fun ComputerOverflowMenu(
                     )
                 }
             }
+            if (onTurnOff != null) {
+                HorizontalDivider()
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.cos_turn_off)) },
+                    modifier = Modifier.testTag(TAG_TURN_OFF),
+                    onClick = { close(); onTurnOff() },
+                )
+            }
         }
     }
 }
+
+/** Values for the CPU / Memory / COS storage strip; already formatted. */
+data class CosResourceStrip(val cpu: String, val memory: String, val storage: String)
+
+enum class ComputerTab { DESKTOP, TERMINAL, ACTIVITY }
+
+@Composable
+private fun StatusPill(label: String, active: Boolean) {
+    val bg = if (active) {
+        MaterialTheme.colorScheme.primaryContainer
+    } else {
+        MaterialTheme.colorScheme.surfaceContainerHighest
+    }
+    val fg = if (active) {
+        MaterialTheme.colorScheme.onPrimaryContainer
+    } else {
+        MaterialTheme.colorScheme.onSurfaceVariant
+    }
+    Surface(shape = RoundedCornerShape(50), color = bg) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            modifier = Modifier.padding(horizontal = 9.dp, vertical = 3.dp),
+        ) {
+            Box(
+                Modifier
+                    .size(7.dp)
+                    .clip(CircleShape)
+                    .background(if (active) RunningGreen else fg.copy(alpha = 0.6f)),
+            )
+            Text(label, style = MaterialTheme.typography.labelMedium, color = fg, maxLines = 1)
+        }
+    }
+}
+
+@Composable
+private fun ResourceStripRow(res: CosResourceStrip) {
+    Surface(
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 6.dp),
+    ) {
+        Row(
+            Modifier.padding(vertical = 10.dp, horizontal = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            ResourceCell(Icons.Outlined.Memory, stringResource(R.string.cos_res_cpu), res.cpu, Modifier.weight(1f))
+            VerticalDivider(Modifier.height(32.dp))
+            ResourceCell(Icons.Outlined.DeveloperBoard, stringResource(R.string.cos_res_memory), res.memory, Modifier.weight(1f))
+            VerticalDivider(Modifier.height(32.dp))
+            ResourceCell(Icons.Outlined.Storage, stringResource(R.string.cos_res_storage), res.storage, Modifier.weight(1f))
+        }
+    }
+}
+
+@Composable
+private fun ResourceCell(icon: ImageVector, label: String, value: String, modifier: Modifier) {
+    Row(
+        modifier = modifier.padding(horizontal = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+        Column {
+            Text(
+                label,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(value, style = MaterialTheme.typography.titleSmall, maxLines = 1)
+        }
+    }
+}
+
+@Composable
+private fun ComputerTabRow(tab: ComputerTab, onTab: (ComputerTab) -> Unit) {
+    val tabs = listOf(
+        Triple(ComputerTab.DESKTOP, Icons.Outlined.DesktopWindows, R.string.cos_tab_desktop),
+        Triple(ComputerTab.TERMINAL, Icons.Outlined.Terminal, R.string.cos_tab_terminal),
+        Triple(ComputerTab.ACTIVITY, Icons.Outlined.BarChart, R.string.cos_tab_activity),
+    )
+    SingleChoiceSegmentedButtonRow(
+        Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 6.dp),
+    ) {
+        tabs.forEachIndexed { i, (t, icon, label) ->
+            SegmentedButton(
+                selected = tab == t,
+                onClick = { onTab(t) },
+                shape = SegmentedButtonDefaults.itemShape(index = i, count = tabs.size),
+                icon = { Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp)) },
+                modifier = Modifier.testTag("cos_tab_" + t.name.lowercase()),
+            ) { Text(stringResource(label), maxLines = 1) }
+        }
+    }
+}
+
+@Composable
+private fun CollapsedTerminalRow(lastLine: String, onExpand: () -> Unit) {
+    Surface(
+        onClick = onExpand,
+        shape = RoundedCornerShape(14.dp),
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 4.dp),
+    ) {
+        Row(
+            Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Icon(Icons.Outlined.Terminal, contentDescription = null, modifier = Modifier.size(18.dp))
+            Text(
+                lastLine.ifBlank { stringResource(R.string.cos_terminal_collapsed) },
+                style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
+            )
+            Icon(Icons.Filled.KeyboardArrowUp, contentDescription = stringResource(R.string.cos_tab_terminal))
+        }
+    }
+}
+
+private val RunningGreen = Color(0xFF4CD964)
 
 @Composable
 private fun CosTerminalOutput(text: String, modifier: Modifier = Modifier) {
@@ -361,6 +600,7 @@ private fun CosCommandRow(
 }
 
 internal const val TAG_ENABLE = "cos_enable"
+internal const val TAG_TURN_OFF = "cos_turn_off"
 internal const val TAG_MENU = "cos_menu"
 internal const val TAG_STATUS = "cos_status"
 internal const val TAG_TERMINAL = "cos_terminal"

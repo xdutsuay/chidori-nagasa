@@ -66,6 +66,10 @@ object ComputerScreenModel {
         return parts.joinToString(" · ").replace(Regex("\\s*[\\r\\n]+\\s*"), " ")
     }
 
+    /** Last non-blank terminal line, for the collapsed terminal row. */
+    fun lastTerminalLine(terminal: String): String =
+        terminal.lineSequence().map { it.trim() }.lastOrNull { it.isNotEmpty() } ?: ""
+
     /** True when the input row can submit (Enter / send icon). */
     fun canRun(state: ComputerUiState): Boolean =
         state.enabled && !state.busy && state.input.isNotBlank()
