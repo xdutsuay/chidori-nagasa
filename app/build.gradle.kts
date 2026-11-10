@@ -267,6 +267,7 @@ android {
     }
 
     testOptions {
+        unitTests.isIncludeAndroidResources = true
         managedDevices {
             allDevices {
                 maybeCreate<ManagedVirtualDevice>("mvdApi35").apply {
@@ -460,6 +461,7 @@ dependencies {
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.mockwebserver)
     testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.compose.ui.test.junit4)
     testImplementation(libs.androidx.test.core)
     testImplementation(libs.androidx.work.testing)
     androidTestImplementation(libs.junit)

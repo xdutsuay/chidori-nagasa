@@ -33,6 +33,7 @@ import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.Memory
 import androidx.compose.material.icons.outlined.Policy
 import androidx.compose.material.icons.outlined.Storage
+import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material.icons.outlined.VolumeUp
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -66,7 +67,7 @@ import java.util.Locale
  * [promptsDetailContent] slots — the caller owns the ViewModels and passes
  * the appropriate Composable when on tablet.
  */
-private enum class SettingsDetail { Models, Prompts, CloudApis, Usage, Language, Tools, SoundHaptic, Advanced, PrivacyPolicy, CosLicences, Faq, Chidori }
+private enum class SettingsDetail { Models, Prompts, CloudApis, Usage, Language, Tools, SoundHaptic, Advanced, CheckIns, PrivacyPolicy, CosLicences, Faq, Chidori }
 
 @Composable
 fun SettingsScreen(
@@ -79,6 +80,7 @@ fun SettingsScreen(
     onToolsClick: () -> Unit,
     onSoundHapticClick: () -> Unit,
     onAdvancedClick: () -> Unit,
+    onCheckInsClick: () -> Unit = {},
     onSendFeedbackClick: () -> Unit,
     onChidoriClick: () -> Unit = {},
     onComputerClick: () -> Unit = {},
@@ -115,6 +117,11 @@ fun SettingsScreen(
      * Tablet-only mirror of [modelsDetailContent] for the Advanced section.
      */
     advancedDetailContent: (@Composable () -> Unit)? = null,
+    /**
+     * Tablet-only Check-ins pane (enable, cadence, quiet hours, open items,
+     * and the app-wide background pause).
+     */
+    checkInsDetailContent: (@Composable () -> Unit)? = null,
     /**
      * Tablet-only: Cloud APIs settings content.
      */
@@ -270,6 +277,13 @@ fun SettingsScreen(
                                 onAdvancedClick()
                             }
                         },
+                        onCheckInsClick = {
+                            if (checkInsDetailContent != null) {
+                                detail = SettingsDetail.CheckIns
+                            } else {
+                                onCheckInsClick()
+                            }
+                        },
                         onPrivacyPolicyClick = { detail = SettingsDetail.PrivacyPolicy },
                         onCosLicencesClick = { detail = SettingsDetail.CosLicences },
                         onFaqClick = { detail = SettingsDetail.Faq },
@@ -306,6 +320,7 @@ fun SettingsScreen(
                 SettingsDetail.Tools -> stringResource(R.string.tools)
                 SettingsDetail.SoundHaptic -> stringResource(R.string.sound_and_haptic)
                 SettingsDetail.Advanced -> stringResource(R.string.advanced)
+                SettingsDetail.CheckIns -> stringResource(R.string.check_ins)
                 SettingsDetail.PrivacyPolicy -> stringResource(R.string.privacy_policy)
                 SettingsDetail.CosLicences -> stringResource(R.string.cos_licences_title)
                 SettingsDetail.Faq -> stringResource(R.string.faq)
@@ -332,6 +347,7 @@ fun SettingsScreen(
                         SettingsDetail.Tools -> toolsDetailContent?.invoke()
                         SettingsDetail.SoundHaptic -> soundHapticDetailContent?.invoke()
                         SettingsDetail.Advanced -> advancedDetailContent?.invoke()
+                        SettingsDetail.CheckIns -> checkInsDetailContent?.invoke()
                         SettingsDetail.PrivacyPolicy ->
                             PrivacyPolicyContent(onSendFeedbackClick = onSendFeedbackClick)
                         SettingsDetail.CosLicences -> CosLicencesContent()
@@ -369,6 +385,7 @@ fun SettingsScreen(
                 onToolsClick = onToolsClick,
                 onSoundHapticClick = onSoundHapticClick,
                 onAdvancedClick = onAdvancedClick,
+                onCheckInsClick = onCheckInsClick,
                 onPrivacyPolicyClick = onPrivacyPolicyClick,
                 onCosLicencesClick = { phoneCosLicences = true },
                 onFaqClick = onFaqClick,
@@ -401,6 +418,7 @@ private fun SettingsList(
     onToolsClick: () -> Unit,
     onSoundHapticClick: () -> Unit,
     onAdvancedClick: () -> Unit,
+    onCheckInsClick: () -> Unit = {},
     onPrivacyPolicyClick: () -> Unit,
     onCosLicencesClick: () -> Unit = {},
     onFaqClick: () -> Unit,
@@ -491,6 +509,14 @@ private fun SettingsList(
             subtitle = stringResource(R.string.advanced_subtitle),
             selected = selectedDetail == SettingsDetail.Advanced,
             onClick = onAdvancedClick
+        )
+
+        SettingsRow(
+            icon = Icons.Outlined.Notifications,
+            title = stringResource(R.string.check_ins),
+            subtitle = stringResource(R.string.check_ins_subtitle),
+            selected = selectedDetail == SettingsDetail.CheckIns,
+            onClick = onCheckInsClick
         )
 
         // Language row

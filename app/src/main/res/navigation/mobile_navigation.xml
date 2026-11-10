@@ -58,6 +58,9 @@
             android:id="@+id/action_settings_to_advanced"
             app:destination="@id/nav_advanced" />
         <action
+            android:id="@+id/action_settings_to_check_ins"
+            app:destination="@id/nav_check_ins" />
+        <action
             android:id="@+id/action_settings_to_faq"
             app:destination="@id/nav_faq" />
         <action
@@ -122,6 +125,11 @@
         android:id="@+id/nav_advanced"
         android:name="com.druk.lmplayground.settings.AdvancedFragment"
         android:label="@string/advanced" />
+
+    <fragment
+        android:id="@+id/nav_check_ins"
+        android:name="com.druk.lmplayground.settings.CheckInsFragment"
+        android:label="@string/check_ins" />
 
     <fragment
         android:id="@+id/nav_privacy_policy"

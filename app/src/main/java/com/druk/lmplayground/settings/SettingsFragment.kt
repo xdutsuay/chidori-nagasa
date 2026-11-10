@@ -56,6 +56,7 @@ class SettingsFragment : Fragment() {
     private val toolsViewModel: ToolsViewModel by viewModels()
     private val soundHapticViewModel: SoundHapticViewModel by viewModels()
     private val advancedViewModel: AdvancedViewModel by viewModels()
+    private val checkInsViewModel: CheckInsViewModel by viewModels()
     private val cloudApisViewModel: com.druk.lmplayground.cloud.CloudApisViewModel by viewModels()
     private val usageViewModel: com.druk.lmplayground.cloud.UsageViewModel by viewModels()
 
@@ -248,6 +249,9 @@ class SettingsFragment : Fragment() {
                     onAdvancedClick = {
                         findNavController().navigateFromSettings(R.id.action_settings_to_advanced)
                     },
+                    onCheckInsClick = {
+                        findNavController().navigateFromSettings(R.id.action_settings_to_check_ins)
+                    },
                     onSendFeedbackClick = {
                         val email = getString(R.string.privacy_policy_contact_email)
                         val intent = Intent(Intent.ACTION_SENDTO).apply {
@@ -273,6 +277,9 @@ class SettingsFragment : Fragment() {
                     } else null,
                     advancedDetailContent = if (twoPane) {
                         { AdvancedDetailPane() }
+                    } else null,
+                    checkInsDetailContent = if (twoPane) {
+                        { CheckInsDetailPane() }
                     } else null,
                     cloudApisDetailContent = if (twoPane) {
                         { CloudApisDetailPane() }
@@ -412,6 +419,34 @@ class SettingsFragment : Fragment() {
      * Embedded Advanced pane — memory/performance toggles, rendered without
      * the Scaffold/topBar that [AdvancedFragment] adds on phone.
      */
+    @androidx.compose.runtime.Composable
+    private fun CheckInsDetailPane() {
+        val enabled by checkInsViewModel.enabled.collectAsStateWithLifecycle()
+        val frequency by checkInsViewModel.frequency.collectAsStateWithLifecycle()
+        val inactivity by checkInsViewModel.inactivityMs.collectAsStateWithLifecycle()
+        val quietStart by checkInsViewModel.quietStartMinute.collectAsStateWithLifecycle()
+        val quietEnd by checkInsViewModel.quietEndMinute.collectAsStateWithLifecycle()
+        val paused by checkInsViewModel.paused.collectAsStateWithLifecycle()
+        val items by checkInsViewModel.items.collectAsStateWithLifecycle()
+        CheckInsContent(
+            enabled = enabled,
+            frequency = frequency,
+            inactivityMs = inactivity,
+            quietStartMinute = quietStart,
+            quietEndMinute = quietEnd,
+            paused = paused,
+            items = items,
+            onEnabled = checkInsViewModel::setEnabled,
+            onFrequency = checkInsViewModel::setFrequency,
+            onInactivity = checkInsViewModel::setInactivity,
+            onQuietStart = checkInsViewModel::setQuietStart,
+            onQuietEnd = checkInsViewModel::setQuietEnd,
+            onPaused = checkInsViewModel::setPaused,
+            onPark = checkInsViewModel::park,
+            onClose = checkInsViewModel::close,
+        )
+    }
+
     @androidx.compose.runtime.Composable
     private fun AdvancedDetailPane() {
         val repackEnabled by advancedViewModel.repackEnabled.collectAsStateWithLifecycle()
