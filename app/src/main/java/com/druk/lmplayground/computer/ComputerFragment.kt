@@ -50,6 +50,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
 import com.druk.lmplayground.R
+import com.druk.lmplayground.computer.remote.RemoteComputersDialog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -75,6 +76,7 @@ class ComputerFragment : Fragment() {
                 val scope = rememberCoroutineScope()
                 var installPrompt by remember { mutableStateOf<DesktopInstallPolicy.Prompt?>(null) }
                 var withFirefox by remember { mutableStateOf(false) }
+                var showRemote by remember { mutableStateOf(false) }
                 var resources by remember { mutableStateOf(CosResourceSampler.Sample(null, null)) }
                 val lifecycle = LocalLifecycleOwner.current.lifecycle
                 LaunchedEffect(state.enabled, lifecycle) {
@@ -124,6 +126,7 @@ class ComputerFragment : Fragment() {
                         else -> ComputerScreenModel.statusLabel(state.status)
                     },
                     headerActive = desktop.state is DesktopState.Running,
+                    onOtherComputers = { showRemote = true },
                     headerAction = {
                         if (desktop.canStop) {
                             FilledTonalButton(
@@ -199,6 +202,7 @@ class ComputerFragment : Fragment() {
                         }
                     },
                 )
+                if (showRemote) RemoteComputersDialog(onDismiss = { showRemote = false })
                 installPrompt?.let { p ->
                     DesktopInstallDialog(
                         prompt = p,

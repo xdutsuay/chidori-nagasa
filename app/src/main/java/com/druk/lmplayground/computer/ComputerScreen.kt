@@ -110,6 +110,7 @@ fun ComputerScreen(
     /** Primary desktop action in the top bar (Start / Stop). */
     headerAction: (@Composable () -> Unit)? = null,
     resources: CosResourceStrip? = null,
+    onOtherComputers: (() -> Unit)? = null,
 ) {
     val cosSwitchCd = stringResource(R.string.cd_cos_desktop_switch)
     var tab by rememberSaveable { mutableStateOf(ComputerTab.DESKTOP) }
@@ -153,6 +154,7 @@ fun ComputerScreen(
                         )
                     }
                     ComputerOverflowMenu(
+                        onOtherComputers = onOtherComputers,
                         onTurnOff = if (state.enabled) {
                             { onEnabledChange(false) }
                         } else {
@@ -268,6 +270,7 @@ fun ComputerScreen(
 
 @Composable
 private fun ComputerOverflowMenu(
+    onOtherComputers: (() -> Unit)?,
     onTurnOff: (() -> Unit)?,
     state: ComputerUiState,
     onEnsureRootfs: () -> Unit,
@@ -361,6 +364,14 @@ private fun ComputerOverflowMenu(
                         onClick = { close(); onInstallRecipe(r.id) },
                     )
                 }
+            }
+            if (onOtherComputers != null) {
+                HorizontalDivider()
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.remote_title)) },
+                    modifier = Modifier.testTag(TAG_OTHER_COMPUTERS),
+                    onClick = { close(); onOtherComputers() },
+                )
             }
             if (onTurnOff != null) {
                 HorizontalDivider()
@@ -601,6 +612,7 @@ private fun CosCommandRow(
 
 internal const val TAG_ENABLE = "cos_enable"
 internal const val TAG_TURN_OFF = "cos_turn_off"
+internal const val TAG_OTHER_COMPUTERS = "cos_other_computers"
 internal const val TAG_MENU = "cos_menu"
 internal const val TAG_STATUS = "cos_status"
 internal const val TAG_TERMINAL = "cos_terminal"
