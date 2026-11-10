@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Library feature strings. Kept in a separate file so locale translations
+     (values-*/strings.xml) are owned elsewhere; new Library copy lands here. -->
+<resources>
+
+    <string name="library_title">Library</string>
+    <string name="library_intro">Add files or folders. Chats can search them with the Library tool. Indexing stays on this phone; with a cloud model, matching snippets are sent to that provider.</string>
+    <string name="library_add_file">Add file</string>
+    <string name="library_add_folder">Add folder</string>
+    <string name="library_reindex_all">Re-index all</string>
+
+    <string name="library_empty_title">Nothing in your library yet</string>
+    <string name="library_empty_body">Add a text file or a folder of them — the assistant will search their contents during chats.</string>
+
+    <string name="library_source_remove">Remove</string>
+    <string name="library_remove_confirm_title">Remove source?</string>
+    <string name="library_remove_confirm_message">Remove %1$s from the library? Its indexed content will be deleted and the app will release access to it.</string>
+    <string name="library_remove_failed">Couldn\'t remove %1$s</string>
+
+    <plurals name="library_source_summary">
+        <item quantity="one">%1$d file · %2$d parts</item>
+        <item quantity="other">%1$d files · %2$d parts</item>
+    </plurals>
+
+    <string name="library_indexing_with_total">Indexing %1$s — %2$d of %3$d files</string>
+    <string name="library_indexing_no_total">Indexing %1$s — %2$d files</string>
+    <string name="library_index_done">Indexed %1$d files, skipped %2$d</string>
+    <string name="library_index_failed">Indexing failed: %1$s</string>
+
+    <string name="library_picker_unavailable">No file picker is available on this device.</string>
+
+    <!-- Settings → Tools entry for the library_search tool. -->
+    <string name="tool_library_search_title">Library search</string>
+    <string name="tool_library_search_desc">Searches the files and folders you added on the Library screen and returns matching snippets.</string>
+    <string name="tool_library_search_example">\"What do my project notes say about the release plan?\"</string>
+
+</resources>

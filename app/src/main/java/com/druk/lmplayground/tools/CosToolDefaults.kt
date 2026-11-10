@@ -28,6 +28,14 @@ object CosToolDefaults {
     /** Tools that need the running COS desktop. */
     val DESKTOP_TOOLS: Set<String> = setOf(COS_SCREENSHOT, COS_GUI)
 
+    const val LIBRARY_SEARCH = "library_search"
+
+    /**
+     * Non-COS tools that default ON: they only read the user's own on-phone data
+     * and are hidden by [Tool.isAvailable] until there is something to read.
+     */
+    val DEFAULT_ON_TOOLS: Set<String> = setOf(LIBRARY_SEARCH)
+
     fun isCosTool(toolName: String): Boolean = toolName in COS_TOOLS
 
     /**
@@ -41,7 +49,7 @@ object CosToolDefaults {
         globalDefault: Boolean?,
         computerEnabled: Boolean,
     ): Boolean {
-        if (toolName !in COS_TOOLS) return override ?: globalDefault ?: false
+        if (toolName !in COS_TOOLS) return override ?: globalDefault ?: (toolName in DEFAULT_ON_TOOLS)
         if (!computerEnabled) return false
         return override ?: globalDefault ?: true
     }
@@ -52,5 +60,5 @@ object CosToolDefaults {
      * the user's intent is visible even while Computer is off.
      */
     fun globalDisplay(toolName: String, globalDefault: Boolean?): Boolean =
-        globalDefault ?: (toolName in COS_TOOLS)
+        globalDefault ?: (toolName in COS_TOOLS || toolName in DEFAULT_ON_TOOLS)
 }

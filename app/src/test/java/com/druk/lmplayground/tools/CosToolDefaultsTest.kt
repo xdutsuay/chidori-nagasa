@@ -49,4 +49,55 @@ class CosToolDefaultsTest {
         assertFalse(CosToolDefaults.globalDisplay("cos_exec", false))
         assertFalse(CosToolDefaults.globalDisplay("web_fetch", null))
     }
+
+    // library_search: on by default, independent of the Computer toggle.
+
+    @Test
+    fun `library_search constants and default-on set`() {
+        assertEquals("library_search", CosToolDefaults.LIBRARY_SEARCH)
+        assertTrue(CosToolDefaults.DEFAULT_ON_TOOLS.contains(CosToolDefaults.LIBRARY_SEARCH))
+    }
+
+    @Test
+    fun `library_search defaults on regardless of Computer toggle`() {
+        for (override in listOf<Boolean?>(null)) {
+            for (global in listOf<Boolean?>(null)) {
+                assertEquals(override ?: global ?: true,
+                    CosToolDefaults.resolve(CosToolDefaults.LIBRARY_SEARCH, override, global, true))
+                assertEquals(override ?: global ?: true,
+                    CosToolDefaults.resolve(CosToolDefaults.LIBRARY_SEARCH, override, global, false))
+            }
+        }
+    }
+
+    @Test
+    fun `library_search respects explicit user off`() {
+        // chat toggle off wins
+        assertFalse(CosToolDefaults.resolve(CosToolDefaults.LIBRARY_SEARCH, false, true, true))
+        assertFalse(CosToolDefaults.resolve(CosToolDefaults.LIBRARY_SEARCH, false, null, false))
+        // global switch off wins when no chat toggle
+        assertFalse(CosToolDefaults.resolve(CosToolDefaults.LIBRARY_SEARCH, null, false, true))
+        assertFalse(CosToolDefaults.resolve(CosToolDefaults.LIBRARY_SEARCH, null, false, false))
+    }
+
+    @Test
+    fun `library_search chat on beats global off and stays independent of Computer`() {
+        assertTrue(CosToolDefaults.resolve(CosToolDefaults.LIBRARY_SEARCH, true, false, true))
+        assertTrue(CosToolDefaults.resolve(CosToolDefaults.LIBRARY_SEARCH, true, false, false))
+    }
+
+    @Test
+    fun `settings display shows library_search on until switched off`() {
+        assertTrue(CosToolDefaults.globalDisplay(CosToolDefaults.LIBRARY_SEARCH, null))
+        assertFalse(CosToolDefaults.globalDisplay(CosToolDefaults.LIBRARY_SEARCH, false))
+    }
+
+    @Test
+    fun `other non-COS tools still default off alongside library_search`() {
+        for (computer in listOf(true, false)) {
+            assertFalse(CosToolDefaults.resolve("web_search", null, null, computer))
+            // library_search must not flip the default for its non-COS siblings
+            assertFalse(CosToolDefaults.resolve("web_fetch", null, null, computer))
+        }
+    }
 }

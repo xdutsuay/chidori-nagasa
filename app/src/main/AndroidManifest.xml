@@ -61,6 +61,13 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="chidori-nagasa" android:host="computer" />
             </intent-filter>
+            <!-- In-app deep links for dogfood/automation (Library screen). -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="chidori-nagasa" android:host="library" />
+            </intent-filter>
         </activity>
 
         <service

@@ -309,6 +309,7 @@ class ConversationFragment : Fragment() {
                         }
                         HubDestination.NEEDS_YOU -> nav.navigate(R.id.action_home_to_needs_you)
                         HubDestination.COMPUTER -> nav.navigate(R.id.action_home_to_computer)
+                        HubDestination.LIBRARY -> nav.navigate(R.id.action_home_to_library)
                         HubDestination.CLOUD_APIS -> nav.navigate(R.id.action_home_to_cloud_apis)
                         HubDestination.USAGE -> nav.navigate(R.id.action_home_to_usage)
                         HubDestination.MODELS -> nav.navigate(R.id.action_home_to_models)

@@ -34,6 +34,9 @@
         <action
             android:id="@+id/action_home_to_computer"
             app:destination="@id/nav_computer" />
+        <action
+            android:id="@+id/action_home_to_library"
+            app:destination="@id/nav_library" />
     </fragment>
 
     <fragment
@@ -81,6 +84,9 @@
         <action
             android:id="@+id/action_settings_to_computer"
             app:destination="@id/nav_computer" />
+        <action
+            android:id="@+id/action_settings_to_library"
+            app:destination="@id/nav_library" />
     </fragment>
 
     <fragment
@@ -154,6 +160,15 @@
         <!-- Agent / dogfood: adb shell am start -a android.intent.action.VIEW -d "chidori-nagasa://computer"
              Stays inside this app — no BACK/monkey taps that can leave to Imou etc. -->
         <deepLink app:uri="chidori-nagasa://computer" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/nav_library"
+        android:name="com.druk.lmplayground.library.LibraryFragment"
+        android:label="@string/library_title">
+        <!-- Agent / dogfood: adb shell am start -a android.intent.action.VIEW -d "chidori-nagasa://library"
+             Same in-app pattern as chidori-nagasa://computer — no BACK/monkey taps. -->
+        <deepLink app:uri="chidori-nagasa://library" />
     </fragment>
 
 </navigation>

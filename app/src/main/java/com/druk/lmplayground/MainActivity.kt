@@ -71,6 +71,7 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.content_main)
         handleNeedsYouIntent(intent)
         handleComputerDeepLink(intent)
+        handleLibraryDeepLink(intent)
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -78,6 +79,7 @@ class MainActivity : AppCompatActivity() {
         setIntent(intent)
         handleNeedsYouIntent(intent)
         handleComputerDeepLink(intent)
+        handleLibraryDeepLink(intent)
     }
 
     /**
@@ -96,6 +98,26 @@ class MainActivity : AppCompatActivity() {
         window.decorView.post {
             if (nav.currentDestination?.id != R.id.nav_computer) {
                 runCatching { nav.navigate(R.id.nav_computer) }
+            }
+        }
+    }
+
+    /**
+     * Dogfood / adb: `chidori-nagasa://library` opens [LibraryFragment], the
+     * same in-app deep-link pattern as [handleComputerDeepLink].
+     */
+    private fun handleLibraryDeepLink(intent: Intent?) {
+        if (intent == null) return
+        val uri = intent.data ?: return
+        if (uri.scheme != "chidori-nagasa" || uri.host != "library") return
+        intent.data = null
+        val navHost = supportFragmentManager
+            .findFragmentById(R.id.nav_host_fragment) as? NavHostFragment
+            ?: return
+        val nav = navHost.navController
+        window.decorView.post {
+            if (nav.currentDestination?.id != R.id.nav_library) {
+                runCatching { nav.navigate(R.id.nav_library) }
             }
         }
     }

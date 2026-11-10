@@ -27,6 +27,7 @@ import androidx.compose.material.icons.outlined.Computer
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.filled.PushPin
+import androidx.compose.material.icons.outlined.LibraryBooks
 import androidx.compose.material.icons.outlined.Memory
 import androidx.compose.material.icons.outlined.NotificationsActive
 import androidx.compose.material.icons.outlined.PushPin
@@ -69,6 +70,7 @@ enum class HubDestination {
     ASK_DESKTOP,
     NEEDS_YOU,
     COMPUTER,
+    LIBRARY,
     CLOUD_APIS,
     USAGE,
     MODELS,
@@ -254,6 +256,13 @@ private fun SessionListContent(
                     label = stringResource(R.string.hub_computer),
                     icon = Icons.Outlined.Computer,
                     onClick = { onDestinationSelected(HubDestination.COMPUTER) },
+                )
+            }
+            item(key = "dest_library") {
+                HubDestinationRow(
+                    label = stringResource(R.string.library_title),
+                    icon = Icons.Outlined.LibraryBooks,
+                    onClick = { onDestinationSelected(HubDestination.LIBRARY) },
                 )
             }
             item(key = "dest_cloud") {

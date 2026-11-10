@@ -1,5 +1,6 @@
 package com.druk.lmplayground.tools
 
+import com.druk.lmplayground.library.Library
 import android.content.Context
 import org.json.JSONArray
 import org.json.JSONObject
@@ -132,6 +133,7 @@ class ToolRegistry(private val nowMs: () -> Long = { System.nanoTime() / 1_000_0
                 register(WebSearchTool(webLinkStore))
                 register(WebFetchTool(webLinkStore))
                 register(JavaScriptTool(context))
+                register(Library.searchTool(context))
                 register(CosExecTool(context))
                 // CP2: COS desktop tools, advertised only while the desktop runs.
                 register(CosScreenshotTool(desktop, toolImages))
