@@ -4,7 +4,7 @@
 #####
 [versions]
 accompanist = "0.32.0"
-jsch = "0.2.25"
+jsch = "0.2.24"
 androidGradlePlugin = "8.13.2"
 # 1.11+ adds the EdgeToEdgeApi35 path so enableEdgeToEdge stops calling the
 # deprecated setStatusBarColor/setNavigationBarColor on Android 15+ (Play
