@@ -105,6 +105,83 @@ val spirvIncludeDir: String? = run {
     (unix + windows).firstOrNull { File(it, "spirv/unified1/spirv.hpp").exists() }
 }
 
+// ── Release signing (release-signing migration) ─────────────────────────
+// Secrets live OUTSIDE the repo only. Two sources, checked in order:
+//   1. A keystore.properties file located outside the repo:
+//      - $CINDI_KEYSTORE_PROPERTIES if set, else ~/.chidori/keystore.properties
+//        with keys: storeFile, storePassword, keyAlias, keyPassword
+//   2. Environment variables: CINDI_KEYSTORE (path to the .jks/.keystore),
+//      CINDI_KEYSTORE_PASSWORD, CINDI_KEY_ALIAS, CINDI_KEY_PASSWORD.
+// If neither source is present the release build falls back to the debug
+// signing config so contributors can always assembleRelease; if a source IS
+// present but incomplete/invalid, the build fails loudly instead of silently
+// shipping an unattended key. See docs/RELEASE-SIGNING.md.
+fun resolveReleaseSigning(): Map<String, String>? {
+    fun canonical(p: String): String = try {
+        File(p).canonicalPath
+    } catch (_: Exception) {
+        File(p).absolutePath
+    }
+    val repoRoot = rootProject.projectDir.canonicalPath + File.separator
+
+    fun rejectInsideRepo(path: String) {
+        if (canonical(path).startsWith(repoRoot, ignoreCase = true)) {
+            throw GradleException(
+                "Release keystore must live OUTSIDE the repository " +
+                    "(found: $path). Move it out and update keystore.properties / env vars. " +
+                    "See docs/RELEASE-SIGNING.md."
+            )
+        }
+    }
+
+    val propsPath = System.getenv("CINDI_KEYSTORE_PROPERTIES")
+        ?.takeIf { it.isNotBlank() }
+        ?.let { File(it) }
+        ?: File(System.getProperty("user.home"), ".chidori/keystore.properties")
+    if (propsPath.isFile) {
+        val props = Properties().apply { propsPath.inputStream().use { load(it) } }
+        val values = mapOf(
+            "storeFile" to props.getProperty("storeFile"),
+            "storePassword" to props.getProperty("storePassword"),
+            "keyAlias" to props.getProperty("keyAlias"),
+            "keyPassword" to props.getProperty("keyPassword"),
+        )
+        val missing = values.filterValues { it.isNullOrBlank() }.keys
+        if (missing.isNotEmpty()) {
+            throw GradleException(
+                "$propsPath is missing keys: $missing " +
+                    "(expected storeFile, storePassword, keyAlias, keyPassword). " +
+                    "See docs/RELEASE-SIGNING.md."
+            )
+        }
+        rejectInsideRepo(values["storeFile"]!!)
+        return values
+    }
+
+    val ksPath = System.getenv("CINDI_KEYSTORE")
+    if (!ksPath.isNullOrBlank()) {
+        val values = mapOf(
+            "storeFile" to ksPath,
+            "storePassword" to System.getenv("CINDI_KEYSTORE_PASSWORD"),
+            "keyAlias" to System.getenv("CINDI_KEY_ALIAS"),
+            "keyPassword" to System.getenv("CINDI_KEY_PASSWORD"),
+        )
+        val missing = values.filterValues { it.isNullOrBlank() }.keys
+        if (missing.isNotEmpty()) {
+            throw GradleException(
+                "CINDI_KEYSTORE is set but these env vars are missing: $missing " +
+                    "(CINDI_KEYSTORE_PASSWORD, CINDI_KEY_ALIAS, CINDI_KEY_PASSWORD). " +
+                    "See docs/RELEASE-SIGNING.md."
+            )
+        }
+        rejectInsideRepo(values["storeFile"]!!)
+        return values
+    }
+    return null
+}
+
+val releaseSigning = resolveReleaseSigning()
+
 android {
     compileSdk = libs.versions.compileSdk.get().toInt()
     namespace = "com.druk.lmplayground"
@@ -220,6 +297,21 @@ android {
             keyAlias = if (hasKeyInfo) System.getenv("LM_PLAYGROUND_KEY_ALIAS") else "androiddebugkey"
             keyPassword = if (hasKeyInfo) System.getenv("LM_PLAYGROUND_KEY_PASSWORD") else "android"
         }
+
+        create("release") {
+            releaseSigning?.let { cfg ->
+                storeFile = File(cfg.getValue("storeFile"))
+                storePassword = cfg.getValue("storePassword")
+                keyAlias = cfg.getValue("keyAlias")
+                keyPassword = cfg.getValue("keyPassword")
+            }
+            // Explicit scheme enablement (v1 jar signing is not needed for
+            // minSdk 30 but is kept deterministic; v3 carries the key-rotation
+            // lineage used by scripts/release/rotate-signing.ps1).
+            enableV1Signing = true
+            enableV2Signing = true
+            enableV3Signing = true
+        }
     }
 
     buildTypes {
@@ -233,7 +325,15 @@ android {
 
         getByName("release") {
             isMinifyEnabled = true
-            signingConfig = signingConfigs.getByName("debug")
+            // Real release key when configured (keystore.properties outside the
+            // repo or CINDI_* env vars); otherwise fall back to the debug
+            // signing config so contributor builds never break. See
+            // docs/RELEASE-SIGNING.md.
+            signingConfig = if (releaseSigning != null) {
+                signingConfigs.getByName("release")
+            } else {
+                signingConfigs.getByName("debug")
+            }
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"),
                     "proguard-rules.pro")
             // Package native debug symbols into the AAB so Play Console

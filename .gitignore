@@ -29,6 +29,11 @@ render.experimental.xml
 *.jks
 *.keystore
 !debug.keystore
+# Release signing secrets live OUTSIDE the repo (docs/RELEASE-SIGNING.md):
+keystore.properties
+# APK Signature Scheme v3 rotation lineage is public, but keep copies out of
+# git unless deliberately tracked:
+*.lineage
 
 # Google Services (e.g. APIs or Firebase)
 google-services.json
