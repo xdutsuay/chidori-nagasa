@@ -26,6 +26,17 @@ object ComputerPrefs {
     const val KEY_EVIDENCE_DOGFOOD = "computer.evidence_dogfood"
     const val DEFAULT_EVIDENCE_DOGFOOD = false
 
+    /** Developer options: unlocks desktop sharing (VNC over USB). */
+    const val KEY_DEVELOPER_MODE = "computer.developer_mode"
+    const val DEFAULT_DEVELOPER_MODE = false
+
+    fun isDeveloperMode(prefs: SharedPreferences): Boolean =
+        prefs.getBoolean(KEY_DEVELOPER_MODE, DEFAULT_DEVELOPER_MODE)
+
+    fun setDeveloperMode(prefs: SharedPreferences, enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_DEVELOPER_MODE, enabled).apply()
+    }
+
     fun isComputerEnabled(prefs: SharedPreferences): Boolean =
         prefs.getBoolean(KEY_COMPUTER_ENABLED, DEFAULT_ENABLED)
 

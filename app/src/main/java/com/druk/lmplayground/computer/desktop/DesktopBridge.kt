@@ -73,6 +73,44 @@ interface DesktopBridge {
      */
     suspend fun openDesktopStream(cmd: String): DesktopStream =
         throw UnsupportedOperationException("openDesktopStream not implemented by this DesktopBridge")
+
+    /** What this computer supports beyond the basics. */
+    fun capabilities(): Set<DesktopCapability> = setOf(DesktopCapability.EXEC, DesktopCapability.SCREENSHOT)
+
+    /** Human VNC viewer sharing state (see [com.druk.lmplayground.computer.desktop.share.VncShare]). */
+    val viewer: StateFlow<ViewerState> get() = ViewerState.OFF_FLOW
+
+    suspend fun startViewer(
+        lease: ShareLease = ShareLease(),
+        scope: ViewerScope = ViewerScope.LOOPBACK,
+    ): Result<ViewerEndpoint> =
+        Result.failure(UnsupportedOperationException("viewer not supported by this DesktopBridge"))
+
+    suspend fun stopViewer(reason: String = com.druk.lmplayground.computer.desktop.share.VncShare.STOP_REASON) {}
+}
+
+enum class DesktopCapability { EXEC, SCREENSHOT, INPUT_STREAM, VIEWER }
+
+/** LOOPBACK: 127.0.0.1 only (reach it with `adb forward`). LAN is not available yet. */
+enum class ViewerScope { LOOPBACK, LAN }
+
+data class ShareLease(val maxMs: Long = DEFAULT_MAX_MS) {
+    companion object {
+        const val DEFAULT_MAX_MS = 30L * 60 * 1000
+    }
+}
+
+data class ViewerEndpoint(val host: String, val port: Int, val password: String, val expiresAtMs: Long)
+
+sealed interface ViewerState {
+    data object Off : ViewerState
+    data object Starting : ViewerState
+    data class Shared(val endpoint: ViewerEndpoint) : ViewerState
+    data class Error(val message: String) : ViewerState
+
+    companion object {
+        val OFF_FLOW: StateFlow<ViewerState> = kotlinx.coroutines.flow.MutableStateFlow<ViewerState>(Off)
+    }
 }
 
 /**

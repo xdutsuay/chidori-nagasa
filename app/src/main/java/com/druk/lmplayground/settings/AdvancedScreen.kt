@@ -77,6 +77,7 @@ fun AdvancedContent(
             checked = repackEnabled,
             onCheckedChange = onRepackEnabledChanged,
         )
+        DeveloperOptionsSection()
     }
 }
 

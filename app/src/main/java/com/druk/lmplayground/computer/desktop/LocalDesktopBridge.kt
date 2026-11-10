@@ -61,6 +61,17 @@ class LocalDesktopBridge internal constructor(
     @Volatile private var session: DesktopSession? = null
     private val openStreams = CopyOnWriteArrayList<ProotDesktopStream>()
 
+    private val vncShare by lazy { com.druk.lmplayground.computer.desktop.share.VncShare(this, scope) }
+
+    override fun capabilities(): Set<DesktopCapability> = DesktopCapability.entries.toSet()
+
+    override val viewer: StateFlow<ViewerState> get() = vncShare.state
+
+    override suspend fun startViewer(lease: ShareLease, scope: ViewerScope): Result<ViewerEndpoint> =
+        vncShare.start(lease, scope)
+
+    override suspend fun stopViewer(reason: String) = vncShare.stop(reason)
+
     private val stateDir: File get() = File(runtime.hostRootfsDir, DesktopCommand.GUEST_STATE_DIR.trimStart('/'))
     private val installedMarker: File get() = File(runtime.hostRootfsDir, DesktopCommand.GUEST_INSTALLED_MARKER.trimStart('/'))
     internal val fbFile: File get() = File(runtime.hostRootfsDir, DesktopCommand.GUEST_FB_FILE.trimStart('/'))

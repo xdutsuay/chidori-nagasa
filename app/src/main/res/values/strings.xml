@@ -586,6 +586,14 @@
     <string name="cos_confirm_title">Allow %1$s on the Computer?</string>
     <string name="cos_confirm_allow">Allow</string>
     <string name="cos_confirm_deny">Deny</string>
+    <string name="developer_options_title">Developer options</string>
+    <string name="developer_options_desc">Tools for development. Off by default.</string>
+    <string name="viewer_usb_title">Share Computer desktop over USB</string>
+    <string name="viewer_usb_desc">Starts a VNC viewer on the phone only (127.0.0.1), not on Wi-Fi. Connect from a computer with adb forward. The Computer desktop must be running.</string>
+    <string name="viewer_usb_start">Start sharing</string>
+    <string name="viewer_usb_stop">Stop sharing</string>
+    <string name="viewer_usb_starting">Starting the viewer…</string>
+    <string name="viewer_usb_shared">On your computer run: adb forward tcp:%1$d tcp:%1$d\nThen open a VNC viewer at 127.0.0.1:%1$d\nPassword: %2$s\nSharing stops at %3$s.</string>
     <string name="history_message_too_large">A saved message in this conversation is too large to reload. Start a new chat to continue.</string>
     <string name="inference_engine_unavailable">Inference engine is not available right now. Try again in a moment.</string>
     <string name="model_load_failed_status">Couldn\'t load model</string>

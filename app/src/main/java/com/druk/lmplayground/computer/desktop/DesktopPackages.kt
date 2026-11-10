@@ -72,6 +72,9 @@ object DesktopPackages {
 
     private val FIREFOX_PINS: Map<String, String> = linkedMapOf("firefox-esr" to "140.12.0-r0")
 
+    /** Installed on demand when the developer VNC viewer is first started (same for both arches). */
+    val VIEWER_PINS: Map<String, String> = mapOf("x11vnc" to "0.9.17-r1")
+
     private val SETS: Map<Pair<String, String>, PinnedSet> = listOf(
         PinnedSet(SET_DEFAULT, "aarch64", DEFAULT_PINS, 140, 118_354_286L, 324_693_859L),
         PinnedSet(SET_DEFAULT, "x86_64", DEFAULT_PINS, 140, 123_988_068L, 337_580_815L),
