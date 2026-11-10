@@ -112,8 +112,8 @@ SSH. Connect-only: the app never creates, starts or bills a cloud VM.
 2. In the app: **Add** (host, port, user `cindi`) → **Copy key** → append it to
    `/home/cindi/.ssh/authorized_keys` on the VM.
 3. **Test** → confirm the host-key fingerprint (it is pinned; a changed key is
-   refused) → **Use for agent**. Chat desktop tools now act on the VM; the chat
-   header and the dialog say it leaves the phone. **Use this phone** switches back.
+   refused) → **Use for agent**. Chat desktop tools now act on the VM; the dialog
+   marks it as leaving the phone. **Use this phone** switches back.
 
 Keys are per-computer, generated on the phone and stored encrypted with an Android
 Keystore key; **Rotate key** replaces one.
