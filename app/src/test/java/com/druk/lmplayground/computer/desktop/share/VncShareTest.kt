@@ -75,12 +75,16 @@ class VncShareTest {
         assertEquals(ViewerEndpoint(VncShare.LOOPBACK_HOST, 5901, password, 45_000), endpoint)
         assertEquals(ViewerState.Shared(endpoint), s.state.value)
 
-        // Rule 7: exact stream command, including -localhost (never reachable off-loopback).
+        // Rule 7: exact stream command, including -localhost (never reachable off-loopback)
+        // and -noshm (Android/proot has no SysV shared memory; x11vnc would die with
+        // "shmget(scanline) failed").
         assertEquals(
             "exec 'x11vnc' '-display' ':1' '-auth' '/root/.Xauthority' '-localhost' " +
-                "'-rfbport' '5901' '-passwdfile' 'rm:/tmp/cos-vnc/passwd' '-forever' '-shared' '-noxdamage'",
+                "'-rfbport' '5901' '-passwdfile' 'rm:/tmp/cos-vnc/passwd' '-forever' '-shared' " +
+                "'-noxdamage' '-noshm'",
             bridge.openedCmds.single(),
         )
+        assertTrue("stream command must contain -noshm", bridge.openedCmds.single().contains("-noshm"))
 
         // Rules 5+6: capability probe, then the password file; NO apk add when present.
         assertEquals(2, bridge.execCommands.size)

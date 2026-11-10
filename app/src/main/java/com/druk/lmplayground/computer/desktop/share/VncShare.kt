@@ -73,7 +73,8 @@ class VncShare(
         val argv = listOf(
             "x11vnc", "-display", running.display, "-auth", running.xauthorityGuestPath,
             "-localhost", "-rfbport", port.toString(), "-passwdfile", "rm:$PASSWORD_FILE",
-            "-forever", "-shared", "-noxdamage",
+            // proot on Android has no SysV shared memory (shmget: ENOSYS).
+            "-forever", "-shared", "-noxdamage", "-noshm",
         )
         val s = try {
             bridge.openDesktopStream("exec " + ShellQuote.join(argv))
