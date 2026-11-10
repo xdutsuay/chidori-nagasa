@@ -22,6 +22,8 @@
 
 **chidori-nagasa** is the Android companion to [chidori](https://kaustubhtripathi.com/public/lab/lclreason/) — an AI-powered desktop IDE. On your phone it runs GGUF models locally (offline, private). When paired with a chidori desktop on the same LAN, it can monitor Ask / Agent / Plan / Debug runs, chat through the desktop's models, and optionally offer the phone as an inference node.
 
+**Short name: CINDI.** In discussions, tickets and handovers, chidori-nagasa is called **CINDI**. "Chidori" alone means the desktop IDE. The opt-in Linux desktop inside the app is the **CINDI desktop**.
+
 Built as a substantial fork of [LM Playground](https://github.com/andriydruk/LMPlayground) by Andriy Druk (MIT). Inference is powered by [llama.cpp](https://github.com/ggml-org/llama.cpp). See [`NOTICE.md`](NOTICE.md) and [`UPSTREAM_DIVERGENCE.md`](UPSTREAM_DIVERGENCE.md) for attribution and what changed.
 
 > **Desktop source** (`lclreason`) stays private. Public desktop binaries ship from [xdutsuay/chidori](https://github.com/xdutsuay/chidori/releases). This Android repo is the open companion client.
