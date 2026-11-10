@@ -108,6 +108,10 @@ class ModelRuntime(
 
     var model: LlamaModel? = null
         private set
+
+    init {
+        com.druk.lmplayground.checkin.LoadedModelSlot.attach(this)
+    }
     var session: LlamaGenerationSession? = null
         private set
 
@@ -636,6 +640,7 @@ class ModelRuntime(
         session = null
         model = null
         modelFileHandle = null
+        com.druk.lmplayground.checkin.LoadedModelSlot.detach(this)
 
         withContext(Dispatchers.Default) {
             prevSession?.destroy()
@@ -659,6 +664,7 @@ class ModelRuntime(
         this.session = null
         this.model = null
         modelFileHandle = null
+        com.druk.lmplayground.checkin.LoadedModelSlot.detach(this)
 
         CoroutineScope(Dispatchers.Default).launch {
             job?.cancel()

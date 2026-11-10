@@ -2,6 +2,8 @@ package com.druk.lmplayground.conversation
 
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
+import com.druk.lmplayground.checkin.OpenItemHooks
+import com.druk.lmplayground.checkin.PersistedChat
 import com.druk.lmplayground.data.ChatMessageEntity
 import com.druk.lmplayground.data.ChatRepository
 import com.druk.lmplayground.data.ChatRoute
@@ -95,7 +97,8 @@ class ChatSessionStore(
         message: Message,
         imagePath: String? = null,
     ) {
-        chatRepository?.insertMessage(
+        val repo = chatRepository ?: return
+        val id = repo.insertMessage(
             ChatMessageEntity(
                 sessionId = sessionId,
                 author = message.author,
@@ -108,6 +111,15 @@ class ChatSessionStore(
                 imagePath = imagePath,
                 toolCallsJson = ToolCallInfoCodec.encode(message.toolCalls)
             )
+        )
+        OpenItemHooks.onPersisted?.invoke(
+            PersistedChat(
+                sessionId = sessionId,
+                author = message.author,
+                content = message.content,
+                messageId = id,
+                timestamp = message.timestamp,
+            ),
         )
     }
 

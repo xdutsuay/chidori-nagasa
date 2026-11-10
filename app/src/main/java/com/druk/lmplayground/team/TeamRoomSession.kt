@@ -25,11 +25,39 @@ class TeamRoomSession(
 
     fun addHandoff(handoff: TeamHandoff) {
         handoffs.add(handoff)
+        TeamRoomRegistry.current = this
+        handoffListener?.invoke(handoff)
+        TeamHandoffEvents.listener?.invoke(this, handoff)
     }
+
+    /**
+     * Optional per-session listener. [TeamHandoffEvents] is the process-wide
+     * sink check-ins install so a handoff is captured without the room
+     * knowing about the ledger.
+     */
+    var handoffListener: ((TeamHandoff) -> Unit)? = null
 
     fun handoffs(): List<TeamHandoff> = handoffs.toList()
 
     companion object {
         fun createDefault(): TeamRoomSession = TeamRoomSession()
     }
+}
+
+/**
+ * The room most recently handed off in this process, if it is still alive.
+ * Check-in probes read it. There is no durable team-room store on this baseline.
+ */
+object TeamRoomRegistry {
+    @Volatile
+    var current: TeamRoomSession? = null
+}
+
+/**
+ * Process-wide handoff sink. Check-ins register a listener from [com.druk.lmplayground.App].
+ * The team package does not depend on the check-in ledger.
+ */
+object TeamHandoffEvents {
+    @Volatile
+    var listener: ((TeamRoomSession, TeamHandoff) -> Unit)? = null
 }
