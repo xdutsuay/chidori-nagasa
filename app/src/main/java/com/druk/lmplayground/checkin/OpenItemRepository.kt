@@ -101,13 +101,18 @@ class OpenItemRepository(private val dao: OpenItemDao) :
                     fresh = false,
                     updatedAt = nowMs,
                 )
-                CheckInUserAction.LATER -> existing.copy(
-                    status = OpenItemStatus.RAISED.name,
-                    lastRaisedAt = nowMs,
-                    stateAtLastRaise = existing.lastProbeState,
-                    fresh = false,
-                    updatedAt = nowMs,
-                )
+                CheckInUserAction.LATER -> {
+                    val open = existing.status == OpenItemStatus.OPEN.name ||
+                        existing.status == OpenItemStatus.RAISED.name
+                    if (!open) continue
+                    existing.copy(
+                        status = OpenItemStatus.RAISED.name,
+                        lastRaisedAt = nowMs,
+                        stateAtLastRaise = existing.lastProbeState,
+                        fresh = false,
+                        updatedAt = nowMs,
+                    )
+                }
             }
             dao.update(updated)
         }

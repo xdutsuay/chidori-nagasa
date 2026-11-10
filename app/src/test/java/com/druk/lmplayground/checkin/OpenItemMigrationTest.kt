@@ -56,6 +56,8 @@ class OpenItemMigrationTest {
         val loaded = repo.getById("row-2")
         assertEquals(OpenItemStatus.PARKED.name, loaded?.status)
         assertEquals("Ship the migration", loaded?.summary)
+        repo.applyUserAction(listOf("row-2"), CheckInUserAction.LATER, 70)
+        assertEquals(OpenItemStatus.PARKED.name, repo.getById("row-2")?.status)
         assertTrue(db.openHelper.writableDatabase.version >= 10)
         db.close()
     }

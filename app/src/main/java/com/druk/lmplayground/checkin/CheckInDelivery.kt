@@ -93,14 +93,19 @@ object CheckInPendingHold {
 object CheckInNotifier {
     const val NOTIFICATION_ID = 0x4E0D_E033
 
-    fun post(context: Context, items: List<OpenItemEntity>, text: String) {
-        if (items.isEmpty()) return
+    /**
+     * Returns false when there is nothing to show or the user has not granted
+     * POST_NOTIFICATIONS. Callers must not mark items RAISED or spend the
+     * daily cap in that case, or a later grant can never deliver them.
+     */
+    fun post(context: Context, items: List<OpenItemEntity>, text: String): Boolean {
+        if (items.isEmpty()) return false
         if (
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
             ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) !=
             PackageManager.PERMISSION_GRANTED
         ) {
-            return
+            return false
         }
         NeedsYouNotification.ensureChannel(context)
         val first = items.first()
@@ -134,6 +139,7 @@ object CheckInNotifier {
             .addAction(action(context, ACTION_CHECK_IN_LATER, R.string.check_in_action_later, REQUEST_LATER, ids))
             .build()
         NotificationManagerCompat.from(context).notify(NOTIFICATION_ID, notification)
+        return true
     }
 
     private fun action(

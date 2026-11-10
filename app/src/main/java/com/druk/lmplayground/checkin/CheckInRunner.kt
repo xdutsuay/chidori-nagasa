@@ -18,7 +18,7 @@ class CheckInRunner(
     private val lastActivityAtMs: suspend () -> Long?,
     private val ingest: suspend (Long) -> Unit,
     private val probe: suspend (List<OpenItemEntity>, Long) -> Map<String, ProbeSnapshot>,
-    private val notify: suspend (List<OpenItemEntity>, String) -> Unit,
+    private val notify: suspend (List<OpenItemEntity>, String) -> Boolean,
     private val recordNotification: (String) -> Unit,
     private val wording: suspend (List<OpenItemEntity>) -> String = { CheckInCopy.bundle(it) },
 ) {
@@ -61,15 +61,15 @@ class CheckInRunner(
                 probes = probes,
             ),
         )
-        ledger.applyResult(result, probes, now)
         val byId = items.associateBy { it.id }
         val chosen = result.toNotify.mapNotNull { byId[it.id] }
-        if (chosen.isNotEmpty()) {
-            notify(chosen, wording(chosen))
+        val posted = chosen.isNotEmpty() && notify(chosen, wording(chosen))
+        val applied = if (posted) result else result.copy(toNotify = emptyList())
+        ledger.applyResult(applied, probes, now)
+        if (posted) {
             recordNotification(CheckInGates.dayKey(now, zone))
-            return CheckInRunOutcome(result, ingested = true, notified = true)
         }
-        return CheckInRunOutcome(result, ingested = true, notified = false)
+        return CheckInRunOutcome(result = applied, ingested = true, notified = posted)
     }
 }
 

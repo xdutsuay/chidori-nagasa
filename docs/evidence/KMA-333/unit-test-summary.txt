@@ -4,10 +4,11 @@ Command: ./gradlew testDebugUnitTest -PskipScreenshots -PggmlVulkan=off
 SDK: /opt/android-sdk (platform 36, build-tools 35.0.0, NDK 27.2.12479018, CMake 3.31.6)
 Vulkan: -PggmlVulkan=off because this VM has no vulkan.hpp / SPIRV-Headers package. The switch is the project's own ggmlVulkan property. It does not change product source.
 
-Check-in tests (com.druk.lmplayground.checkin): 34 run, 34 passed, 0 failed
+Check-in tests (com.druk.lmplayground.checkin): 35 run, 35 passed, 0 failed
+  (re-run after the review fixes; ./gradlew testDebugUnitTest --tests com.druk.lmplayground.checkin.*)
   CheckInGatesTest            12
   OpenItemExtractorTest        6
-  CheckInRunnerTest            4
+  CheckInRunnerTest            5
   SourceIngestTest             4
   CheckInPreferencesTest       2
   OpenItemMigrationTest        2
@@ -15,7 +16,8 @@ Check-in tests (com.druk.lmplayground.checkin): 34 run, 34 passed, 0 failed
   CheckInSchedulerTest         1
   CheckInsScreenTest           1
 
-Full suite with -PskipScreenshots (the repo's CI equivalent; Paparazzi goldens are not git-tracked):
+Full suite with -PskipScreenshots (the repo's CI equivalent; Paparazzi goldens are not git-tracked),
+before the four review fixes below added one runner test:
   736 tests, 2 failed, 1 skipped
 
 The two failures are not from this change:

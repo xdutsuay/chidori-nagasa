@@ -73,6 +73,8 @@ class OpenItemCapture(
     }
 
     internal suspend fun handle(event: PersistedChat) {
+        // Any new message means the session is not idle. Drop a pending extraction.
+        jobs.remove(event.sessionId)?.cancel()
         if (event.author.equals("User", ignoreCase = true)) {
             when (parseChatCommand(event.content)) {
                 ChatCommand.DONE ->
@@ -88,7 +90,6 @@ class OpenItemCapture(
         }
         if (!event.author.equals("Assistant", ignoreCase = true)) return
         if (!enabled()) return
-        jobs.remove(event.sessionId)?.cancel()
         jobs[event.sessionId] = scope.launch {
             delay(idleDelayMs)
             jobs.remove(event.sessionId)

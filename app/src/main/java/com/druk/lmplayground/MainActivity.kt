@@ -115,6 +115,16 @@ class MainActivity : AppCompatActivity() {
             intent.removeExtra(EXTRA_CHECK_IN_INSTANCE_ID)
             intent.removeExtra(EXTRA_CHECK_IN_RUN_ID)
         }
+        if (link.source == OpenItemSource.DESKTOP_RUN.storageValue()) {
+            val instanceId = link.instanceId
+            val runId = link.runId
+            if (instanceId != null && runId != null) {
+                // Offer before navigation so a Chidori screen that is already
+                // started can consume the link, and so a cold start finds it
+                // waiting in onStart.
+                NeedsYouPendingHold.offer(NeedsYouDeepLink(instanceId, runId))
+            }
+        }
         val navHost = supportFragmentManager
             .findFragmentById(R.id.nav_host_fragment) as? NavHostFragment
             ?: return
@@ -122,11 +132,6 @@ class MainActivity : AppCompatActivity() {
         window.decorView.post {
             when (link.source) {
                 OpenItemSource.DESKTOP_RUN.storageValue() -> {
-                    val instanceId = link.instanceId
-                    val runId = link.runId
-                    if (instanceId != null && runId != null) {
-                        NeedsYouPendingHold.offer(NeedsYouDeepLink(instanceId, runId))
-                    }
                     if (nav.currentDestination?.id != R.id.nav_chidori) {
                         runCatching { nav.navigate(R.id.nav_chidori) }
                     }

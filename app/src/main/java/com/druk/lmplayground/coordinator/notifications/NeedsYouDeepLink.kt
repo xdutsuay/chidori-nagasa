@@ -57,8 +57,17 @@ internal object NeedsYouPendingHold {
     @Volatile
     private var pending: NeedsYouDeepLink? = null
 
+    /**
+     * Set by the Chidori screen while it is started, so a notification tap
+     * that arrives after onStart still opens the run. Cleared when that
+     * screen stops.
+     */
+    @Volatile
+    var onOffered: (() -> Unit)? = null
+
     fun offer(link: NeedsYouDeepLink) {
         pending = link
+        onOffered?.invoke()
     }
 
     fun peek(): NeedsYouDeepLink? = pending

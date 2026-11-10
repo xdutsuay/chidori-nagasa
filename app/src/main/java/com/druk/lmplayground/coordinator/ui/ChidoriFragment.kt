@@ -12,6 +12,7 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.fragment.findNavController
+import com.druk.lmplayground.coordinator.notifications.NeedsYouPendingHold
 import com.druk.lmplayground.theme.PlaygroundTheme
 
 /**
@@ -22,6 +23,21 @@ import com.druk.lmplayground.theme.PlaygroundTheme
 class ChidoriFragment : Fragment() {
 
     private val viewModel: ChidoriViewModel by viewModels()
+
+    override fun onStart() {
+        super.onStart()
+        // A tap that lands while this screen is already started offers the
+        // link after onResume. The callback consumes it immediately.
+        NeedsYouPendingHold.onOffered = { viewModel.consumeNeedsYouPending() }
+        viewModel.consumeNeedsYouPending()
+    }
+
+    override fun onStop() {
+        if (NeedsYouPendingHold.onOffered != null) {
+            NeedsYouPendingHold.onOffered = null
+        }
+        super.onStop()
+    }
 
     override fun onResume() {
         super.onResume()

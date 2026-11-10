@@ -14,7 +14,10 @@ class CheckInRunnerTest {
         val runner = runner(
             config = config(paused = true),
             ingest = { ingested = true },
-            notify = { _, _ -> notified++ },
+            notify = { _, _ ->
+                notified++
+                true
+            },
         )
         val outcome = runner.run()
         assertEquals(CheckInStop.PAUSED_OR_DISABLED, outcome.result.stop)
@@ -49,6 +52,7 @@ class CheckInRunnerTest {
             notify = { items, _ ->
                 calls++
                 bundled = items.size
+                true
             },
         )
         val outcome = runner.run()
@@ -56,6 +60,28 @@ class CheckInRunnerTest {
         assertEquals(1, calls)
         assertEquals(3, bundled)
         assertEquals(3, ledger.applied?.toNotify?.size)
+    }
+
+    @Test
+    fun aRefusedNotificationDoesNotMarkRaisedOrSpendTheCap() = runBlocking {
+        val ledger = FakeLedger(listOf(entity("n", fresh = true)))
+        var recorded = 0
+        val runner = CheckInRunner(
+            nowMs = { java.time.Instant.parse("2026-06-01T12:00:00Z").toEpochMilli() },
+            zone = java.time.ZoneId.of("UTC"),
+            readConfig = { config() },
+            ledger = ledger,
+            lastActivityAtMs = { java.time.Instant.parse("2026-06-01T12:00:00Z").toEpochMilli() - 5 * 3_600_000 },
+            ingest = {},
+            probe = { items, _ -> items.associate { it.id to ProbeSnapshot("open", false) } },
+            notify = { _, _ -> false },
+            recordNotification = { recorded++ },
+        )
+        val outcome = runner.run()
+        assertFalse(outcome.notified)
+        assertEquals(0, recorded)
+        assertTrue(outcome.result.toNotify.isEmpty())
+        assertTrue(ledger.applied?.toNotify?.isEmpty() == true)
     }
 
     @Test
@@ -73,7 +99,10 @@ class CheckInRunnerTest {
                     "d" to ProbeSnapshot("completed", true, "run completed"),
                 )
             },
-            notify = { _, _ -> notified++ },
+            notify = { _, _ ->
+                notified++
+                false
+            },
         )
         val outcome = runner.run()
         assertEquals(CheckInStop.DAILY_CAP, outcome.result.stop)
@@ -86,7 +115,7 @@ class CheckInRunnerTest {
         ledger: OpenItemLedger = FakeLedger(emptyList()),
         ingest: suspend (Long) -> Unit = {},
         probe: suspend (List<OpenItemEntity>, Long) -> Map<String, ProbeSnapshot> = { _, _ -> emptyMap() },
-        notify: suspend (List<OpenItemEntity>, String) -> Unit = { _, _ -> },
+        notify: suspend (List<OpenItemEntity>, String) -> Boolean = { _, _ -> true },
     ) = CheckInRunner(
         nowMs = { java.time.Instant.parse("2026-06-01T12:00:00Z").toEpochMilli() },
         zone = java.time.ZoneId.of("UTC"),
