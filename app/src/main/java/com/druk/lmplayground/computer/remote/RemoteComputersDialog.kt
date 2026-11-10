@@ -19,6 +19,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -36,6 +37,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
@@ -47,6 +49,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.druk.lmplayground.R
+import com.druk.lmplayground.computer.desktop.DesktopBridges
+import com.druk.lmplayground.computer.desktop.LocalDesktopBridge
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -90,8 +94,38 @@ fun RemoteComputersDialog(onDismiss: () -> Unit) {
     var user by remember { mutableStateOf("") }
     var formError by remember { mutableStateOf<String?>(null) }
 
+    var agentId by remember { mutableStateOf((DesktopBridges.bridge as? RemoteDesktopBridge)?.computer?.id) }
+
     fun refresh() {
         computers = store.list()
+    }
+
+    fun usePhone() {
+        val remote = DesktopBridges.bridge as? RemoteDesktopBridge
+        DesktopBridges.bridge = LocalDesktopBridge.get(context)
+        agentId = null
+        remote?.let { scope.launch { it.stop() } }
+    }
+
+    fun useForAgent(c: RemoteComputer) {
+        messages[c.id] = context.getString(R.string.remote_agent_starting)
+        scope.launch {
+            val bridge = RemoteDesktopBridge(c, identity = { vault.loadOrCreate(c.id) })
+            bridge.start()
+                .onSuccess { running ->
+                    val previous = DesktopBridges.bridge as? RemoteDesktopBridge
+                    DesktopBridges.bridge = bridge
+                    agentId = c.id
+                    previous?.takeIf { it.computer.id != c.id }?.stop()
+                    messages[c.id] = context.getString(
+                        R.string.remote_agent_on,
+                        running.display,
+                        running.width,
+                        running.height,
+                    )
+                }
+                .onFailure { messages[c.id] = context.getString(R.string.remote_failed, it.message.orEmpty()) }
+        }
     }
 
     fun test(c: RemoteComputer) {
@@ -142,6 +176,27 @@ fun RemoteComputersDialog(onDismiss: () -> Unit) {
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                Surface(
+                    shape = RoundedCornerShape(16.dp),
+                    color = MaterialTheme.colorScheme.secondaryContainer,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Row(
+                        Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            computers.firstOrNull { it.id == agentId }
+                                ?.let { stringResource(R.string.remote_agent_uses, it.name) }
+                                ?: stringResource(R.string.remote_agent_uses_phone),
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.weight(1f),
+                        )
+                        if (agentId != null) {
+                            TextButton(onClick = { usePhone() }) { Text(stringResource(R.string.remote_use_phone)) }
+                        }
+                    }
+                }
                 if (computers.isEmpty()) {
                     Text(stringResource(R.string.remote_empty), style = MaterialTheme.typography.bodyMedium)
                 }
@@ -183,6 +238,11 @@ fun RemoteComputersDialog(onDismiss: () -> Unit) {
                                     }
                                 }) { Text(stringResource(R.string.remote_copy_key)) }
                                 Button(onClick = { test(c) }) { Text(stringResource(R.string.remote_test)) }
+                                if (c.hostKeyFingerprint != null && agentId != c.id) {
+                                    FilledTonalButton(onClick = { useForAgent(c) }) {
+                                        Text(stringResource(R.string.remote_use_for_agent))
+                                    }
+                                }
                                 TextButton(onClick = {
                                     scope.launch {
                                         withContext(Dispatchers.IO) { vault.rotate(c.id) }
@@ -196,6 +256,7 @@ fun RemoteComputersDialog(onDismiss: () -> Unit) {
                                     }) { Text(stringResource(R.string.remote_forget_host_key)) }
                                 }
                                 TextButton(onClick = {
+                                    if (agentId == c.id) usePhone()
                                     vault.delete(c.id)
                                     store.remove(c.id)
                                     messages.remove(c.id)

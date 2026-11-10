@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+# CINDI remote desktop helper (P4). Installed on the user's own VM; runs as the
+# unprivileged login user. Xvfb uses a unix socket only (-nolisten tcp), so the
+# desktop is never reachable from the network; CINDI reaches it over SSH.
+#   cindi-desktop start | stop | status | exec <cmd> | shot
+set -euo pipefail
+
+DISPLAY_NUM="${CINDI_DISPLAY:-:9}"
+GEOMETRY="${CINDI_GEOMETRY:-1280x720x24}"
+STATE_DIR="${XDG_RUNTIME_DIR:-$HOME/.cache}/cindi-desktop"
+EXEC_TIMEOUT="${CINDI_EXEC_TIMEOUT:-60}"
+mkdir -p "$STATE_DIR"
+
+alive() { [ -f "$STATE_DIR/$1.pid" ] && kill -0 "$(cat "$STATE_DIR/$1.pid")" 2>/dev/null; }
+
+start() {
+  if ! alive xvfb; then
+    nohup Xvfb "$DISPLAY_NUM" -screen 0 "$GEOMETRY" -nolisten tcp >"$STATE_DIR/xvfb.log" 2>&1 &
+    echo $! >"$STATE_DIR/xvfb.pid"
+    for _ in $(seq 1 50); do xdpyinfo -display "$DISPLAY_NUM" >/dev/null 2>&1 && break; sleep 0.1; done
+  fi
+  if ! alive wm; then
+    DISPLAY="$DISPLAY_NUM" nohup openbox >"$STATE_DIR/wm.log" 2>&1 &
+    echo $! >"$STATE_DIR/wm.pid"
+  fi
+  xdpyinfo -display "$DISPLAY_NUM" >/dev/null 2>&1 || { echo "ERR Xvfb did not start"; exit 1; }
+  echo "OK $DISPLAY_NUM $GEOMETRY"
+}
+
+stop() {
+  for p in wm xvfb; do
+    if alive "$p"; then kill "$(cat "$STATE_DIR/$p.pid")" 2>/dev/null || true; fi
+    rm -f "$STATE_DIR/$p.pid"
+  done
+  echo "OK stopped"
+}
+
+case "${1:-status}" in
+  start) start ;;
+  stop) stop ;;
+  status) if alive xvfb; then echo "OK $DISPLAY_NUM $GEOMETRY"; else echo "STOPPED"; fi ;;
+  exec)
+    shift
+    alive xvfb || { echo "desktop not running" >&2; exit 2; }
+    DISPLAY="$DISPLAY_NUM" exec timeout "$EXEC_TIMEOUT" bash -c "$*"
+    ;;
+  shot)
+    alive xvfb || { echo "desktop not running" >&2; exit 2; }
+    import -display "$DISPLAY_NUM" -window root png:- | base64 -w0
+    ;;
+  *) echo "usage: cindi-desktop start|stop|status|exec <cmd>|shot" >&2; exit 64 ;;
+esac

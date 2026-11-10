@@ -281,6 +281,12 @@
     <string name="remote_forget_host_key">Forget host key</string>
     <string name="remote_ok">Connected (exit %1$d): %2$s</string>
     <string name="remote_failed">Failed: %1$s</string>
+    <string name="remote_use_for_agent">Use for agent</string>
+    <string name="remote_use_phone">Use this phone</string>
+    <string name="remote_agent_uses">Agent desktop: %1$s (leaves this phone)</string>
+    <string name="remote_agent_uses_phone">Agent desktop: this phone</string>
+    <string name="remote_agent_starting">Starting desktop on the VM…</string>
+    <string name="remote_agent_on">Agent now uses this VM (%1$s, %2$d×%3$d)</string>
     <string name="cos_status_running">Running</string>
     <string name="cos_status_error">Error</string>
     <string name="cos_header_subtitle">COS · Alpine Linux · Private to this phone</string>
