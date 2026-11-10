@@ -68,30 +68,22 @@
     <string name="models_subtitle">Mag-download at pamahalaan ang mga modelo</string>
     <string name="privacy_policy">Patakaran sa Privacy</string>
     <string name="privacy_policy_effective_date">Petsa ng Pagkabisa: Hunyo 2, 2026</string>
-    <string name="privacy_policy_intro">Maligayang pagdating sa LM Playground! Nakatuon ako sa pagpapanatili ng tiwala at kumpiyansa ng lahat ng gumagamit ng aking app. Ipinapaliwanag ng Patakaran sa Privacy na ito kung ano ang kinokolekta at hindi kinokolekta ng app, kung paano nananatili sa iyong device ang iyong mga usapan, at ang ilang kaso — tulad ng mga opsyonal na web tool — kung saan umaalis ang impormasyon mula sa iyong device, upang lagi mong alam kung ano ang aasahan.</string>
-    <string name="privacy_policy_s1_title">1. Walang Pagkolekta ng Personal na Impormasyon</string>
-    <string name="privacy_policy_s1_body">Ako, si Andriy Druk, ang developer ng LM Playground, ay hindi nangongolekta, nag-iimbak, gumagamit, o nagbabahagi ng anumang personal na impormasyon mula sa mga gumagamit ng aking app. Walang mga account, walang advertising, at walang usage analytics o pagsubaybay. Ang app ay dinisenyo na may privacy mo bilang priyoridad, kaya magagamit mo ito nang hindi nakokompromiso ang iyong personal na data.</string>
-    <string name="privacy_policy_s2_title">2. Pagpoproseso sa Device</string>
+        <string name="privacy_policy_s1_title">1. Walang Pagkolekta ng Personal na Impormasyon</string>
+        <string name="privacy_policy_s2_title">2. Pagpoproseso sa Device</string>
     <string name="privacy_policy_s2_body">Ang iyong mga usapan, system prompt, at mga tugon ng model ay pinoproseso nang lokal sa iyong device ng on-device na model. Ang nilalamang ito ay hindi kailanman ipinapadala sa akin o sa anumang server para sa inference. Nananatili ito sa iyong device maliban kung pipiliin mong gumamit ng feature na umaabot sa internet, gaya ng inilalarawan sa ibaba.</string>
     <string name="privacy_policy_s3_title">3. Pag-access sa Internet</string>
-    <string name="privacy_policy_s3_body">Humihingi ang LM Playground ng pahintulot sa Internet para sa dalawang layunin: upang i-download ang mga file ng model na pinili mo, at — kung io-on mo lamang ang mga ito — upang paganahin ang mga opsyonal na web tool. Walang advertising, telemetry, o usage analytics ang app, at hindi nito iniuulat sa akin ang iyong aktibidad.</string>
-    <string name="privacy_policy_s4_title">4. Mga Tool at Pag-access sa Web</string>
+        <string name="privacy_policy_s4_title">4. Mga Tool at Pag-access sa Web</string>
     <string name="privacy_policy_s4_body">Ang mga magagaling na model ay maaaring gumamit ng mga opsyonal na tool, na naka-off bilang default. Kapag in-enable mo ang mga web tool, may ilang impormasyong umaalis sa iyong device: ang Web search tool ay nagpapadala ng search query ng model sa DuckDuckGo, at ang Kunin ang web page tool ay nagda-download ng mga page na napagpasyahan ng model na buksan mula sa mga website na iyon. Ang mga kahilingang iyon ay hinahawakan ng mga third-party na site sa ilalim ng kanilang sariling patakaran sa privacy — hindi ko ito natatanggap o iniimbak. Ang Patakbuhin ang JavaScript tool ay tumatakbo nang buo sa iyong device sa isang sandbox na walang access sa internet. Upang panatilihing offline ang lahat, hayaan na lang na naka-off ang mga tool.</string>
     <string name="privacy_policy_s5_title">5. Mga Update sa Patakaran sa Privacy</string>
-    <string name="privacy_policy_s5_body">Bilang developer ng LM Playground, nagkakaroon ako ng karapatang i-update ang Patakaran sa Privacy na ito anumang oras. Ang anumang pagbabago ay magkakabisa kaagad pagkatapos mai-post ang na-update na patakaran. Hinihikayat ang mga user na suriin ang pahinang ito paminsan-minsan at manatiling may kaalaman kung paano protektado ang kanilang privacy.</string>
-    <string name="privacy_policy_s6_title">6. Pagtanggap sa Patakarang Ito</string>
-    <string name="privacy_policy_s6_body">Sa paggamit ng LM Playground, kinikilala mo at sumasang-ayon sa Patakaran sa Privacy na ito. Kung hindi ka sumasang-ayon sa patakaran, mangyaring huwag gamitin ang app. Ang iyong patuloy na paggamit ng app kasunod ng pag-post ng anumang mga update o pagbabago sa patakarang ito ay ituturing na pagtanggap mo sa mga pagbabagong iyon.</string>
-    <string name="privacy_policy_s7_title">7. Makipag-ugnayan sa Akin</string>
+        <string name="privacy_policy_s6_title">6. Pagtanggap sa Patakarang Ito</string>
+        <string name="privacy_policy_s7_title">7. Makipag-ugnayan sa Akin</string>
     <string name="privacy_policy_s7_body">Kung mayroon kang anumang mga tanong o mungkahi tungkol sa aking Patakaran sa Privacy, huwag mag-atubiling makipag-ugnayan sa akin.</string>
-    <string name="privacy_policy_contact_email" translatable="false">andriydruk@gmail.com</string>
-    <string name="send_feedback">Magpadala ng Feedback</string>
+        <string name="send_feedback">Magpadala ng Feedback</string>
     <string name="faq">FAQ</string>
     <string name="faq_subtitle">Mga madalas itanong</string>
 
     <!-- FAQ -->
-    <string name="faq_q1">Ano ang LM Playground?</string>
-    <string name="faq_a1">Ang LM Playground ay nagpapahintulot sa iyo na magpatakbo ng malalaking modelo ng wika nang direkta sa iyong Android device. Lahat ng pagpoproseso ay lokal na nangyayari \u2013 walang kailangan na cloud server.</string>
-    <string name="faq_q2">Anong mga modelo ang suportado?</string>
+            <string name="faq_q2">Anong mga modelo ang suportado?</string>
     <string name="faq_a2">Sinusuportahan ng app ang mga modelo sa format na GGUF na may Q4_K_M quantization, kabilang ang Qwen 3, Gemma 3, Llama 3.2, Phi\u20114 mini, at DeepSeek R1 Distill sa iba\'t ibang laki.</string>
     <string name="faq_q3">Gaano karaming storage space ang kailangan ko?</string>
     <string name="faq_a3">Ang mga laki ng modelo ay nag-iiba mula sa halos 500 MB (maliliit na modelo tulad ng Qwen 3 0.6B) hanggang ilang GB (mas malalaking modelo tulad ng DeepSeek R1 7B). Tiyaking may sapat kang libreng espasyo bago mag-download.</string>

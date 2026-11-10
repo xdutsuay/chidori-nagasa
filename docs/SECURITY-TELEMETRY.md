@@ -37,7 +37,7 @@ Residual risk: packages installed **inside** Alpine (`apk add …`) can themselv
 
 | Component | Role | Telemetry notes |
 |-----------|------|-----------------|
-| LM Playground fork | UI / chat / tools shell | Upstream privacy: no analytics; we kept that stance |
+| chidori-nagasa | UI / chat / tools shell | No analytics or tracking |
 | llama.cpp (submodule / NDK) | Inference | Core lib has no product analytics; **do not** enable optional server/UI demos that pull npm OpenTelemetry (those live under `llama.cpp/tools/ui` and are **not** shipped in the Android APK) |
 | Termux proot / talloc / shmem | COS | GPL/LGPL/BSD natives; no analytics SDKs; see `assets/licenses/` |
 | OkHttp | HTTP | No telemetry; avoid `HttpLoggingInterceptor` BODY in release |

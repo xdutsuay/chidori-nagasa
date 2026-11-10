@@ -1,4 +1,4 @@
-LM Playground, büyük dil modellerini doğrudan Android cihazınızda çalıştırmanıza olanak tanır. Modelleri indirin, tek dokunuşla yükleyin ve sohbet edin — tamamen çevrimdışı, tamamen gizli. Bulut sunucusu yok, API anahtarı yok, cihazınızdan veri çıkışı yok.
+chidori-nagasa, büyük dil modellerini doğrudan Android cihazınızda çalıştırmanıza olanak tanır. Modelleri indirin, tek dokunuşla yükleyin ve sohbet edin — tamamen çevrimdışı, tamamen gizli. Bulut sunucusu yok, API anahtarı yok, cihazınızdan veri çıkışı yok.
 
 TEMEL ÖZELLİKLER
 
@@ -47,4 +47,4 @@ En küçük model sadece 267 MB'dan başlar. Daha büyük modeller (4B–8B) 8+ 
 
 AÇIK KAYNAK
 
-LM Playground, MIT Lisansı altında açık kaynaktır. Hugging Face'ten modellerle llama.cpp tarafından desteklenmektedir.
+chidori-nagasa, MIT Lisansı altında açık kaynaktır. Hugging Face'ten modellerle llama.cpp tarafından desteklenmektedir.

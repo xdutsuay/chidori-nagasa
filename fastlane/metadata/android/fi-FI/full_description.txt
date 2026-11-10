@@ -1,4 +1,4 @@
-LM Playgroundin avulla voit ajaa suuria kielimalleja suoraan Android-laitteellasi. Lataa malleja, avaa ne yhdellä napautuksella ja keskustele — kaikki offline-tilassa ja yksityisesti. Ei pilvipalvelimia, ei API-avaimia, mikään data ei poistu laitteeltasi.
+chidori-nagasain avulla voit ajaa suuria kielimalleja suoraan Android-laitteellasi. Lataa malleja, avaa ne yhdellä napautuksella ja keskustele — kaikki offline-tilassa ja yksityisesti. Ei pilvipalvelimia, ei API-avaimia, mikään data ei poistu laitteeltasi.
 
 TÄRKEIMMÄT OMINAISUUDET
 
@@ -47,4 +47,4 @@ Alkaen vain 267 MB pienimmälle mallille. Suuremmat mallit (4B–8B) hyötyvät 
 
 AVOIN LÄHDEKOODI
 
-LM Playground on avointa lähdekoodia MIT-lisenssillä. Moottorina llama.cpp ja mallit Hugging Facesta.
+chidori-nagasa on avointa lähdekoodia MIT-lisenssillä. Moottorina llama.cpp ja mallit Hugging Facesta.

@@ -1,4 +1,4 @@
-LM Playground 让您直接在 Android 设备上运行大型语言模型。下载模型，一键加载，即可对话——完全离线，完全私密。无需云服务器，无需 API 密钥，数据不会离开您的设备。
+chidori-nagasa 让您直接在 Android 设备上运行大型语言模型。下载模型，一键加载，即可对话——完全离线，完全私密。无需云服务器，无需 API 密钥，数据不会离开您的设备。
 
 主要功能
 
@@ -47,4 +47,4 @@ LM Playground 让您直接在 Android 设备上运行大型语言模型。下载
 
 开源
 
-LM Playground 基于 MIT 许可证开源。由 llama.cpp 驱动，模型来自 Hugging Face。
+chidori-nagasa 基于 MIT 许可证开源。由 llama.cpp 驱动，模型来自 Hugging Face。

@@ -69,30 +69,22 @@
     <string name="models_subtitle">Lataa ja hallitse malleja</string>
     <string name="privacy_policy">Tietosuojakäytäntö</string>
     <string name="privacy_policy_effective_date">Voimaantulopäivä: 2. kesäkuuta 2026</string>
-    <string name="privacy_policy_intro">Tervetuloa LM Playgroundiin! Olen sitoutunut ylläpitämään sovellukseni kaikkien käyttäjien luottamusta. Tässä tietosuojakäytännössä selitetään, mitä sovellus kerää ja mitä se ei kerää, miten keskustelusi pysyvät laitteellasi, sekä ne harvat tapaukset — kuten valinnaiset verkkotyökalut — joissa tietoja lähtee laitteeltasi, jotta tiedät aina, mitä odottaa.</string>
-    <string name="privacy_policy_s1_title">1. Ei henkilötietojen keräämistä</string>
-    <string name="privacy_policy_s1_body">Minä, Andriy Druk, LM Playgroundin kehittäjä, en kerää, tallenna, käytä tai jaa sovellukseni käyttäjien henkilötietoja. Sovelluksessa ei ole tilejä, mainoksia eikä käytön analytiikkaa tai seurantaa. Sovellus on suunniteltu yksityisyytesi etusijalla, joten voit käyttää sitä vaarantamatta henkilötietojasi.</string>
-    <string name="privacy_policy_s2_title">2. Käsittely laitteella</string>
+        <string name="privacy_policy_s1_title">1. Ei henkilötietojen keräämistä</string>
+        <string name="privacy_policy_s2_title">2. Käsittely laitteella</string>
     <string name="privacy_policy_s2_body">Keskustelusi, järjestelmäkehotteesi ja mallin vastaukset käsitellään paikallisesti laitteellasi laitteella toimivan mallin avulla. Tätä sisältöä ei koskaan lähetetä minulle eikä millekään palvelimelle päättelyä varten. Se pysyy laitteellasi, ellet päätä käyttää internetiin yhteyttä ottavaa ominaisuutta, kuten alla kuvataan.</string>
     <string name="privacy_policy_s3_title">3. Internetyhteys</string>
-    <string name="privacy_policy_s3_body">LM Playground pyytää internetlupaa kahteen tarkoitukseen: valitsemiesi mallitiedostojen lataamiseen ja — vain jos otat ne käyttöön — valinnaisten verkkotyökalujen toimintaan. Sovellus ei sisällä mainoksia, telemetriaa tai käytön analytiikkaa, eikä se raportoi toimintaasi minulle.</string>
-    <string name="privacy_policy_s4_title">4. Työkalut ja verkkoyhteys</string>
+        <string name="privacy_policy_s4_title">4. Työkalut ja verkkoyhteys</string>
     <string name="privacy_policy_s4_body">Kyvykkäät mallit voivat käyttää valinnaisia työkaluja, jotka ovat oletuksena pois päältä. Kun otat verkkotyökalut käyttöön, osa tiedoista lähtee laitteeltasi: Verkkohaku-työkalu lähettää mallin hakukyselyn DuckDuckGoon, ja Nouda verkkosivu -työkalu lataa sivut, jotka malli päättää avata näiltä verkkosivustoilta. Nämä pyynnöt käsittelevät kolmannen osapuolen sivustot omien tietosuojakäytäntöjensä mukaisesti — en vastaanota enkä tallenna niitä. Suorita JavaScript -työkalu toimii kokonaan laitteellasi hiekkalaatikossa ilman internetyhteyttä. Pidä kaikki offline-tilassa jättämällä työkalut yksinkertaisesti pois päältä.</string>
     <string name="privacy_policy_s5_title">5. Tietosuojakäytännön päivitykset</string>
-    <string name="privacy_policy_s5_body">LM Playgroundin kehittäjänä pidätän oikeuden päivittää tätä tietosuojakäytäntöä milloin tahansa. Muutokset tulevat voimaan välittömästi, kun päivitetty käytäntö julkaistaan. Käyttäjiä kannustetaan tarkistamaan tämä sivu säännöllisesti ja pysymään ajan tasalla siitä, miten yksityisyyttäsi suojataan.</string>
-    <string name="privacy_policy_s6_title">6. Tämän käytännön hyväksyminen</string>
-    <string name="privacy_policy_s6_body">Käyttämällä LM Playgroundia hyväksyt tämän tietosuojakäytännön. Jos et hyväksy käytäntöä, pidättäydy sovelluksen käytöstä. Sovelluksen jatkuvaa käyttöä tämän käytännön päivitysten tai muutosten julkaisemisen jälkeen pidetään hyväksymisenä näille muutoksille.</string>
-    <string name="privacy_policy_s7_title">7. Ota yhteyttä</string>
+        <string name="privacy_policy_s6_title">6. Tämän käytännön hyväksyminen</string>
+        <string name="privacy_policy_s7_title">7. Ota yhteyttä</string>
     <string name="privacy_policy_s7_body">Jos sinulla on kysymyksiä tai ehdotuksia tietosuojakäytännöstäni, älä epäröi ottaa yhteyttä.</string>
-    <string name="privacy_policy_contact_email" translatable="false">andriydruk@gmail.com</string>
-    <string name="send_feedback">Lähetä palaute</string>
+        <string name="send_feedback">Lähetä palaute</string>
     <string name="faq">UKK</string>
     <string name="faq_subtitle">Usein kysytyt kysymykset</string>
 
     <!-- FAQ -->
-    <string name="faq_q1">Mikä on LM Playground?</string>
-    <string name="faq_a1">LM Playgroundin avulla voit ajaa suuria kielimalleja suoraan Android-laitteellasi. Kaikki käsittely tapahtuu paikallisesti \u2013 pilvipalvelimia ei tarvita.</string>
-    <string name="faq_q2">Mitä malleja tuetaan?</string>
+            <string name="faq_q2">Mitä malleja tuetaan?</string>
     <string name="faq_a2">Sovellus tukee GGUF-muotoisia malleja Q4_K_M-kvantisoinnilla, mukaan lukien Qwen 3, Gemma 3, Llama 3.2, Phi\u20114 mini ja DeepSeek R1 Distill eri kokoisina.</string>
     <string name="faq_q3">Kuinka paljon tallennustilaa tarvitsen?</string>
     <string name="faq_a3">Mallien koot vaihtelevat noin 500 MB:stä (pienet mallit kuten Qwen 3 0.6B) useisiin gigatavuihin (suuremmat mallit kuten DeepSeek R1 7B). Varmista, että sinulla on tarpeeksi vapaata tilaa ennen lataamista.</string>

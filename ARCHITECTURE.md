@@ -1,7 +1,7 @@
 # Architecture
 
-LM Playground runs GGUF models on-device through [llama.cpp](https://github.com/andriydruk/llama.cpp-android)
-(a fork carrying one patch — see [fd:N paths](#fdn-file-descriptor-paths)).
+On-device inference runs through the native [llama.cpp](https://github.com/andriydruk/llama.cpp-android)
+layer, which carries one local patch — see [fd:N paths](#fdn-file-descriptor-paths).
 This document maps the moving parts and the contracts between them.
 
 ## Process model

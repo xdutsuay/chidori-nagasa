@@ -17,11 +17,11 @@ binding rules for v1.
 
 ## 2. Unit and instrumentation coverage (by module)
 
-### 2.1 `inference/` (on-device, LMPlayground-derived)
+### 2.1 `inference/` (on-device native engine)
 
 - Model catalog listing and metadata parsing.
 - Download manager: start/pause/resume/cancel, resume-after-interruption
-  (this is a named feature of upstream LMPlayground — must not regress).
+  (resume-after-interruption is a named feature — must not regress).
 - Chat session CRUD: create, rename, pin, delete, resume.
 - Markdown rendering of chat responses (headers, code blocks, lists).
 - Reasoning-model thinking-step parsing/display for at least one model in

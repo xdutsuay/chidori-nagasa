@@ -2,8 +2,8 @@
 // Created by Andrew Druk on 22.01.2024.
 //
 
-#ifndef LMPLAYGROUND_LLAMACPP_H
-#define LMPLAYGROUND_LLAMACPP_H
+#ifndef CHIDORI_LLAMACPP_H
+#define CHIDORI_LLAMACPP_H
 
 #include "common.h"
 #include "chat.h"
@@ -248,4 +248,4 @@ private:
     mtmd_context *mtmd_ctx = nullptr;
 };
 
-#endif //LMPLAYGROUND_LLAMACPP_H
+#endif //CHIDORI_LLAMACPP_H

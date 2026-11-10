@@ -1,4 +1,4 @@
-LM Playground vám umožňuje spouštět velké jazykové modely přímo na vašem zařízení Android. Stahujte modely, načítejte je jedním klepnutím a chatujte — vše offline, vše soukromě. Žádné cloudové servery, žádné API klíče, žádná data neopouštějí vaše zařízení.
+chidori-nagasa vám umožňuje spouštět velké jazykové modely přímo na vašem zařízení Android. Stahujte modely, načítejte je jedním klepnutím a chatujte — vše offline, vše soukromě. Žádné cloudové servery, žádné API klíče, žádná data neopouštějí vaše zařízení.
 
 KLÍČOVÉ FUNKCE
 
@@ -47,4 +47,4 @@ Začíná již na 267 MB pro nejmenší model. Větší modely (4B–8B) těží
 
 OPEN SOURCE
 
-LM Playground je open source pod licencí MIT. Poháněno llama.cpp s modely z Hugging Face.
+chidori-nagasa je open source pod licencí MIT. Poháněno llama.cpp s modely z Hugging Face.

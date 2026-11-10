@@ -51,7 +51,7 @@ import androidx.compose.ui.unit.dp
 import com.druk.lmplayground.R
 import com.druk.lmplayground.theme.PlaygroundTheme
 
-private const val GITHUB_URL = "https://github.com/andriydruk/LMPlayground"
+private const val GITHUB_URL = "https://github.com/xdutsuay/chidori-nagasa"
 
 private data class FaqItem(
     @StringRes val questionRes: Int,

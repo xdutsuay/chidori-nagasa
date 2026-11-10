@@ -1,4 +1,4 @@
-LM Playground ti permette di eseguire modelli linguistici di grandi dimensioni direttamente sul tuo dispositivo Android. Scarica i modelli, caricali con un tocco e chatta — tutto offline, tutto privato. Nessun server cloud, nessuna chiave API, nessun dato esce dal tuo dispositivo.
+chidori-nagasa ti permette di eseguire modelli linguistici di grandi dimensioni direttamente sul tuo dispositivo Android. Scarica i modelli, caricali con un tocco e chatta — tutto offline, tutto privato. Nessun server cloud, nessuna chiave API, nessun dato esce dal tuo dispositivo.
 
 FUNZIONALITÀ PRINCIPALI
 
@@ -47,4 +47,4 @@ A partire da soli 267 MB per il modello più piccolo. I modelli più grandi (4B�
 
 OPEN SOURCE
 
-LM Playground è open source sotto licenza MIT. Basato su llama.cpp con modelli da Hugging Face.
+chidori-nagasa è open source sotto licenza MIT. Basato su llama.cpp con modelli da Hugging Face.

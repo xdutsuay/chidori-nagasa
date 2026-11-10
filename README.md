@@ -24,13 +24,14 @@
 
 **Short name: CINDI.** In discussions, tickets and handovers, chidori-nagasa is called **CINDI**. "Chidori" alone means the desktop IDE. The opt-in Linux desktop inside the app is the **CINDI desktop**.
 
-Built as a substantial fork of [LM Playground](https://github.com/andriydruk/LMPlayground) by Andriy Druk (MIT). Inference is powered by [llama.cpp](https://github.com/ggml-org/llama.cpp). See [`NOTICE.md`](NOTICE.md) and [`UPSTREAM_DIVERGENCE.md`](UPSTREAM_DIVERGENCE.md) for attribution and what changed.
+chidori-nagasa is developed as its own codebase; third-party attribution
+lives in [`NOTICE.md`](NOTICE.md). Inference is powered by [llama.cpp](https://github.com/ggml-org/llama.cpp).
 
 > **Desktop source** (`lclreason`) stays private. Public desktop binaries ship from [xdutsuay/chidori](https://github.com/xdutsuay/chidori/releases). This Android repo is the open companion client.
 
-## Why this fork exists
+## Why chidori-nagasa exists
 
-LM Playground already nails on-device chat. chidori-nagasa keeps that working and adds the pieces that make a phone useful next to a desktop AI IDE:
+chidori-nagasa keeps solid on-device chat working and adds the pieces that make a phone useful next to a desktop AI IDE:
 
 | Area | What we added |
 |------|----------------|
@@ -55,7 +56,7 @@ Sideload notes:
 
 ## Features
 
-### On-device (from LM Playground, kept working)
+### On-device
 
 - Offline inference — no cloud, no API keys for local chat
 - Vision / image input for capable models (Gemma, Qwen 3.5, Ministral, …)
@@ -291,7 +292,6 @@ Before merging changes that touch `net/coordinator`, `inference/`, or JNI: read 
 | [`docs/SECURITY-TELEMETRY.md`](docs/SECURITY-TELEMETRY.md) | Network egress, deps, telemetry audit |
 | [`docs/COS.md`](docs/COS.md) / [`COS_DESKTOP_*.md`](docs/COS_DESKTOP_TOOLS.md) | On-device computer + desktop tools/input |
 | [`TEST_PLAN.md`](TEST_PLAN.md) | Regression / release gates |
-| [`UPSTREAM_DIVERGENCE.md`](UPSTREAM_DIVERGENCE.md) | Diff vs LM Playground |
 | [`ARCHITECTURE.md`](ARCHITECTURE.md) | High-level layout |
 
 ## Contributing
@@ -300,11 +300,10 @@ This repo follows [`CHIDORI_PROTOCOL.md`](CHIDORI_PROTOCOL.md). Please open an i
 
 ## License
 
-[MIT](LICENSE) — derivative of LM Playground (MIT). See [`NOTICE.md`](NOTICE.md).
+[MIT](LICENSE). Third-party notices: [`NOTICE.md`](NOTICE.md).
 
 ## Acknowledgments
 
-- [LM Playground](https://github.com/andriydruk/LMPlayground) — Andriy Druk
 - [llama.cpp](https://github.com/ggml-org/llama.cpp) / [llama.cpp-android](https://github.com/andriydruk/llama.cpp-android)
 - Models: GGUF builds from [Hugging Face](https://huggingface.co/), each under their own licenses
 - Companion to [chidori](https://kaustubhtripathi.com/public/lab/lclreason/) (desktop binaries: [xdutsuay/chidori](https://github.com/xdutsuay/chidori))

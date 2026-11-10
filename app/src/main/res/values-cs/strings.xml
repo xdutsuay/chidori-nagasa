@@ -70,30 +70,22 @@
     <string name="models_subtitle">Stáhnout a spravovat modely</string>
     <string name="privacy_policy">Zásady ochrany osobních údajů</string>
     <string name="privacy_policy_effective_date">Datum účinnosti: 2. června 2026</string>
-    <string name="privacy_policy_intro">Vítejte v LM Playground! Záleží mi na zachování důvěry všech, kdo mou aplikaci používají. Tyto zásady ochrany osobních údajů vysvětlují, co aplikace shromažďuje a co ne, jak vaše konverzace zůstávají ve vašem zařízení a v jakých několika případech — například u volitelných webových nástrojů — informace vaše zařízení opouštějí, abyste vždy věděli, co očekávat.</string>
-    <string name="privacy_policy_s1_title">1. Žádný sběr osobních údajů</string>
-    <string name="privacy_policy_s1_body">Já, Andriy Druk, vývojář LM Playground, neshromažďuji, neukládám, nepoužívám ani nesdílím žádné osobní údaje uživatelů mé aplikace. Nejsou zde žádné účty, žádná reklama ani žádná analytika používání nebo sledování. Aplikace je navržena s prioritou vašeho soukromí, abyste ji mohli používat bez ohrožení svých osobních údajů.</string>
-    <string name="privacy_policy_s2_title">2. Zpracování v zařízení</string>
+        <string name="privacy_policy_s1_title">1. Žádný sběr osobních údajů</string>
+        <string name="privacy_policy_s2_title">2. Zpracování v zařízení</string>
     <string name="privacy_policy_s2_body">Vaše konverzace, systémové pokyny a odpovědi modelu jsou zpracovávány lokálně ve vašem zařízení modelem běžícím v zařízení. Tento obsah není nikdy odesílán mně ani na žádný server pro inferenci. Zůstává ve vašem zařízení, pokud se nerozhodnete použít funkci, která se připojuje k internetu, jak je popsáno níže.</string>
     <string name="privacy_policy_s3_title">3. Přístup k internetu</string>
-    <string name="privacy_policy_s3_body">LM Playground žádá o oprávnění k internetu ze dvou důvodů: ke stažení souborů modelů, které si vyberete, a — pouze pokud je zapnete — k provozu volitelných webových nástrojů. Aplikace neobsahuje žádnou reklamu, telemetrii ani analytiku používání a nehlásí mi vaši aktivitu.</string>
-    <string name="privacy_policy_s4_title">4. Nástroje a přístup k webu</string>
+        <string name="privacy_policy_s4_title">4. Nástroje a přístup k webu</string>
     <string name="privacy_policy_s4_body">Schopné modely mohou používat volitelné nástroje, které jsou ve výchozím nastavení vypnuté. Když zapnete webové nástroje, část informací opustí vaše zařízení: nástroj Vyhledávání na webu odešle vyhledávací dotaz modelu do DuckDuckGo a nástroj Načíst webovou stránku stáhne stránky, které se model rozhodne otevřít na těchto webech. Tyto požadavky zpracovávají weby třetích stran podle svých vlastních zásad ochrany osobních údajů — já je ani nepřijímám, ani neukládám. Nástroj Spustit JavaScript běží zcela ve vašem zařízení v sandboxu bez přístupu k internetu. Chcete-li, aby vše zůstalo offline, jednoduše nástroje nezapínejte.</string>
     <string name="privacy_policy_s5_title">5. Aktualizace zásad ochrany osobních údajů</string>
-    <string name="privacy_policy_s5_body">Jako vývojář LM Playground si vyhrazuji právo kdykoli tyto zásady ochrany osobních údajů aktualizovat. Jakékoli změny jsou účinné okamžitě po zveřejnění aktualizovaných zásad. Uživatelé jsou vybízeni, aby tuto stránku pravidelně kontrolovali a zůstali informováni o tom, jak je chráněno jejich soukromí.</string>
-    <string name="privacy_policy_s6_title">6. Přijetí těchto zásad</string>
-    <string name="privacy_policy_s6_body">Používáním LM Playground berete na vědomí a souhlasíte s těmito zásadami ochrany osobních údajů. Pokud s nimi nesouhlasíte, aplikaci prosím nepoužívejte. Pokračující používání aplikace po zveřejnění jakýchkoli aktualizací nebo změn těchto zásad bude považováno za vaše přijetí těchto změn.</string>
-    <string name="privacy_policy_s7_title">7. Kontakt</string>
+        <string name="privacy_policy_s6_title">6. Přijetí těchto zásad</string>
+        <string name="privacy_policy_s7_title">7. Kontakt</string>
     <string name="privacy_policy_s7_body">Pokud máte jakékoli dotazy nebo návrhy ohledně mých zásad ochrany osobních údajů, neváhejte mě kontaktovat.</string>
-    <string name="privacy_policy_contact_email" translatable="false">andriydruk@gmail.com</string>
-    <string name="send_feedback">Odeslat zpětnou vazbu</string>
+        <string name="send_feedback">Odeslat zpětnou vazbu</string>
     <string name="faq">FAQ</string>
     <string name="faq_subtitle">Často kladené otázky</string>
 
     <!-- FAQ -->
-    <string name="faq_q1">Co je LM Playground?</string>
-    <string name="faq_a1">LM Playground vám umožňuje spouštět velké jazykové modely přímo na vašem zařízení s Androidem. Veškeré zpracování probíhá lokálně \u2013 bez potřeby cloudových serverů.</string>
-    <string name="faq_q2">Jaké modely jsou podporovány?</string>
+            <string name="faq_q2">Jaké modely jsou podporovány?</string>
     <string name="faq_a2">Aplikace podporuje modely ve formátu GGUF s kvantizací Q4_K_M, včetně Qwen 3, Gemma 3, Llama 3.2, Phi\u20114 mini a DeepSeek R1 Distill v různých velikostech.</string>
     <string name="faq_q3">Kolik úložného prostoru potřebuji?</string>
     <string name="faq_a3">Velikosti modelů se pohybují od přibližně 500 MB (malé modely jako Qwen 3 0.6B) až po několik GB (větší modely jako DeepSeek R1 7B). Před stažením se ujistěte, že máte dostatek volného místa.</string>

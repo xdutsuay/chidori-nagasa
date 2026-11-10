@@ -3,7 +3,7 @@
 **Status:** **CP2 on `origin/main`** @ `27c7528`. **CP3 coding tip** `cp/kma-cp3-history-cos-hardening` @ `3e72177` (APK installed on Realme; E3-6 sha in `nagasa-evidence/cp3/`). Still **not merged to main** — awaiting E3-1…E3-5 device captures + OK. Branch map: `docs/BRANCH-SANITY.md`. Local `main` clean @ tip.  
 **Date:** 2026-11-05.  
 **Product name (use case):** **CINDI** — chidori-nagasa driving apps on the on-device Linux desktop (bot-driven COS). Incremental UX; tweak as use cases land.  
-**Sources:** `nagasa-handover/CURSOR-HANDOVER.txt`, `POST-CP2-PLAN.txt`, `docs/cp2-desktop-spike.md`, Gangadhar/LightYagami handovers, `NODE_MODE_SPIKE.md`, `ROADMAP.md`, `UPSTREAM_DIVERGENCE.md`.  
+**Sources:** `nagasa-handover/CURSOR-HANDOVER.txt`, `POST-CP2-PLAN.txt`, `docs/cp2-desktop-spike.md`, Gangadhar/LightYagami handovers, `NODE_MODE_SPIKE.md`, `ROADMAP.md`.  
 **Repo:** `C:\Users\kaust\AndroidStudioProjects\chidori-nagasa` · origin `xdutsuay/chidori-nagasa` · `origin/main` = `27c7528`.
 
 ### Decisions locked (2026-11-05)
@@ -333,7 +333,7 @@ E5-* · KMA-20 evidence comment · stop for Kaustubh.
 
 ## Later (out of scope; own handout each)
 
-KMA-27 mDNS OEM · KMA-279 default assistant · KMA-21 cloud relay · KMA-294 ideas · phone controls desktop runs · multi-desktop pairing · iOS · Kotlin package rename off `com.druk.lmplayground` (deferred per `UPSTREAM_DIVERGENCE.md`).
+KMA-27 mDNS OEM · KMA-279 default assistant · KMA-21 cloud relay · KMA-294 ideas · phone controls desktop runs · multi-desktop pairing · iOS · Kotlin package rename off `com.druk.lmplayground` (deferred; tracked as a separate package-identity task).
 
 ### CINDI backlog (God, 2026-11-05) — chat context from the live desktop
 

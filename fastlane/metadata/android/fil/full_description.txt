@@ -1,4 +1,4 @@
-Pinapayagan ka ng LM Playground na magpatakbo ng malalaking language model nang direkta sa iyong Android device. Mag-download ng mga modelo, i-load ang mga ito sa isang pag-tap, at mag-chat — lahat offline, lahat pribado. Walang cloud server, walang API key, walang data na umaalis sa iyong device.
+Pinapayagan ka ng chidori-nagasa na magpatakbo ng malalaking language model nang direkta sa iyong Android device. Mag-download ng mga modelo, i-load ang mga ito sa isang pag-tap, at mag-chat — lahat offline, lahat pribado. Walang cloud server, walang API key, walang data na umaalis sa iyong device.
 
 MGA PANGUNAHING TAMPOK
 
@@ -47,4 +47,4 @@ Simula sa 267 MB lamang para sa pinakamaliit na modelo. Ang mas malalaking model
 
 OPEN SOURCE
 
-Ang LM Playground ay open source sa ilalim ng MIT License. Pinapagana ng llama.cpp na may mga modelo mula sa Hugging Face.
+Ang chidori-nagasa ay open source sa ilalim ng MIT License. Pinapagana ng llama.cpp na may mga modelo mula sa Hugging Face.

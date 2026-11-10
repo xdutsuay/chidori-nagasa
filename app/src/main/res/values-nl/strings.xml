@@ -69,30 +69,22 @@
     <string name="models_subtitle">Modellen downloaden en beheren</string>
     <string name="privacy_policy">Privacybeleid</string>
     <string name="privacy_policy_effective_date">Ingangsdatum: 2 juni 2026</string>
-    <string name="privacy_policy_intro">Welkom bij LM Playground! Ik zet me in om het vertrouwen van alle gebruikers van mijn app te behouden. Dit privacybeleid legt uit wat de app wel en niet verzamelt, hoe je gesprekken op je apparaat blijven en in welke weinige gevallen — zoals bij de optionele webtools — informatie je apparaat verlaat, zodat je altijd weet wat je kunt verwachten.</string>
-    <string name="privacy_policy_s1_title">1. Geen verzameling van persoonlijke gegevens</string>
-    <string name="privacy_policy_s1_body">Ik, Andriy Druk, de ontwikkelaar van LM Playground, verzamel, bewaar, gebruik of deel geen persoonlijke gegevens van de gebruikers van mijn app. Er zijn geen accounts, geen advertenties en geen gebruiksanalyse of tracking. De app is ontworpen met jouw privacy als prioriteit, zodat je hem kunt gebruiken zonder je persoonlijke gegevens in gevaar te brengen.</string>
-    <string name="privacy_policy_s2_title">2. Verwerking op het apparaat</string>
+        <string name="privacy_policy_s1_title">1. Geen verzameling van persoonlijke gegevens</string>
+        <string name="privacy_policy_s2_title">2. Verwerking op het apparaat</string>
     <string name="privacy_policy_s2_body">Je gesprekken, systeemprompts en de antwoorden van het model worden lokaal op je apparaat verwerkt door het model op het apparaat. Deze inhoud wordt nooit voor inferentie naar mij of naar een server verstuurd. Het blijft op je apparaat, tenzij je ervoor kiest een functie te gebruiken die verbinding maakt met internet, zoals hieronder beschreven.</string>
     <string name="privacy_policy_s3_title">3. Internettoegang</string>
-    <string name="privacy_policy_s3_body">LM Playground vraagt om internettoestemming voor twee doeleinden: om de modelbestanden te downloaden die jij kiest, en — alleen als je ze inschakelt — om de optionele webtools te laten werken. De app bevat geen advertenties, telemetrie of gebruiksanalyse en rapporteert je activiteit niet terug aan mij.</string>
-    <string name="privacy_policy_s4_title">4. Tools en webtoegang</string>
+        <string name="privacy_policy_s4_title">4. Tools en webtoegang</string>
     <string name="privacy_policy_s4_body">Capabele modellen kunnen optionele tools gebruiken, die standaard uitstaan. Wanneer je de webtools inschakelt, verlaat bepaalde informatie je apparaat: de tool Zoeken op het web stuurt de zoekopdracht van het model naar DuckDuckGo, en de tool Webpagina ophalen downloadt de pagina\'s die het model besluit te openen van die websites. Die verzoeken worden afgehandeld door de externe sites onder hun eigen privacybeleid — ik ontvang of bewaar ze niet. De tool JavaScript uitvoeren draait volledig op je apparaat in een sandbox zonder internettoegang. Om alles offline te houden, laat je de tools gewoon uitstaan.</string>
     <string name="privacy_policy_s5_title">5. Updates van het privacybeleid</string>
-    <string name="privacy_policy_s5_body">Als ontwikkelaar van LM Playground behoud ik me het recht voor om dit privacybeleid op elk moment bij te werken. Wijzigingen worden onmiddellijk van kracht zodra het bijgewerkte beleid wordt geplaatst. Gebruikers worden aangemoedigd om deze pagina regelmatig te bekijken en op de hoogte te blijven van hoe hun privacy wordt beschermd.</string>
-    <string name="privacy_policy_s6_title">6. Aanvaarding van dit beleid</string>
-    <string name="privacy_policy_s6_body">Door LM Playground te gebruiken, erken je en ga je akkoord met dit privacybeleid. Als je het niet eens bent met het beleid, gebruik de app dan niet. Je voortgezette gebruik van de app na het plaatsen van updates of wijzigingen aan dit beleid wordt beschouwd als jouw aanvaarding van die wijzigingen.</string>
-    <string name="privacy_policy_s7_title">7. Contact</string>
+        <string name="privacy_policy_s6_title">6. Aanvaarding van dit beleid</string>
+        <string name="privacy_policy_s7_title">7. Contact</string>
     <string name="privacy_policy_s7_body">Als je vragen of suggesties hebt over mijn privacybeleid, aarzel dan niet om contact met me op te nemen.</string>
-    <string name="privacy_policy_contact_email" translatable="false">andriydruk@gmail.com</string>
-    <string name="send_feedback">Feedback sturen</string>
+        <string name="send_feedback">Feedback sturen</string>
     <string name="faq">FAQ</string>
     <string name="faq_subtitle">Veelgestelde vragen</string>
 
     <!-- FAQ -->
-    <string name="faq_q1">Wat is LM Playground?</string>
-    <string name="faq_a1">Met LM Playground kun je grote taalmodellen rechtstreeks op je Android-apparaat uitvoeren. Alle verwerking gebeurt lokaal \u2013 geen cloudservers nodig.</string>
-    <string name="faq_q2">Welke modellen worden ondersteund?</string>
+            <string name="faq_q2">Welke modellen worden ondersteund?</string>
     <string name="faq_a2">De app ondersteunt modellen in GGUF-formaat met Q4_K_M-kwantisatie, waaronder Qwen 3, Gemma 3, Llama 3.2, Phi\u20114 mini en DeepSeek R1 Distill in verschillende groottes.</string>
     <string name="faq_q3">Hoeveel opslagruimte heb ik nodig?</string>
     <string name="faq_a3">Modelgroottes variëren van ongeveer 500 MB (kleine modellen zoals Qwen 3 0.6B) tot meerdere GB (grotere modellen zoals DeepSeek R1 7B). Zorg dat je voldoende vrije ruimte hebt voor het downloaden.</string>

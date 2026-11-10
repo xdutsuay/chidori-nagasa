@@ -4,21 +4,19 @@ Governed by `CHIDORI_PROTOCOL.md`. Scope per phase must not silently expand
 past what that document currently authorizes for the wire contract (§2.4) —
 expanding scope requires a protocol amendment first, then a roadmap update.
 
-## Phase 0 — Fork and baseline (pre-v1)
+## Phase 0 — Identity and baseline (pre-v1)
 
-Goal: get LMPlayground running as chidori-nagasa with zero functional
+Goal: establish chidori-nagasa as its own codebase with zero functional
 regression, before adding anything new.
 
-- Fork LMPlayground; strip and re-brand (name, icon, package ID, store
-  listing assets, credits/acknowledgment screen).
-- Set up `vendor/lmplayground-sync` branch and `UPSTREAM_DIVERGENCE.md` per
-  protocol §3.5.
+- Establish the project identity: name, icon, package ID, store
+  listing assets, credits/acknowledgment screen.
 - Stand up CI: unit tests, instrumentation smoke tests, lint, per protocol
   §3.1 merge gates.
-- Baseline regression pass of on-device chat against upstream LMPlayground
+- Baseline regression pass of on-device chat
   on reference devices (protocol §3.2, test plan §3).
 - Exit criteria: rebranded app installs, downloads a model, chats offline,
-  with no behavior change from upstream LMPlayground.
+  with no functional regression.
 
 ## Phase 1 — Wire contract spec (joint with lclreason)
 

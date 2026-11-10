@@ -12,5 +12,5 @@ dependencyResolutionManagement {
         mavenCentral()
     }
 }
-rootProject.name = "LMPlayground"
+rootProject.name = "chidori-nagasa"
 include(":app")

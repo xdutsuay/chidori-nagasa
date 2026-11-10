@@ -1,4 +1,4 @@
-LM Playground te permite ejecutar modelos de lenguaje grandes directamente en tu dispositivo Android. Descarga modelos, cárgalos con un toque y chatea — todo sin conexión, todo privado. Sin servidores en la nube, sin claves API, sin datos que salgan de tu dispositivo.
+chidori-nagasa te permite ejecutar modelos de lenguaje grandes directamente en tu dispositivo Android. Descarga modelos, cárgalos con un toque y chatea — todo sin conexión, todo privado. Sin servidores en la nube, sin claves API, sin datos que salgan de tu dispositivo.
 
 CARACTERÍSTICAS PRINCIPALES
 
@@ -47,4 +47,4 @@ Desde solo 267 MB para el modelo más pequeño. Los modelos más grandes (4B–8
 
 CÓDIGO ABIERTO
 
-LM Playground es código abierto bajo la licencia MIT. Desarrollado con llama.cpp con modelos de Hugging Face.
+chidori-nagasa es código abierto bajo la licencia MIT. Desarrollado con llama.cpp con modelos de Hugging Face.

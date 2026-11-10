@@ -1,4 +1,4 @@
-LM Playground cho phép bạn chạy các mô hình ngôn ngữ lớn trực tiếp trên thiết bị Android. Tải mô hình, nạp chỉ bằng một chạm và trò chuyện — tất cả ngoại tuyến, tất cả riêng tư. Không cần máy chủ đám mây, không cần khóa API, không có dữ liệu rời khỏi thiết bị của bạn.
+chidori-nagasa cho phép bạn chạy các mô hình ngôn ngữ lớn trực tiếp trên thiết bị Android. Tải mô hình, nạp chỉ bằng một chạm và trò chuyện — tất cả ngoại tuyến, tất cả riêng tư. Không cần máy chủ đám mây, không cần khóa API, không có dữ liệu rời khỏi thiết bị của bạn.
 
 TÍNH NĂNG CHÍNH
 
@@ -47,4 +47,4 @@ Bắt đầu từ chỉ 267 MB cho mô hình nhỏ nhất. Mô hình lớn hơn 
 
 MÃ NGUỒN MỞ
 
-LM Playground là mã nguồn mở theo Giấy phép MIT. Được hỗ trợ bởi llama.cpp với các mô hình từ Hugging Face.
+chidori-nagasa là mã nguồn mở theo Giấy phép MIT. Được hỗ trợ bởi llama.cpp với các mô hình từ Hugging Face.

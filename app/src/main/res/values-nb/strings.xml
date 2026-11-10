@@ -68,30 +68,22 @@
     <string name="models_subtitle">Last ned og administrer modeller</string>
     <string name="privacy_policy">Personvernerklæring</string>
     <string name="privacy_policy_effective_date">Ikrafttredelsesdato: 2. juni 2026</string>
-    <string name="privacy_policy_intro">Velkommen til LM Playground! Jeg er forpliktet til å opprettholde tilliten og tryggheten til alle brukerne av appen min. Denne personvernerklæringen forklarer hva appen samler inn og ikke samler inn, hvordan samtalene dine blir værende på enheten din, og de få tilfellene — som de valgfrie nettverktøyene — der informasjon forlater enheten din, slik at du alltid vet hva du kan forvente.</string>
-    <string name="privacy_policy_s1_title">1. Ingen innsamling av personopplysninger</string>
-    <string name="privacy_policy_s1_body">Jeg, Andriy Druk, utvikleren av LM Playground, samler ikke inn, lagrer, bruker eller deler noen personopplysninger fra brukerne av appen min. Det finnes ingen kontoer, ingen annonsering og ingen bruksanalyse eller sporing. Appen er designet med personvernet ditt som prioritet, slik at du kan bruke den uten å kompromittere personopplysningene dine.</string>
-    <string name="privacy_policy_s2_title">2. Behandling på enheten</string>
+        <string name="privacy_policy_s1_title">1. Ingen innsamling av personopplysninger</string>
+        <string name="privacy_policy_s2_title">2. Behandling på enheten</string>
     <string name="privacy_policy_s2_body">Samtalene dine, systemledetekstene og modellens svar behandles lokalt på enheten din av modellen på enheten. Dette innholdet sendes aldri til meg eller til noen server for inferens. Det blir værende på enheten din med mindre du velger å bruke en funksjon som kobler til internett, slik det er beskrevet nedenfor.</string>
     <string name="privacy_policy_s3_title">3. Internett-tilgang</string>
-    <string name="privacy_policy_s3_body">LM Playground ber om Internett-tillatelse for to formål: for å laste ned modellfilene du velger, og — bare hvis du slår dem på — for å drive de valgfrie nettverktøyene. Appen inneholder ingen annonsering, telemetri eller bruksanalyse, og den rapporterer ikke aktiviteten din tilbake til meg.</string>
-    <string name="privacy_policy_s4_title">4. Verktøy og nettilgang</string>
+        <string name="privacy_policy_s4_title">4. Verktøy og nettilgang</string>
     <string name="privacy_policy_s4_body">Dyktige modeller kan bruke valgfrie verktøy, som er av som standard. Når du aktiverer nettverktøyene, forlater noe informasjon enheten din: verktøyet Nettsøk sender modellens søk til DuckDuckGo, og verktøyet Hent nettside laster ned sidene modellen bestemmer seg for å åpne fra disse nettstedene. Disse forespørslene håndteres av tredjepartsnettstedene under deres egne personvernerklæringer — jeg verken mottar eller lagrer dem. Verktøyet Kjør JavaScript kjører utelukkende på enheten din i en sandkasse uten internett-tilgang. For å holde alt offline lar du bare verktøyene være av.</string>
     <string name="privacy_policy_s5_title">5. Oppdateringer av personvernerklæringen</string>
-    <string name="privacy_policy_s5_body">Som utvikler av LM Playground forbeholder jeg meg retten til å oppdatere denne personvernerklæringen når som helst. Eventuelle endringer vil tre i kraft umiddelbart etter at den oppdaterte erklæringen er publisert. Brukere oppfordres til å gjennomgå denne siden jevnlig og holde seg informert om hvordan personvernet deres beskyttes.</string>
-    <string name="privacy_policy_s6_title">6. Aksept av denne erklæringen</string>
-    <string name="privacy_policy_s6_body">Ved å bruke LM Playground bekrefter du og godtar denne personvernerklæringen. Hvis du ikke er enig i erklæringen, vennligst avstå fra å bruke appen. Din fortsatte bruk av appen etter publisering av eventuelle oppdateringer eller endringer i denne erklæringen vil anses som din aksept av disse endringene.</string>
-    <string name="privacy_policy_s7_title">7. Kontakt meg</string>
+        <string name="privacy_policy_s6_title">6. Aksept av denne erklæringen</string>
+        <string name="privacy_policy_s7_title">7. Kontakt meg</string>
     <string name="privacy_policy_s7_body">Hvis du har spørsmål eller forslag til personvernerklæringen min, ikke nøl med å kontakte meg.</string>
-    <string name="privacy_policy_contact_email" translatable="false">andriydruk@gmail.com</string>
-    <string name="send_feedback">Send tilbakemelding</string>
+        <string name="send_feedback">Send tilbakemelding</string>
     <string name="faq">FAQ</string>
     <string name="faq_subtitle">Ofte stilte spørsmål</string>
 
     <!-- FAQ -->
-    <string name="faq_q1">Hva er LM Playground?</string>
-    <string name="faq_a1">LM Playground lar deg kjøre store språkmodeller direkte på Android-enheten din. All behandling skjer lokalt \u2013 ingen skytjenere nødvendig.</string>
-    <string name="faq_q2">Hvilke modeller støttes?</string>
+            <string name="faq_q2">Hvilke modeller støttes?</string>
     <string name="faq_a2">Appen støtter modeller i GGUF-format med Q4_K_M-kvantisering, inkludert Qwen 3, Gemma 3, Llama 3.2, Phi\u20114 mini og DeepSeek R1 Distill i ulike størrelser.</string>
     <string name="faq_q3">Hvor mye lagringsplass trenger jeg?</string>
     <string name="faq_a3">Modellstørrelsene varierer fra omtrent 500 MB (små modeller som Qwen 3 0.6B) til flere GB (større modeller som DeepSeek R1 7B). Sørg for at du har nok ledig plass før du laster ned.</string>

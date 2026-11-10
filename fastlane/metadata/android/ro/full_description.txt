@@ -1,4 +1,4 @@
-LM Playground îți permite să rulezi modele lingvistice mari direct pe dispozitivul tău Android. Descarcă modele, încarcă-le dintr-o singură atingere și conversează — totul offline, totul privat. Fără servere cloud, fără chei API, fără date care părăsesc dispozitivul tău.
+chidori-nagasa îți permite să rulezi modele lingvistice mari direct pe dispozitivul tău Android. Descarcă modele, încarcă-le dintr-o singură atingere și conversează — totul offline, totul privat. Fără servere cloud, fără chei API, fără date care părăsesc dispozitivul tău.
 
 FUNCȚII CHEIE
 
@@ -47,4 +47,4 @@ MODELE COMPATIBILE
 
 OPEN SOURCE
 
-LM Playground este open source sub licența MIT. Bazat pe llama.cpp cu modele de pe Hugging Face.
+chidori-nagasa este open source sub licența MIT. Bazat pe llama.cpp cu modele de pe Hugging Face.

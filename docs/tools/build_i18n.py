@@ -7,7 +7,7 @@ Two source streams:
     sibling extract_app_strings.py. These are professional translations.
   • Website-original strings (~60 keys: hero, pillars, sections, footer) —
     translated inline below, best-effort. Community PRs welcome:
-    https://github.com/andriydruk/LMPlayground
+    https://github.com/xdutsuay/chidori-nagasa
 
 Missing keys fall back to English at runtime, so we can be sparse.
 
@@ -22,11 +22,11 @@ REPO = os.path.dirname(DOCS)             # repo root
 # Re-extract app strings on every build so we always pick up the latest
 # translations from the Android resources.
 EXTRACT = os.path.join(HERE, 'extract_app_strings.py')
-APP = json.loads(subprocess.check_output(['python3', EXTRACT, REPO]).decode('utf-8'))
+APP = json.loads(subprocess.check_output([sys.executable, EXTRACT, REPO]).decode('utf-8'))
 
 EN = {
     "nav.models": "Models", "nav.how": "How it works", "nav.languages": "Languages",
-    "nav.specs": "Under the hood", "nav.faq": "FAQ", "nav.cta": "Get on Play Store",
+    "nav.specs": "Under the hood", "nav.faq": "FAQ",
     "nav.prompts": "System Prompts", "nav.tools": "Tools", "nav.vision": "Vision",
 
     "hero.pill": "v1.8.0 · Now with vision",
@@ -136,7 +136,7 @@ EN = {
     "lang.title": "Speaks your language.<br/>Right out of the box.",
     "lang.sub": "The whole app is translated into 28 languages. On first launch, we'll pick a model that speaks yours.",
     "lang.locales": "locales",
-    "lang.foot": "Spotted a wrong translation? <a href=\"https://github.com/andriydruk/LMPlayground/tree/main/app/src/main/res\">Please open a PR on GitHub</a>.",
+    "lang.foot": "Spotted a wrong translation? <a href=\"https://github.com/xdutsuay/chidori-nagasa/tree/main/app/src/main/res\">Please open a PR on GitHub</a>.",
 
     "specs.eyebrow": "Under the hood",
     "specs.title": "Engineered for phones,<br/>not data centers.",
@@ -151,7 +151,6 @@ EN = {
 
     "cta.title": "<em>Any</em> model in your pocket.",
     "cta.body": "Seconds to install. Minutes to download a model. Then you're done with the cloud.",
-    "cta.primary": "Get on Google Play",
     "cta.ghost": "Read the source →",
 
     "footer.about": "Open-source Android app for running large language models locally. Built on llama.cpp. MIT licensed.",
@@ -163,9 +162,9 @@ EN = {
     "footer.build": "Build", "footer.build.github": "GitHub",
     "footer.build.releases": "Releases", "footer.build.contributing": "Contributing",
     "footer.build.issues": "Issue tracker",
-    "footer.contact": "Contact", "footer.contact.play": "Google Play",
+    "footer.contact": "Contact",
     "footer.contact.license": "License (MIT)",
-    "footer.copy": "© 2026 Andrew Druk · Built with llama.cpp",
+    "footer.copy": "© 2026 chidori-nagasa · Built with llama.cpp",
 }
 
 # Stub-fill FAQ + phone + privacy keys; will be filled from app strings.
@@ -194,7 +193,7 @@ T = {}
 # ---------- DEUTSCH (de) ----------
 T["de"] = {
     "nav.models": "Modelle", "nav.how": "So funktioniert's", "nav.languages": "Sprachen",
-    "nav.specs": "Unter der Haube", "nav.faq": "FAQ", "nav.cta": "Im Play Store öffnen",
+    "nav.specs": "Unter der Haube", "nav.faq": "FAQ",
     "hero.pill": "v1.5.0 · System-Prompts + 28 Sprachen",
     "hero.title": "Große Sprachmodelle<br/>auf <em>deinem</em> Handy.",
     "hero.sub": "Keine Cloud. Kein Internet. Kein Tracking.",
@@ -236,7 +235,7 @@ T["de"] = {
     "lang.title": "Spricht deine Sprache.<br/>Direkt ab Werk.",
     "lang.sub": "Die ganze App ist in 28 Sprachen übersetzt. Beim ersten Start wählen wir ein Modell aus, das deine Sprache spricht.",
     "lang.locales": "Sprachen",
-    "lang.foot": "Falsche Übersetzung entdeckt? <a href=\"https://github.com/andriydruk/LMPlayground/tree/main/app/src/main/res\">Bitte öffne einen PR auf GitHub</a>.",
+    "lang.foot": "Falsche Übersetzung entdeckt? <a href=\"https://github.com/xdutsuay/chidori-nagasa/tree/main/app/src/main/res\">Bitte öffne einen PR auf GitHub</a>.",
     "specs.eyebrow": "Unter der Haube",
     "specs.title": "Gebaut für Handys,<br/>nicht Rechenzentren.",
     "specs.body": "Aufgebaut auf llama.cpp mit quantisierten GGUF-Modellen. Native C++-Inferenz mit ARM-optimierten Kerneln bedeutet weniger Hitze, mehr Tokens pro Sekunde und keinen unerwarteten Akkuverbrauch im Hintergrund.",
@@ -247,8 +246,7 @@ T["de"] = {
     "faq.title": "Fragen, die du hattest,<br/>bevor du sie gestellt hast.",
     "faq.sub": "Steckst du fest? Öffne ein Issue auf GitHub oder schreib mir direkt.",
     "cta.title": "<em>Jedes</em> Modell in deiner Tasche.",
-    "cta.body": "Sekunden zur Installation. Minuten für den Download eines Modells. Dann bist du fertig mit der Cloud.",
-    "cta.primary": "Bei Google Play holen", "cta.ghost": "Quellcode lesen →",
+    "cta.body": "Sekunden zur Installation. Minuten für den Download eines Modells. Dann bist du fertig mit der Cloud.", "cta.ghost": "Quellcode lesen →",
     "footer.about": "Open-Source-Android-App, um große Sprachmodelle lokal auszuführen. Aufgebaut auf llama.cpp. MIT-lizenziert.",
     "footer.product": "Produkt",
     "footer.product.models": "Unterstützte Modelle", "footer.product.how": "So funktioniert's",
@@ -257,15 +255,15 @@ T["de"] = {
     "footer.build": "Build", "footer.build.github": "GitHub",
     "footer.build.releases": "Releases", "footer.build.contributing": "Mitwirken",
     "footer.build.issues": "Issue-Tracker",
-    "footer.contact": "Kontakt", "footer.contact.play": "Google Play",
+    "footer.contact": "Kontakt",
     "footer.contact.license": "Lizenz (MIT)",
-    "footer.copy": "© 2026 Andrew Druk · Gebaut mit llama.cpp",
+    "footer.copy": "© 2026 chidori-nagasa · Gebaut mit llama.cpp",
 }
 
 # ---------- ESPAÑOL (es) ----------
 T["es"] = {
     "nav.models": "Modelos", "nav.how": "Cómo funciona", "nav.languages": "Idiomas",
-    "nav.specs": "Bajo el capó", "nav.faq": "FAQ", "nav.cta": "Abrir en Play Store",
+    "nav.specs": "Bajo el capó", "nav.faq": "FAQ",
     "hero.pill": "v1.5.0 · Prompts de sistema + 28 idiomas",
     "hero.title": "Ejecuta grandes modelos<br/>en <em>tu</em> teléfono.",
     "hero.sub": "Sin nube, sin internet, sin rastreo.",
@@ -307,7 +305,7 @@ T["es"] = {
     "lang.title": "Habla tu idioma.<br/>Listo desde el primer momento.",
     "lang.sub": "Toda la app está traducida a 28 idiomas. En el primer arranque elegimos un modelo que hable el tuyo.",
     "lang.locales": "idiomas",
-    "lang.foot": "¿Encontraste una traducción incorrecta? <a href=\"https://github.com/andriydruk/LMPlayground/tree/main/app/src/main/res\">Por favor abre un PR en GitHub</a>.",
+    "lang.foot": "¿Encontraste una traducción incorrecta? <a href=\"https://github.com/xdutsuay/chidori-nagasa/tree/main/app/src/main/res\">Por favor abre un PR en GitHub</a>.",
     "specs.eyebrow": "Bajo el capó",
     "specs.title": "Diseñado para teléfonos,<br/>no para centros de datos.",
     "specs.body": "Construido sobre llama.cpp con modelos cuantizados GGUF. La inferencia nativa en C++ con kernels optimizados para ARM significa menos calor, más tokens por segundo y ningún consumo inesperado en segundo plano.",
@@ -318,8 +316,7 @@ T["es"] = {
     "faq.title": "Preguntas que tenías<br/>antes de preguntar.",
     "faq.sub": "¿Te quedaste atascado? Abre un issue en GitHub o escríbeme directamente.",
     "cta.title": "<em>Cualquier</em> modelo en tu bolsillo.",
-    "cta.body": "Segundos para instalar. Minutos para descargar un modelo. Y listo, fuera de la nube.",
-    "cta.primary": "Conseguir en Google Play", "cta.ghost": "Leer el código →",
+    "cta.body": "Segundos para instalar. Minutos para descargar un modelo. Y listo, fuera de la nube.", "cta.ghost": "Leer el código →",
     "footer.about": "App de Android de código abierto para ejecutar grandes modelos de lenguaje localmente. Construida sobre llama.cpp. Licencia MIT.",
     "footer.product": "Producto",
     "footer.product.models": "Modelos compatibles", "footer.product.how": "Cómo funciona",
@@ -328,15 +325,15 @@ T["es"] = {
     "footer.build": "Build", "footer.build.github": "GitHub",
     "footer.build.releases": "Releases", "footer.build.contributing": "Contribuir",
     "footer.build.issues": "Seguimiento de issues",
-    "footer.contact": "Contacto", "footer.contact.play": "Google Play",
+    "footer.contact": "Contacto",
     "footer.contact.license": "Licencia (MIT)",
-    "footer.copy": "© 2026 Andrew Druk · Construido con llama.cpp",
+    "footer.copy": "© 2026 chidori-nagasa · Construido con llama.cpp",
 }
 
 # ---------- FRANÇAIS (fr) ----------
 T["fr"] = {
     "nav.models": "Modèles", "nav.how": "Comment ça marche", "nav.languages": "Langues",
-    "nav.specs": "Sous le capot", "nav.faq": "FAQ", "nav.cta": "Ouvrir sur Play Store",
+    "nav.specs": "Sous le capot", "nav.faq": "FAQ",
     "hero.pill": "v1.5.0 · Prompts système + 28 langues",
     "hero.title": "Exécutez de grands modèles<br/>sur <em>votre</em> téléphone.",
     "hero.sub": "Pas de cloud, pas d'Internet, pas de pistage.",
@@ -378,7 +375,7 @@ T["fr"] = {
     "lang.title": "Parle ta langue.<br/>Sans configuration.",
     "lang.sub": "Toute l'application est traduite en 28 langues. Au premier lancement, on choisit un modèle qui parle la vôtre.",
     "lang.locales": "langues",
-    "lang.foot": "Vu une mauvaise traduction ? <a href=\"https://github.com/andriydruk/LMPlayground/tree/main/app/src/main/res\">Ouvrez une PR sur GitHub</a>.",
+    "lang.foot": "Vu une mauvaise traduction ? <a href=\"https://github.com/xdutsuay/chidori-nagasa/tree/main/app/src/main/res\">Ouvrez une PR sur GitHub</a>.",
     "specs.eyebrow": "Sous le capot",
     "specs.title": "Conçu pour les téléphones,<br/>pas les centres de données.",
     "specs.body": "Construit sur llama.cpp avec des modèles GGUF quantifiés. L'inférence native C++ avec des kernels optimisés ARM signifie moins de chauffe, plus de tokens par seconde, et pas de consommation inattendue en arrière-plan.",
@@ -389,8 +386,7 @@ T["fr"] = {
     "faq.title": "Les questions que vous aviez<br/>avant de demander.",
     "faq.sub": "Toujours bloqué ? Ouvrez une issue sur GitHub ou contactez-moi directement.",
     "cta.title": "<em>N'importe quel</em> modèle dans votre poche.",
-    "cta.body": "Quelques secondes pour installer. Quelques minutes pour télécharger un modèle. Puis adieu le cloud.",
-    "cta.primary": "Obtenir sur Google Play", "cta.ghost": "Lire le code source →",
+    "cta.body": "Quelques secondes pour installer. Quelques minutes pour télécharger un modèle. Puis adieu le cloud.", "cta.ghost": "Lire le code source →",
     "footer.about": "App Android open-source pour exécuter de grands modèles de langage localement. Construite sur llama.cpp. Licence MIT.",
     "footer.product": "Produit",
     "footer.product.models": "Modèles pris en charge", "footer.product.how": "Comment ça marche",
@@ -399,15 +395,15 @@ T["fr"] = {
     "footer.build": "Build", "footer.build.github": "GitHub",
     "footer.build.releases": "Versions", "footer.build.contributing": "Contribuer",
     "footer.build.issues": "Suivi des issues",
-    "footer.contact": "Contact", "footer.contact.play": "Google Play",
+    "footer.contact": "Contact",
     "footer.contact.license": "Licence (MIT)",
-    "footer.copy": "© 2026 Andrew Druk · Construit avec llama.cpp",
+    "footer.copy": "© 2026 chidori-nagasa · Construit avec llama.cpp",
 }
 
 # ---------- ITALIANO (it) ----------
 T["it"] = {
     "nav.models": "Modelli", "nav.how": "Come funziona", "nav.languages": "Lingue",
-    "nav.specs": "Sotto il cofano", "nav.faq": "FAQ", "nav.cta": "Apri su Play Store",
+    "nav.specs": "Sotto il cofano", "nav.faq": "FAQ",
     "hero.pill": "v1.5.0 · Prompt di sistema + 28 lingue",
     "hero.title": "Esegui grandi modelli<br/>sul <em>tuo</em> telefono.",
     "hero.sub": "Niente cloud, niente internet, niente tracciamento.",
@@ -449,7 +445,7 @@ T["it"] = {
     "lang.title": "Parla la tua lingua.<br/>Pronta dalla scatola.",
     "lang.sub": "Tutta l'app è tradotta in 28 lingue. Al primo avvio scegliamo un modello che parla la tua.",
     "lang.locales": "lingue",
-    "lang.foot": "Hai notato una traduzione sbagliata? <a href=\"https://github.com/andriydruk/LMPlayground/tree/main/app/src/main/res\">Apri una PR su GitHub</a>.",
+    "lang.foot": "Hai notato una traduzione sbagliata? <a href=\"https://github.com/xdutsuay/chidori-nagasa/tree/main/app/src/main/res\">Apri una PR su GitHub</a>.",
     "specs.eyebrow": "Sotto il cofano",
     "specs.title": "Progettato per telefoni,<br/>non datacenter.",
     "specs.body": "Costruito su llama.cpp con modelli quantizzati GGUF. L'inferenza nativa in C++ con kernel ottimizzati ARM significa meno calore, più token al secondo e nessun consumo inatteso in background.",
@@ -460,8 +456,7 @@ T["it"] = {
     "faq.title": "Le domande che avevi<br/>prima di chiedere.",
     "faq.sub": "Ancora bloccato? Apri una issue su GitHub o scrivimi direttamente.",
     "cta.title": "<em>Qualsiasi</em> modello in tasca.",
-    "cta.body": "Secondi per installare. Minuti per scaricare un modello. E poi il cloud è alle spalle.",
-    "cta.primary": "Scarica da Google Play", "cta.ghost": "Leggi il codice →",
+    "cta.body": "Secondi per installare. Minuti per scaricare un modello. E poi il cloud è alle spalle.", "cta.ghost": "Leggi il codice →",
     "footer.about": "App Android open source per eseguire grandi modelli di linguaggio in locale. Costruita su llama.cpp. Licenza MIT.",
     "footer.product": "Prodotto",
     "footer.product.models": "Modelli supportati", "footer.product.how": "Come funziona",
@@ -470,15 +465,15 @@ T["it"] = {
     "footer.build": "Build", "footer.build.github": "GitHub",
     "footer.build.releases": "Release", "footer.build.contributing": "Contribuire",
     "footer.build.issues": "Tracker issue",
-    "footer.contact": "Contatti", "footer.contact.play": "Google Play",
+    "footer.contact": "Contatti",
     "footer.contact.license": "Licenza (MIT)",
-    "footer.copy": "© 2026 Andrew Druk · Costruito con llama.cpp",
+    "footer.copy": "© 2026 chidori-nagasa · Costruito con llama.cpp",
 }
 
 # ---------- PORTUGUÊS (pt) ----------
 T["pt"] = {
     "nav.models": "Modelos", "nav.how": "Como funciona", "nav.languages": "Idiomas",
-    "nav.specs": "Por dentro", "nav.faq": "FAQ", "nav.cta": "Abrir no Play Store",
+    "nav.specs": "Por dentro", "nav.faq": "FAQ",
     "hero.pill": "v1.5.0 · Prompts de sistema + 28 idiomas",
     "hero.title": "Execute grandes modelos<br/>no <em>seu</em> telefone.",
     "hero.sub": "Sem nuvem, sem internet, sem rastreamento.",
@@ -520,7 +515,7 @@ T["pt"] = {
     "lang.title": "Fala o seu idioma.<br/>Desde o primeiro instante.",
     "lang.sub": "O app inteiro é traduzido para 28 idiomas. No primeiro lançamento, escolhemos um modelo que fala o seu.",
     "lang.locales": "idiomas",
-    "lang.foot": "Encontrou uma tradução errada? <a href=\"https://github.com/andriydruk/LMPlayground/tree/main/app/src/main/res\">Por favor abra um PR no GitHub</a>.",
+    "lang.foot": "Encontrou uma tradução errada? <a href=\"https://github.com/xdutsuay/chidori-nagasa/tree/main/app/src/main/res\">Por favor abra um PR no GitHub</a>.",
     "specs.eyebrow": "Por dentro",
     "specs.title": "Feito para telefones,<br/>não para data centers.",
     "specs.body": "Construído sobre llama.cpp com modelos quantizados GGUF. Inferência nativa em C++ com kernels otimizados para ARM significa menos calor, mais tokens por segundo e nenhum consumo inesperado em segundo plano.",
@@ -531,8 +526,7 @@ T["pt"] = {
     "faq.title": "Perguntas que você tinha<br/>antes de perguntar.",
     "faq.sub": "Ainda travado? Abra uma issue no GitHub ou fale comigo direto.",
     "cta.title": "<em>Qualquer</em> modelo no seu bolso.",
-    "cta.body": "Segundos para instalar. Minutos para baixar um modelo. Aí a nuvem fica para trás.",
-    "cta.primary": "Baixar no Google Play", "cta.ghost": "Ler o código →",
+    "cta.body": "Segundos para instalar. Minutos para baixar um modelo. Aí a nuvem fica para trás.", "cta.ghost": "Ler o código →",
     "footer.about": "App Android de código aberto para rodar grandes modelos de linguagem localmente. Construído sobre llama.cpp. Licença MIT.",
     "footer.product": "Produto",
     "footer.product.models": "Modelos suportados", "footer.product.how": "Como funciona",
@@ -541,15 +535,15 @@ T["pt"] = {
     "footer.build": "Build", "footer.build.github": "GitHub",
     "footer.build.releases": "Releases", "footer.build.contributing": "Contribuir",
     "footer.build.issues": "Rastreador de issues",
-    "footer.contact": "Contato", "footer.contact.play": "Google Play",
+    "footer.contact": "Contato",
     "footer.contact.license": "Licença (MIT)",
-    "footer.copy": "© 2026 Andrew Druk · Construído com llama.cpp",
+    "footer.copy": "© 2026 chidori-nagasa · Construído com llama.cpp",
 }
 
 # ---------- NEDERLANDS (nl) ----------
 T["nl"] = {
     "nav.models": "Modellen", "nav.how": "Hoe het werkt", "nav.languages": "Talen",
-    "nav.specs": "Onder de motorkap", "nav.faq": "FAQ", "nav.cta": "Open in Play Store",
+    "nav.specs": "Onder de motorkap", "nav.faq": "FAQ",
     "hero.pill": "v1.5.0 · Systeem-prompts + 28 talen",
     "hero.title": "Draai grote taalmodellen<br/>op <em>jouw</em> telefoon.",
     "hero.sub": "Geen cloud, geen internet, geen tracking.",
@@ -591,7 +585,7 @@ T["nl"] = {
     "lang.title": "Spreekt jouw taal.<br/>Direct uit de doos.",
     "lang.sub": "De hele app is vertaald in 28 talen. Bij de eerste start kiezen we een model dat jouw taal spreekt.",
     "lang.locales": "talen",
-    "lang.foot": "Verkeerde vertaling gezien? <a href=\"https://github.com/andriydruk/LMPlayground/tree/main/app/src/main/res\">Open een PR op GitHub</a>.",
+    "lang.foot": "Verkeerde vertaling gezien? <a href=\"https://github.com/xdutsuay/chidori-nagasa/tree/main/app/src/main/res\">Open een PR op GitHub</a>.",
     "specs.eyebrow": "Onder de motorkap",
     "specs.title": "Gebouwd voor telefoons,<br/>niet voor datacenters.",
     "specs.body": "Gebouwd op llama.cpp met gequantiseerde GGUF-modellen. Native C++-inferentie met ARM-geoptimaliseerde kernels betekent minder warmte, meer tokens per seconde en geen onverwacht batterijverbruik op de achtergrond.",
@@ -602,8 +596,7 @@ T["nl"] = {
     "faq.title": "Vragen die je had<br/>voordat je ze stelde.",
     "faq.sub": "Vastgelopen? Open een issue op GitHub of neem direct contact op.",
     "cta.title": "<em>Elk</em> model in je broekzak.",
-    "cta.body": "Seconden om te installeren. Minuten om een model te downloaden. En dan ben je klaar met de cloud.",
-    "cta.primary": "Op Google Play", "cta.ghost": "Lees de broncode →",
+    "cta.body": "Seconden om te installeren. Minuten om een model te downloaden. En dan ben je klaar met de cloud.", "cta.ghost": "Lees de broncode →",
     "footer.about": "Open-source Android-app om grote taalmodellen lokaal te draaien. Gebouwd op llama.cpp. MIT-licentie.",
     "footer.product": "Product",
     "footer.product.models": "Ondersteunde modellen", "footer.product.how": "Hoe het werkt",
@@ -612,15 +605,15 @@ T["nl"] = {
     "footer.build": "Build", "footer.build.github": "GitHub",
     "footer.build.releases": "Releases", "footer.build.contributing": "Bijdragen",
     "footer.build.issues": "Issue-tracker",
-    "footer.contact": "Contact", "footer.contact.play": "Google Play",
+    "footer.contact": "Contact",
     "footer.contact.license": "Licentie (MIT)",
-    "footer.copy": "© 2026 Andrew Druk · Gebouwd met llama.cpp",
+    "footer.copy": "© 2026 chidori-nagasa · Gebouwd met llama.cpp",
 }
 
 # ---------- POLSKI (pl) ----------
 T["pl"] = {
     "nav.models": "Modele", "nav.how": "Jak to działa", "nav.languages": "Języki",
-    "nav.specs": "Pod maską", "nav.faq": "FAQ", "nav.cta": "Otwórz w Play Store",
+    "nav.specs": "Pod maską", "nav.faq": "FAQ",
     "hero.pill": "v1.5.0 · Prompty systemowe + 28 języków",
     "hero.title": "Uruchom duże modele językowe<br/>na <em>swoim</em> telefonie.",
     "hero.sub": "Bez chmury, bez Internetu, bez śledzenia.",
@@ -662,7 +655,7 @@ T["pl"] = {
     "lang.title": "Mówi w Twoim języku.<br/>Od pierwszego uruchomienia.",
     "lang.sub": "Cała aplikacja jest przetłumaczona na 28 języków. Przy pierwszym uruchomieniu wybierzemy model, który zna Twój.",
     "lang.locales": "języków",
-    "lang.foot": "Zauważyłeś błąd w tłumaczeniu? <a href=\"https://github.com/andriydruk/LMPlayground/tree/main/app/src/main/res\">Otwórz proszę PR na GitHubie</a>.",
+    "lang.foot": "Zauważyłeś błąd w tłumaczeniu? <a href=\"https://github.com/xdutsuay/chidori-nagasa/tree/main/app/src/main/res\">Otwórz proszę PR na GitHubie</a>.",
     "specs.eyebrow": "Pod maską",
     "specs.title": "Zaprojektowane do telefonów,<br/>nie do data center.",
     "specs.body": "Zbudowane na llama.cpp z modelami GGUF z kwantyzacją. Natywna inferencja w C++ z kernelami zoptymalizowanymi pod ARM oznacza mniej ciepła, więcej tokenów na sekundę i żadnych nieoczekiwanych obciążeń w tle.",
@@ -673,8 +666,7 @@ T["pl"] = {
     "faq.title": "Pytania, które miałeś<br/>zanim je zadałeś.",
     "faq.sub": "Wciąż utknąłeś? Otwórz issue na GitHubie albo skontaktuj się bezpośrednio.",
     "cta.title": "<em>Każdy</em> model w Twojej kieszeni.",
-    "cta.body": "Sekundy na instalację. Minuty na pobranie modelu. I już bez chmury.",
-    "cta.primary": "Pobierz w Google Play", "cta.ghost": "Czytaj kod →",
+    "cta.body": "Sekundy na instalację. Minuty na pobranie modelu. I już bez chmury.", "cta.ghost": "Czytaj kod →",
     "footer.about": "Otwartoźródłowa aplikacja na Androida do uruchamiania dużych modeli językowych lokalnie. Zbudowana na llama.cpp. Licencja MIT.",
     "footer.product": "Produkt",
     "footer.product.models": "Obsługiwane modele", "footer.product.how": "Jak to działa",
@@ -683,15 +675,15 @@ T["pl"] = {
     "footer.build": "Build", "footer.build.github": "GitHub",
     "footer.build.releases": "Wydania", "footer.build.contributing": "Współtworzenie",
     "footer.build.issues": "Tracker issues",
-    "footer.contact": "Kontakt", "footer.contact.play": "Google Play",
+    "footer.contact": "Kontakt",
     "footer.contact.license": "Licencja (MIT)",
-    "footer.copy": "© 2026 Andrew Druk · Zbudowane z llama.cpp",
+    "footer.copy": "© 2026 chidori-nagasa · Zbudowane z llama.cpp",
 }
 
 # ---------- ČEŠTINA (cs) ----------
 T["cs"] = {
     "nav.models": "Modely", "nav.how": "Jak to funguje", "nav.languages": "Jazyky",
-    "nav.specs": "Pod kapotou", "nav.faq": "FAQ", "nav.cta": "Otevřít v Play Store",
+    "nav.specs": "Pod kapotou", "nav.faq": "FAQ",
     "hero.pill": "v1.5.0 · Systémové prompty + 28 jazyků",
     "hero.title": "Spouštějte velké jazykové modely<br/>na <em>svém</em> telefonu.",
     "hero.sub": "Žádný cloud, žádný internet, žádné sledování.",
@@ -733,7 +725,7 @@ T["cs"] = {
     "lang.title": "Mluví vaším jazykem.<br/>Hned od začátku.",
     "lang.sub": "Celá aplikace je přeložena do 28 jazyků. Při prvním spuštění vybereme model, který mluví tím vaším.",
     "lang.locales": "jazyků",
-    "lang.foot": "Všimli jste si chybného překladu? <a href=\"https://github.com/andriydruk/LMPlayground/tree/main/app/src/main/res\">Otevřete prosím PR na GitHubu</a>.",
+    "lang.foot": "Všimli jste si chybného překladu? <a href=\"https://github.com/xdutsuay/chidori-nagasa/tree/main/app/src/main/res\">Otevřete prosím PR na GitHubu</a>.",
     "specs.eyebrow": "Pod kapotou",
     "specs.title": "Navrženo pro telefony,<br/>ne pro datová centra.",
     "specs.body": "Postaveno na llama.cpp s kvantizovanými GGUF modely. Nativní C++ inference s ARM-optimalizovanými kernely znamená méně tepla, více tokenů za sekundu a žádný neočekávaný odběr na pozadí.",
@@ -744,8 +736,7 @@ T["cs"] = {
     "faq.title": "Otázky, které jste měli<br/>před tím, než jste se zeptali.",
     "faq.sub": "Pořád zaseknutí? Otevřete issue na GitHubu nebo se ozvěte přímo.",
     "cta.title": "<em>Jakýkoli</em> model v kapse.",
-    "cta.body": "Sekundy na instalaci. Minuty na stažení modelu. A pak je s cloudem konec.",
-    "cta.primary": "Získat na Google Play", "cta.ghost": "Číst kód →",
+    "cta.body": "Sekundy na instalaci. Minuty na stažení modelu. A pak je s cloudem konec.", "cta.ghost": "Číst kód →",
     "footer.about": "Open-source Android aplikace pro spouštění velkých jazykových modelů lokálně. Postavena na llama.cpp. Licence MIT.",
     "footer.product": "Produkt",
     "footer.product.models": "Podporované modely", "footer.product.how": "Jak to funguje",
@@ -754,15 +745,15 @@ T["cs"] = {
     "footer.build": "Build", "footer.build.github": "GitHub",
     "footer.build.releases": "Vydání", "footer.build.contributing": "Přispět",
     "footer.build.issues": "Tracker issues",
-    "footer.contact": "Kontakt", "footer.contact.play": "Google Play",
+    "footer.contact": "Kontakt",
     "footer.contact.license": "Licence (MIT)",
-    "footer.copy": "© 2026 Andrew Druk · Postaveno s llama.cpp",
+    "footer.copy": "© 2026 chidori-nagasa · Postaveno s llama.cpp",
 }
 
 # ---------- УКРАЇНСЬКА (uk) ----------
 T["uk"] = {
     "nav.models": "Моделі", "nav.how": "Як це працює", "nav.languages": "Мови",
-    "nav.specs": "Під капотом", "nav.faq": "FAQ", "nav.cta": "Відкрити в Play Store",
+    "nav.specs": "Під капотом", "nav.faq": "FAQ",
     "hero.pill": "v1.5.0 · Системні промпти + 28 мов",
     "hero.title": "Великі мовні моделі<br/>на <em>твоєму</em> телефоні.",
     "hero.sub": "Без хмари, без інтернету, без стеження.",
@@ -804,7 +795,7 @@ T["uk"] = {
     "lang.title": "Розмовляє твоєю мовою.<br/>Прямо з коробки.",
     "lang.sub": "Увесь застосунок перекладено на 28 мов. Під час першого запуску ми оберемо модель, яка знає твою.",
     "lang.locales": "мов",
-    "lang.foot": "Помітили неправильний переклад? <a href=\"https://github.com/andriydruk/LMPlayground/tree/main/app/src/main/res\">Відкрийте PR на GitHub</a>.",
+    "lang.foot": "Помітили неправильний переклад? <a href=\"https://github.com/xdutsuay/chidori-nagasa/tree/main/app/src/main/res\">Відкрийте PR на GitHub</a>.",
     "specs.eyebrow": "Під капотом",
     "specs.title": "Створено для телефонів,<br/>а не для дата-центрів.",
     "specs.body": "Побудовано на llama.cpp з GGUF-моделями з квантизацією. Нативний C++ інференс з оптимізованими під ARM ядрами означає менше тепла, більше токенів за секунду й жодного несподіваного фонового споживання.",
@@ -815,8 +806,7 @@ T["uk"] = {
     "faq.title": "Питання, які ти мав,<br/>перш ніж їх ставити.",
     "faq.sub": "Усе ще застряг? Відкрий issue на GitHub або напиши напряму.",
     "cta.title": "<em>Будь-яка</em> модель у твоїй кишені.",
-    "cta.body": "Секунди на встановлення. Хвилини на завантаження моделі. А потім — прощавай, хмаро.",
-    "cta.primary": "Завантажити в Google Play", "cta.ghost": "Читати код →",
+    "cta.body": "Секунди на встановлення. Хвилини на завантаження моделі. А потім — прощавай, хмаро.", "cta.ghost": "Читати код →",
     "footer.about": "Open-source Android-застосунок для запуску великих мовних моделей локально. Побудовано на llama.cpp. Ліцензія MIT.",
     "footer.product": "Продукт",
     "footer.product.models": "Підтримувані моделі", "footer.product.how": "Як це працює",
@@ -825,15 +815,15 @@ T["uk"] = {
     "footer.build": "Build", "footer.build.github": "GitHub",
     "footer.build.releases": "Релізи", "footer.build.contributing": "Співпраця",
     "footer.build.issues": "Трекер issues",
-    "footer.contact": "Контакти", "footer.contact.play": "Google Play",
+    "footer.contact": "Контакти",
     "footer.contact.license": "Ліцензія (MIT)",
-    "footer.copy": "© 2026 Andrew Druk · Побудовано з llama.cpp",
+    "footer.copy": "© 2026 chidori-nagasa · Побудовано з llama.cpp",
 }
 
 # ---------- DANSK (da) ----------
 T["da"] = {
     "nav.models": "Modeller", "nav.how": "Sådan virker det", "nav.languages": "Sprog",
-    "nav.specs": "Under hjelmen", "nav.faq": "FAQ", "nav.cta": "Åbn i Play Store",
+    "nav.specs": "Under hjelmen", "nav.faq": "FAQ",
     "hero.pill": "v1.5.0 · System-prompts + 28 sprog",
     "hero.title": "Kør store sprogmodeller<br/>på <em>din</em> telefon.",
     "hero.sub": "Ingen sky, intet internet, ingen sporing.",
@@ -875,7 +865,7 @@ T["da"] = {
     "lang.title": "Taler dit sprog.<br/>Lige ud af æsken.",
     "lang.sub": "Hele appen er oversat til 28 sprog. Ved første start vælger vi en model, der taler dit.",
     "lang.locales": "sprog",
-    "lang.foot": "Set en forkert oversættelse? <a href=\"https://github.com/andriydruk/LMPlayground/tree/main/app/src/main/res\">Åbn venligst en PR på GitHub</a>.",
+    "lang.foot": "Set en forkert oversættelse? <a href=\"https://github.com/xdutsuay/chidori-nagasa/tree/main/app/src/main/res\">Åbn venligst en PR på GitHub</a>.",
     "specs.eyebrow": "Under hjelmen",
     "specs.title": "Bygget til telefoner,<br/>ikke datacentre.",
     "specs.body": "Bygget på llama.cpp med kvantiserede GGUF-modeller. Native C++ inferens med ARM-optimerede kerner betyder mindre varme, flere tokens i sekundet og intet uventet baggrundsforbrug.",
@@ -886,8 +876,7 @@ T["da"] = {
     "faq.title": "Spørgsmål du havde,<br/>før du spurgte.",
     "faq.sub": "Stadig i tvivl? Åbn et issue på GitHub eller tag direkte kontakt.",
     "cta.title": "<em>Enhver</em> model i lommen.",
-    "cta.body": "Sekunder at installere. Minutter at hente en model. Og så er du færdig med skyen.",
-    "cta.primary": "Hent på Google Play", "cta.ghost": "Læs kildekoden →",
+    "cta.body": "Sekunder at installere. Minutter at hente en model. Og så er du færdig med skyen.", "cta.ghost": "Læs kildekoden →",
     "footer.about": "Open source Android-app til at køre store sprogmodeller lokalt. Bygget på llama.cpp. MIT-licens.",
     "footer.product": "Produkt",
     "footer.product.models": "Understøttede modeller", "footer.product.how": "Sådan virker det",
@@ -896,15 +885,15 @@ T["da"] = {
     "footer.build": "Build", "footer.build.github": "GitHub",
     "footer.build.releases": "Releases", "footer.build.contributing": "Bidrag",
     "footer.build.issues": "Issue-tracker",
-    "footer.contact": "Kontakt", "footer.contact.play": "Google Play",
+    "footer.contact": "Kontakt",
     "footer.contact.license": "Licens (MIT)",
-    "footer.copy": "© 2026 Andrew Druk · Bygget med llama.cpp",
+    "footer.copy": "© 2026 chidori-nagasa · Bygget med llama.cpp",
 }
 
 # ---------- NORSK BOKMÅL (nb) ----------
 T["nb"] = {
     "nav.models": "Modeller", "nav.how": "Slik fungerer det", "nav.languages": "Språk",
-    "nav.specs": "Under panseret", "nav.faq": "FAQ", "nav.cta": "Åpne i Play Store",
+    "nav.specs": "Under panseret", "nav.faq": "FAQ",
     "hero.pill": "v1.5.0 · Systemprompter + 28 språk",
     "hero.title": "Kjør store språkmodeller<br/>på <em>din</em> telefon.",
     "hero.sub": "Ingen sky, ingen internett, ingen sporing.",
@@ -946,7 +935,7 @@ T["nb"] = {
     "lang.title": "Snakker språket ditt.<br/>Rett ut av boksen.",
     "lang.sub": "Hele appen er oversatt til 28 språk. Ved første oppstart velger vi en modell som snakker ditt.",
     "lang.locales": "språk",
-    "lang.foot": "Sett en feil oversettelse? <a href=\"https://github.com/andriydruk/LMPlayground/tree/main/app/src/main/res\">Åpne en PR på GitHub</a>.",
+    "lang.foot": "Sett en feil oversettelse? <a href=\"https://github.com/xdutsuay/chidori-nagasa/tree/main/app/src/main/res\">Åpne en PR på GitHub</a>.",
     "specs.eyebrow": "Under panseret",
     "specs.title": "Laget for telefoner,<br/>ikke datasentre.",
     "specs.body": "Bygget på llama.cpp med kvantiserte GGUF-modeller. Native C++ inferens med ARM-optimaliserte kjerner betyr mindre varme, flere tokens per sekund og ingen uventet bakgrunnsbruk.",
@@ -957,8 +946,7 @@ T["nb"] = {
     "faq.title": "Spørsmål du hadde<br/>før du spurte.",
     "faq.sub": "Står du fast? Åpne et issue på GitHub eller ta direkte kontakt.",
     "cta.title": "<em>Hvilken som helst</em> modell i lommen.",
-    "cta.body": "Sekunder å installere. Minutter å laste ned en modell. Så er du ferdig med skyen.",
-    "cta.primary": "Last ned på Google Play", "cta.ghost": "Les kildekoden →",
+    "cta.body": "Sekunder å installere. Minutter å laste ned en modell. Så er du ferdig med skyen.", "cta.ghost": "Les kildekoden →",
     "footer.about": "Open source Android-app for å kjøre store språkmodeller lokalt. Bygget på llama.cpp. MIT-lisens.",
     "footer.product": "Produkt",
     "footer.product.models": "Støttede modeller", "footer.product.how": "Slik fungerer det",
@@ -967,15 +955,15 @@ T["nb"] = {
     "footer.build": "Build", "footer.build.github": "GitHub",
     "footer.build.releases": "Releases", "footer.build.contributing": "Bidra",
     "footer.build.issues": "Issue-tracker",
-    "footer.contact": "Kontakt", "footer.contact.play": "Google Play",
+    "footer.contact": "Kontakt",
     "footer.contact.license": "Lisens (MIT)",
-    "footer.copy": "© 2026 Andrew Druk · Bygget med llama.cpp",
+    "footer.copy": "© 2026 chidori-nagasa · Bygget med llama.cpp",
 }
 
 # ---------- SVENSKA (sv) ----------
 T["sv"] = {
     "nav.models": "Modeller", "nav.how": "Så fungerar det", "nav.languages": "Språk",
-    "nav.specs": "Under huven", "nav.faq": "FAQ", "nav.cta": "Öppna i Play Store",
+    "nav.specs": "Under huven", "nav.faq": "FAQ",
     "hero.pill": "v1.5.0 · Systemprompter + 28 språk",
     "hero.title": "Kör stora språkmodeller<br/>på <em>din</em> telefon.",
     "hero.sub": "Inget moln, ingen internet, ingen spårning.",
@@ -1017,7 +1005,7 @@ T["sv"] = {
     "lang.title": "Talar ditt språk.<br/>Direkt ur lådan.",
     "lang.sub": "Hela appen är översatt till 28 språk. Vid första start väljer vi en modell som talar ditt.",
     "lang.locales": "språk",
-    "lang.foot": "Hittade en felaktig översättning? <a href=\"https://github.com/andriydruk/LMPlayground/tree/main/app/src/main/res\">Öppna gärna en PR på GitHub</a>.",
+    "lang.foot": "Hittade en felaktig översättning? <a href=\"https://github.com/xdutsuay/chidori-nagasa/tree/main/app/src/main/res\">Öppna gärna en PR på GitHub</a>.",
     "specs.eyebrow": "Under huven",
     "specs.title": "Byggd för telefoner,<br/>inte datacenter.",
     "specs.body": "Byggd på llama.cpp med kvantiserade GGUF-modeller. Native C++-inferens med ARM-optimerade kärnor innebär mindre värme, fler tokens per sekund och ingen oväntad bakgrundsbelastning.",
@@ -1028,8 +1016,7 @@ T["sv"] = {
     "faq.title": "Frågor du hade<br/>innan du frågade.",
     "faq.sub": "Står du och väger? Öppna ett issue på GitHub eller hör av dig direkt.",
     "cta.title": "<em>Vilken</em> modell som helst i fickan.",
-    "cta.body": "Sekunder att installera. Minuter att ladda ner en modell. Sen är du klar med molnet.",
-    "cta.primary": "Hämta på Google Play", "cta.ghost": "Läs källkoden →",
+    "cta.body": "Sekunder att installera. Minuter att ladda ner en modell. Sen är du klar med molnet.", "cta.ghost": "Läs källkoden →",
     "footer.about": "Open source-Android-app för att köra stora språkmodeller lokalt. Byggd på llama.cpp. MIT-licens.",
     "footer.product": "Produkt",
     "footer.product.models": "Stödda modeller", "footer.product.how": "Så fungerar det",
@@ -1038,15 +1025,15 @@ T["sv"] = {
     "footer.build": "Build", "footer.build.github": "GitHub",
     "footer.build.releases": "Releases", "footer.build.contributing": "Bidra",
     "footer.build.issues": "Issue-tracker",
-    "footer.contact": "Kontakt", "footer.contact.play": "Google Play",
+    "footer.contact": "Kontakt",
     "footer.contact.license": "Licens (MIT)",
-    "footer.copy": "© 2026 Andrew Druk · Byggd med llama.cpp",
+    "footer.copy": "© 2026 chidori-nagasa · Byggd med llama.cpp",
 }
 
 # ---------- SUOMI (fi) ----------
 T["fi"] = {
     "nav.models": "Mallit", "nav.how": "Näin se toimii", "nav.languages": "Kielet",
-    "nav.specs": "Konepellin alla", "nav.faq": "FAQ", "nav.cta": "Avaa Play Storessa",
+    "nav.specs": "Konepellin alla", "nav.faq": "FAQ",
     "hero.pill": "v1.5.0 · Järjestelmäkehotteet + 28 kieltä",
     "hero.title": "Aja suuria kielimalleja<br/><em>omassa</em> puhelimessasi.",
     "hero.sub": "Ei pilveä, ei internetiä, ei seurantaa.",
@@ -1088,7 +1075,7 @@ T["fi"] = {
     "lang.title": "Puhuu kieltäsi.<br/>Suoraan paketista.",
     "lang.sub": "Koko sovellus on käännetty 28 kielelle. Ensimmäisellä käynnistyskerralla valitsemme mallin, joka puhuu sinun kieltäsi.",
     "lang.locales": "kieltä",
-    "lang.foot": "Huomasitko väärän käännöksen? <a href=\"https://github.com/andriydruk/LMPlayground/tree/main/app/src/main/res\">Avaa PR GitHubissa</a>.",
+    "lang.foot": "Huomasitko väärän käännöksen? <a href=\"https://github.com/xdutsuay/chidori-nagasa/tree/main/app/src/main/res\">Avaa PR GitHubissa</a>.",
     "specs.eyebrow": "Konepellin alla",
     "specs.title": "Suunniteltu puhelimille,<br/>ei datakeskuksille.",
     "specs.body": "Rakennettu llama.cpp:n päälle kvantisoiduilla GGUF-malleilla. Natiivi C++-inferenssi ARM-optimoiduilla ytimillä tarkoittaa vähemmän lämpöä, enemmän tokeneita sekunnissa eikä yllätyksellistä taustalla syötyvää akkua.",
@@ -1099,8 +1086,7 @@ T["fi"] = {
     "faq.title": "Kysymyksiä joita sinulla oli<br/>ennen kuin kysyit.",
     "faq.sub": "Vieläkö jumissa? Avaa issue GitHubissa tai ota suoraan yhteyttä.",
     "cta.title": "<em>Mikä tahansa</em> malli taskussasi.",
-    "cta.body": "Sekunteja asentaa. Minuutteja ladata malli. Sitten pilvi on jäänyt taakse.",
-    "cta.primary": "Hae Google Playstä", "cta.ghost": "Lue lähdekoodi →",
+    "cta.body": "Sekunteja asentaa. Minuutteja ladata malli. Sitten pilvi on jäänyt taakse.", "cta.ghost": "Lue lähdekoodi →",
     "footer.about": "Avoimen lähdekoodin Android-sovellus suurten kielimallien ajamiseen paikallisesti. Rakennettu llama.cpp:n päälle. MIT-lisenssi.",
     "footer.product": "Tuote",
     "footer.product.models": "Tuetut mallit", "footer.product.how": "Näin se toimii",
@@ -1109,15 +1095,15 @@ T["fi"] = {
     "footer.build": "Build", "footer.build.github": "GitHub",
     "footer.build.releases": "Julkaisut", "footer.build.contributing": "Osallistu",
     "footer.build.issues": "Issue-tracker",
-    "footer.contact": "Yhteystiedot", "footer.contact.play": "Google Play",
+    "footer.contact": "Yhteystiedot",
     "footer.contact.license": "Lisenssi (MIT)",
-    "footer.copy": "© 2026 Andrew Druk · Rakennettu llama.cpp:llä",
+    "footer.copy": "© 2026 chidori-nagasa · Rakennettu llama.cpp:llä",
 }
 
 # ---------- ROMÂNĂ (ro) ----------
 T["ro"] = {
     "nav.models": "Modele", "nav.how": "Cum funcționează", "nav.languages": "Limbi",
-    "nav.specs": "Sub capotă", "nav.faq": "FAQ", "nav.cta": "Deschide în Play Store",
+    "nav.specs": "Sub capotă", "nav.faq": "FAQ",
     "hero.pill": "v1.5.0 · Prompturi de sistem + 28 limbi",
     "hero.title": "Rulează modele lingvistice mari<br/>pe <em>telefonul tău</em>.",
     "hero.sub": "Fără cloud, fără internet, fără urmărire.",
@@ -1159,7 +1145,7 @@ T["ro"] = {
     "lang.title": "Vorbește limba ta.<br/>Direct din cutie.",
     "lang.sub": "Toată aplicația e tradusă în 28 de limbi. La prima pornire, alegem un model care vorbește limba ta.",
     "lang.locales": "limbi",
-    "lang.foot": "Ai văzut o traducere greșită? <a href=\"https://github.com/andriydruk/LMPlayground/tree/main/app/src/main/res\">Te rog deschide un PR pe GitHub</a>.",
+    "lang.foot": "Ai văzut o traducere greșită? <a href=\"https://github.com/xdutsuay/chidori-nagasa/tree/main/app/src/main/res\">Te rog deschide un PR pe GitHub</a>.",
     "specs.eyebrow": "Sub capotă",
     "specs.title": "Conceput pentru telefoane,<br/>nu pentru centre de date.",
     "specs.body": "Construit pe llama.cpp cu modele GGUF cuantizate. Inferență C++ nativă cu nuclee optimizate ARM înseamnă mai puțină căldură, mai multe tokeni pe secundă și niciun consum neașteptat în fundal.",
@@ -1170,8 +1156,7 @@ T["ro"] = {
     "faq.title": "Întrebările pe care le aveai<br/>înainte să întrebi.",
     "faq.sub": "Tot blocat? Deschide un issue pe GitHub sau contactează-mă direct.",
     "cta.title": "<em>Orice</em> model în buzunar.",
-    "cta.body": "Secunde de instalare. Minute pentru descărcarea unui model. Apoi cloudul rămâne în urmă.",
-    "cta.primary": "Obține în Google Play", "cta.ghost": "Citește sursa →",
+    "cta.body": "Secunde de instalare. Minute pentru descărcarea unui model. Apoi cloudul rămâne în urmă.", "cta.ghost": "Citește sursa →",
     "footer.about": "Aplicație Android open source pentru a rula modele lingvistice mari local. Construită pe llama.cpp. Licență MIT.",
     "footer.product": "Produs",
     "footer.product.models": "Modele suportate", "footer.product.how": "Cum funcționează",
@@ -1180,15 +1165,15 @@ T["ro"] = {
     "footer.build": "Build", "footer.build.github": "GitHub",
     "footer.build.releases": "Versiuni", "footer.build.contributing": "Contribuie",
     "footer.build.issues": "Issue-tracker",
-    "footer.contact": "Contact", "footer.contact.play": "Google Play",
+    "footer.contact": "Contact",
     "footer.contact.license": "Licență (MIT)",
-    "footer.copy": "© 2026 Andrew Druk · Construit cu llama.cpp",
+    "footer.copy": "© 2026 chidori-nagasa · Construit cu llama.cpp",
 }
 
 # ---------- 日本語 (ja) ----------
 T["ja"] = {
     "nav.models": "モデル", "nav.how": "仕組み", "nav.languages": "言語",
-    "nav.specs": "技術仕様", "nav.faq": "FAQ", "nav.cta": "Play Storeで開く",
+    "nav.specs": "技術仕様", "nav.faq": "FAQ",
     "hero.pill": "v1.5.0 · システムプロンプト + 28言語",
     "hero.title": "大規模言語モデルを<br/><em>あなた</em>のスマホで。",
     "hero.sub": "クラウドなし、インターネット不要、追跡なし。",
@@ -1230,7 +1215,7 @@ T["ja"] = {
     "lang.title": "あなたの言葉で話します。<br/>はじめから。",
     "lang.sub": "アプリ全体が28言語に翻訳されています。初回起動時、あなたの言語を話せるモデルを自動で選びます。",
     "lang.locales": "言語",
-    "lang.foot": "翻訳の誤りを見つけたら <a href=\"https://github.com/andriydruk/LMPlayground/tree/main/app/src/main/res\">GitHubでPRを開いてください</a>。",
+    "lang.foot": "翻訳の誤りを見つけたら <a href=\"https://github.com/xdutsuay/chidori-nagasa/tree/main/app/src/main/res\">GitHubでPRを開いてください</a>。",
     "specs.eyebrow": "技術仕様",
     "specs.title": "スマホ用に設計、<br/>データセンター用ではない。",
     "specs.body": "llama.cpp上に構築、GGUF量子化モデルを使用。ARM最適化カーネル付きのネイティブC++推論により、発熱は少なく、毎秒のトークン数は多く、予期しないバックグラウンド消費はゼロ。",
@@ -1241,8 +1226,7 @@ T["ja"] = {
     "faq.title": "聞く前から持っていた<br/>疑問。",
     "faq.sub": "まだ困っていますか？ GitHubでissueを開くか、直接連絡を。",
     "cta.title": "<em>どんな</em>モデルもポケットの中。",
-    "cta.body": "インストールは数秒。モデルのダウンロードは数分。あとはクラウドとお別れ。",
-    "cta.primary": "Google Playで入手", "cta.ghost": "ソースを読む →",
+    "cta.body": "インストールは数秒。モデルのダウンロードは数分。あとはクラウドとお別れ。", "cta.ghost": "ソースを読む →",
     "footer.about": "大規模言語モデルをローカルで実行するオープンソースのAndroidアプリ。llama.cppの上に構築。MITライセンス。",
     "footer.product": "プロダクト",
     "footer.product.models": "対応モデル", "footer.product.how": "仕組み",
@@ -1251,15 +1235,15 @@ T["ja"] = {
     "footer.build": "ビルド", "footer.build.github": "GitHub",
     "footer.build.releases": "リリース", "footer.build.contributing": "コントリビュート",
     "footer.build.issues": "Issueトラッカー",
-    "footer.contact": "連絡先", "footer.contact.play": "Google Play",
+    "footer.contact": "連絡先",
     "footer.contact.license": "ライセンス (MIT)",
-    "footer.copy": "© 2026 Andrew Druk · llama.cppで構築",
+    "footer.copy": "© 2026 chidori-nagasa · llama.cppで構築",
 }
 
 # ---------- 中文 (zh) ----------
 T["zh"] = {
     "nav.models": "模型", "nav.how": "工作原理", "nav.languages": "语言",
-    "nav.specs": "幕后技术", "nav.faq": "常见问题", "nav.cta": "在 Play Store 中打开",
+    "nav.specs": "幕后技术", "nav.faq": "常见问题",
     "hero.pill": "v1.5.0 · 系统提示词 + 28 种语言",
     "hero.title": "在 <em>你的</em> 手机上<br/>运行大语言模型。",
     "hero.sub": "无云端、无网络、无跟踪。",
@@ -1301,7 +1285,7 @@ T["zh"] = {
     "lang.title": "说你的语言。<br/>开箱即用。",
     "lang.sub": "整个应用已翻译为 28 种语言。首次启动时，我们会为你选一个会说你语言的模型。",
     "lang.locales": "种语言",
-    "lang.foot": "发现错误的翻译？<a href=\"https://github.com/andriydruk/LMPlayground/tree/main/app/src/main/res\">请到 GitHub 提一个 PR</a>。",
+    "lang.foot": "发现错误的翻译？<a href=\"https://github.com/xdutsuay/chidori-nagasa/tree/main/app/src/main/res\">请到 GitHub 提一个 PR</a>。",
     "specs.eyebrow": "幕后技术",
     "specs.title": "为手机而生，<br/>而非数据中心。",
     "specs.body": "基于 llama.cpp，使用 GGUF 量化模型。原生 C++ 推理 + ARM 优化内核，意味着更少的发热、更高的每秒 token 数，以及不会有出乎意料的后台耗电。",
@@ -1312,8 +1296,7 @@ T["zh"] = {
     "faq.title": "你还没问出口的<br/>那些问题。",
     "faq.sub": "还卡住？在 GitHub 上提 issue，或直接联系我。",
     "cta.title": "<em>任何</em>模型，都在你口袋里。",
-    "cta.body": "几秒安装。几分钟下载一个模型。然后就和云端说再见。",
-    "cta.primary": "在 Google Play 中获取", "cta.ghost": "阅读源码 →",
+    "cta.body": "几秒安装。几分钟下载一个模型。然后就和云端说再见。", "cta.ghost": "阅读源码 →",
     "footer.about": "用于在本地运行大语言模型的开源 Android 应用。基于 llama.cpp。MIT 许可证。",
     "footer.product": "产品",
     "footer.product.models": "支持的模型", "footer.product.how": "工作原理",
@@ -1322,15 +1305,15 @@ T["zh"] = {
     "footer.build": "构建", "footer.build.github": "GitHub",
     "footer.build.releases": "发布", "footer.build.contributing": "贡献",
     "footer.build.issues": "问题追踪",
-    "footer.contact": "联系", "footer.contact.play": "Google Play",
+    "footer.contact": "联系",
     "footer.contact.license": "许可证 (MIT)",
-    "footer.copy": "© 2026 Andrew Druk · 由 llama.cpp 构建",
+    "footer.copy": "© 2026 chidori-nagasa · 由 llama.cpp 构建",
 }
 
 # ---------- 한국어 (ko) ----------
 T["ko"] = {
     "nav.models": "모델", "nav.how": "작동 방식", "nav.languages": "언어",
-    "nav.specs": "기술 사양", "nav.faq": "자주 묻는 질문", "nav.cta": "Play 스토어에서 열기",
+    "nav.specs": "기술 사양", "nav.faq": "자주 묻는 질문",
     "hero.pill": "v1.5.0 · 시스템 프롬프트 + 28개 언어",
     "hero.title": "<em>당신의</em> 폰에서<br/>대규모 언어 모델을 실행하세요.",
     "hero.sub": "클라우드 없음. 인터넷 없음. 추적 없음.",
@@ -1372,7 +1355,7 @@ T["ko"] = {
     "lang.title": "당신의 언어로 말합니다.<br/>처음부터.",
     "lang.sub": "앱 전체가 28개 언어로 번역되어 있습니다. 첫 실행 시 당신의 언어를 구사하는 모델을 골라드립니다.",
     "lang.locales": "개 언어",
-    "lang.foot": "잘못된 번역을 발견하셨나요? <a href=\"https://github.com/andriydruk/LMPlayground/tree/main/app/src/main/res\">GitHub에서 PR을 열어 주세요</a>.",
+    "lang.foot": "잘못된 번역을 발견하셨나요? <a href=\"https://github.com/xdutsuay/chidori-nagasa/tree/main/app/src/main/res\">GitHub에서 PR을 열어 주세요</a>.",
     "specs.eyebrow": "기술 사양",
     "specs.title": "휴대폰을 위해 만들었습니다.<br/>데이터 센터가 아닙니다.",
     "specs.body": "llama.cpp 위에 GGUF 양자화 모델로 구축. ARM에 최적화된 커널을 사용하는 네이티브 C++ 추론은 발열이 적고, 초당 토큰 수가 많으며, 예기치 않은 백그라운드 소모가 없음을 의미합니다.",
@@ -1383,8 +1366,7 @@ T["ko"] = {
     "faq.title": "묻기 전부터<br/>품고 있던 질문들.",
     "faq.sub": "여전히 막혔다면 GitHub에서 이슈를 열거나 직접 연락 주세요.",
     "cta.title": "<em>어떤</em> 모델이든 주머니 속에.",
-    "cta.body": "설치는 몇 초. 모델 다운로드는 몇 분. 그러고 나면 클라우드와는 작별입니다.",
-    "cta.primary": "Google Play에서 받기", "cta.ghost": "소스 읽기 →",
+    "cta.body": "설치는 몇 초. 모델 다운로드는 몇 분. 그러고 나면 클라우드와는 작별입니다.", "cta.ghost": "소스 읽기 →",
     "footer.about": "대규모 언어 모델을 로컬에서 실행하는 오픈 소스 Android 앱. llama.cpp 위에 구축. MIT 라이선스.",
     "footer.product": "제품",
     "footer.product.models": "지원 모델", "footer.product.how": "작동 방식",
@@ -1393,15 +1375,15 @@ T["ko"] = {
     "footer.build": "빌드", "footer.build.github": "GitHub",
     "footer.build.releases": "릴리스", "footer.build.contributing": "기여",
     "footer.build.issues": "이슈 트래커",
-    "footer.contact": "문의", "footer.contact.play": "Google Play",
+    "footer.contact": "문의",
     "footer.contact.license": "라이선스 (MIT)",
-    "footer.copy": "© 2026 Andrew Druk · llama.cpp로 구축",
+    "footer.copy": "© 2026 chidori-nagasa · llama.cpp로 구축",
 }
 
 # ---------- TIẾNG VIỆT (vi) ----------
 T["vi"] = {
     "nav.models": "Mô hình", "nav.how": "Cách hoạt động", "nav.languages": "Ngôn ngữ",
-    "nav.specs": "Bên trong", "nav.faq": "Câu hỏi thường gặp", "nav.cta": "Mở trên Play Store",
+    "nav.specs": "Bên trong", "nav.faq": "Câu hỏi thường gặp",
     "hero.pill": "v1.5.0 · Lời nhắc hệ thống + 28 ngôn ngữ",
     "hero.title": "Chạy mô hình ngôn ngữ lớn<br/>trên <em>điện thoại</em> của bạn.",
     "hero.sub": "Không đám mây, không Internet, không theo dõi.",
@@ -1443,7 +1425,7 @@ T["vi"] = {
     "lang.title": "Nói ngôn ngữ của bạn.<br/>Sẵn sàng từ đầu.",
     "lang.sub": "Toàn bộ ứng dụng được dịch sang 28 ngôn ngữ. Lần khởi chạy đầu tiên, chúng tôi sẽ chọn một mô hình nói ngôn ngữ của bạn.",
     "lang.locales": "ngôn ngữ",
-    "lang.foot": "Phát hiện bản dịch sai? <a href=\"https://github.com/andriydruk/LMPlayground/tree/main/app/src/main/res\">Vui lòng mở PR trên GitHub</a>.",
+    "lang.foot": "Phát hiện bản dịch sai? <a href=\"https://github.com/xdutsuay/chidori-nagasa/tree/main/app/src/main/res\">Vui lòng mở PR trên GitHub</a>.",
     "specs.eyebrow": "Bên trong",
     "specs.title": "Thiết kế cho điện thoại,<br/>không phải trung tâm dữ liệu.",
     "specs.body": "Xây dựng trên llama.cpp với mô hình GGUF lượng tử hóa. Suy luận C++ gốc với nhân tối ưu cho ARM nghĩa là ít nóng hơn, nhiều token mỗi giây hơn, và không tốn pin nền bất ngờ.",
@@ -1454,8 +1436,7 @@ T["vi"] = {
     "faq.title": "Những câu hỏi bạn có<br/>trước khi hỏi.",
     "faq.sub": "Vẫn bí? Mở issue trên GitHub hoặc liên hệ trực tiếp.",
     "cta.title": "<em>Bất kỳ</em> mô hình nào trong túi bạn.",
-    "cta.body": "Vài giây để cài đặt. Vài phút để tải mô hình. Sau đó, tạm biệt đám mây.",
-    "cta.primary": "Tải trên Google Play", "cta.ghost": "Đọc mã nguồn →",
+    "cta.body": "Vài giây để cài đặt. Vài phút để tải mô hình. Sau đó, tạm biệt đám mây.", "cta.ghost": "Đọc mã nguồn →",
     "footer.about": "Ứng dụng Android mã nguồn mở chạy mô hình ngôn ngữ lớn cục bộ. Xây dựng trên llama.cpp. Giấy phép MIT.",
     "footer.product": "Sản phẩm",
     "footer.product.models": "Mô hình hỗ trợ", "footer.product.how": "Cách hoạt động",
@@ -1464,15 +1445,15 @@ T["vi"] = {
     "footer.build": "Build", "footer.build.github": "GitHub",
     "footer.build.releases": "Phát hành", "footer.build.contributing": "Đóng góp",
     "footer.build.issues": "Trình theo dõi vấn đề",
-    "footer.contact": "Liên hệ", "footer.contact.play": "Google Play",
+    "footer.contact": "Liên hệ",
     "footer.contact.license": "Giấy phép (MIT)",
-    "footer.copy": "© 2026 Andrew Druk · Xây dựng bằng llama.cpp",
+    "footer.copy": "© 2026 chidori-nagasa · Xây dựng bằng llama.cpp",
 }
 
 # ---------- ภาษาไทย (th) ----------
 T["th"] = {
     "nav.models": "โมเดล", "nav.how": "วิธีทำงาน", "nav.languages": "ภาษา",
-    "nav.specs": "ข้อมูลทางเทคนิค", "nav.faq": "FAQ", "nav.cta": "เปิดใน Play Store",
+    "nav.specs": "ข้อมูลทางเทคนิค", "nav.faq": "FAQ",
     "hero.pill": "v1.5.0 · System prompt + 28 ภาษา",
     "hero.title": "รันโมเดลภาษาขนาดใหญ่<br/>บนมือถือ <em>ของคุณ</em>",
     "hero.sub": "ไม่มีคลาวด์ ไม่มีอินเทอร์เน็ต ไม่มีการติดตาม",
@@ -1514,7 +1495,7 @@ T["th"] = {
     "lang.title": "พูดภาษาของคุณ<br/>ตั้งแต่เปิดกล่อง",
     "lang.sub": "ทั้งแอปแปลเป็น 28 ภาษา ในการเปิดครั้งแรก เราจะเลือกโมเดลที่พูดภาษาของคุณ",
     "lang.locales": "ภาษา",
-    "lang.foot": "เห็นการแปลผิด? <a href=\"https://github.com/andriydruk/LMPlayground/tree/main/app/src/main/res\">โปรดเปิด PR บน GitHub</a>",
+    "lang.foot": "เห็นการแปลผิด? <a href=\"https://github.com/xdutsuay/chidori-nagasa/tree/main/app/src/main/res\">โปรดเปิด PR บน GitHub</a>",
     "specs.eyebrow": "ข้อมูลทางเทคนิค",
     "specs.title": "ออกแบบสำหรับมือถือ<br/>ไม่ใช่ดาต้าเซ็นเตอร์",
     "specs.body": "สร้างบน llama.cpp ด้วยโมเดล GGUF แบบ quantized การอนุมานแบบ native C++ ด้วยเคอร์เนลที่ปรับให้เหมาะกับ ARM ทำให้เครื่องร้อนน้อยลง จำนวนโทเค็นต่อวินาทีมากขึ้น และไม่กินแบตเบื้องหลังโดยไม่คาดคิด",
@@ -1525,8 +1506,7 @@ T["th"] = {
     "faq.title": "คำถามที่คุณมี<br/>ก่อนที่จะถาม",
     "faq.sub": "ยังติดอยู่? เปิด issue บน GitHub หรือติดต่อโดยตรง",
     "cta.title": "<em>โมเดลใด ๆ</em> ในกระเป๋าของคุณ",
-    "cta.body": "ติดตั้งในไม่กี่วินาที ดาวน์โหลดโมเดลในไม่กี่นาที จากนั้นก็จบกับคลาวด์",
-    "cta.primary": "รับใน Google Play", "cta.ghost": "อ่านซอร์ส →",
+    "cta.body": "ติดตั้งในไม่กี่วินาที ดาวน์โหลดโมเดลในไม่กี่นาที จากนั้นก็จบกับคลาวด์", "cta.ghost": "อ่านซอร์ส →",
     "footer.about": "แอป Android โอเพนซอร์สสำหรับรันโมเดลภาษาขนาดใหญ่ในเครื่อง สร้างบน llama.cpp สัญญา MIT",
     "footer.product": "ผลิตภัณฑ์",
     "footer.product.models": "โมเดลที่รองรับ", "footer.product.how": "วิธีทำงาน",
@@ -1535,15 +1515,15 @@ T["th"] = {
     "footer.build": "บิลด์", "footer.build.github": "GitHub",
     "footer.build.releases": "รุ่น", "footer.build.contributing": "ร่วมพัฒนา",
     "footer.build.issues": "ตัวติดตามปัญหา",
-    "footer.contact": "ติดต่อ", "footer.contact.play": "Google Play",
+    "footer.contact": "ติดต่อ",
     "footer.contact.license": "สัญญา (MIT)",
-    "footer.copy": "© 2026 Andrew Druk · สร้างด้วย llama.cpp",
+    "footer.copy": "© 2026 chidori-nagasa · สร้างด้วย llama.cpp",
 }
 
 # ---------- BAHASA INDONESIA (in) ----------
 T["in"] = {
     "nav.models": "Model", "nav.how": "Cara kerja", "nav.languages": "Bahasa",
-    "nav.specs": "Di balik layar", "nav.faq": "FAQ", "nav.cta": "Buka di Play Store",
+    "nav.specs": "Di balik layar", "nav.faq": "FAQ",
     "hero.pill": "v1.5.0 · System prompt + 28 bahasa",
     "hero.title": "Jalankan model bahasa besar<br/>di ponsel <em>kamu</em>.",
     "hero.sub": "Tanpa cloud, tanpa internet, tanpa pelacakan.",
@@ -1585,7 +1565,7 @@ T["in"] = {
     "lang.title": "Bicara bahasamu.<br/>Langsung dari kotak.",
     "lang.sub": "Seluruh aplikasi diterjemahkan ke 28 bahasa. Saat peluncuran pertama, kami pilih model yang berbicara bahasamu.",
     "lang.locales": "bahasa",
-    "lang.foot": "Menemukan terjemahan yang salah? <a href=\"https://github.com/andriydruk/LMPlayground/tree/main/app/src/main/res\">Silakan buka PR di GitHub</a>.",
+    "lang.foot": "Menemukan terjemahan yang salah? <a href=\"https://github.com/xdutsuay/chidori-nagasa/tree/main/app/src/main/res\">Silakan buka PR di GitHub</a>.",
     "specs.eyebrow": "Di balik layar",
     "specs.title": "Direkayasa untuk ponsel,<br/>bukan pusat data.",
     "specs.body": "Dibangun di atas llama.cpp dengan model GGUF terkuantisasi. Inferensi C++ native dengan kernel yang dioptimalkan untuk ARM berarti lebih sedikit panas, lebih banyak token per detik, dan tanpa konsumsi baterai latar tak terduga.",
@@ -1596,8 +1576,7 @@ T["in"] = {
     "faq.title": "Pertanyaan yang sudah kamu punya<br/>sebelum bertanya.",
     "faq.sub": "Masih bingung? Buka issue di GitHub atau hubungi langsung.",
     "cta.title": "<em>Model apa pun</em> di sakumu.",
-    "cta.body": "Beberapa detik untuk memasang. Beberapa menit untuk mengunduh model. Lalu selesai dengan cloud.",
-    "cta.primary": "Dapatkan di Google Play", "cta.ghost": "Baca sumbernya →",
+    "cta.body": "Beberapa detik untuk memasang. Beberapa menit untuk mengunduh model. Lalu selesai dengan cloud.", "cta.ghost": "Baca sumbernya →",
     "footer.about": "Aplikasi Android sumber terbuka untuk menjalankan model bahasa besar secara lokal. Dibangun di atas llama.cpp. Lisensi MIT.",
     "footer.product": "Produk",
     "footer.product.models": "Model yang didukung", "footer.product.how": "Cara kerja",
@@ -1606,15 +1585,15 @@ T["in"] = {
     "footer.build": "Build", "footer.build.github": "GitHub",
     "footer.build.releases": "Rilis", "footer.build.contributing": "Berkontribusi",
     "footer.build.issues": "Pelacak isu",
-    "footer.contact": "Kontak", "footer.contact.play": "Google Play",
+    "footer.contact": "Kontak",
     "footer.contact.license": "Lisensi (MIT)",
-    "footer.copy": "© 2026 Andrew Druk · Dibangun dengan llama.cpp",
+    "footer.copy": "© 2026 chidori-nagasa · Dibangun dengan llama.cpp",
 }
 
 # ---------- BAHASA MELAYU (ms) ----------
 T["ms"] = {
     "nav.models": "Model", "nav.how": "Cara berfungsi", "nav.languages": "Bahasa",
-    "nav.specs": "Di sebalik tabir", "nav.faq": "FAQ", "nav.cta": "Buka di Play Store",
+    "nav.specs": "Di sebalik tabir", "nav.faq": "FAQ",
     "hero.pill": "v1.5.0 · System prompt + 28 bahasa",
     "hero.title": "Jalankan model bahasa besar<br/>pada telefon <em>anda</em>.",
     "hero.sub": "Tiada awan, tiada Internet, tiada penjejakan.",
@@ -1656,7 +1635,7 @@ T["ms"] = {
     "lang.title": "Bercakap bahasa anda.<br/>Daripada permulaan.",
     "lang.sub": "Seluruh aplikasi diterjemahkan ke dalam 28 bahasa. Pada pelancaran pertama, kami akan pilih model yang bercakap bahasa anda.",
     "lang.locales": "bahasa",
-    "lang.foot": "Nampak terjemahan yang salah? <a href=\"https://github.com/andriydruk/LMPlayground/tree/main/app/src/main/res\">Sila buka PR di GitHub</a>.",
+    "lang.foot": "Nampak terjemahan yang salah? <a href=\"https://github.com/xdutsuay/chidori-nagasa/tree/main/app/src/main/res\">Sila buka PR di GitHub</a>.",
     "specs.eyebrow": "Di sebalik tabir",
     "specs.title": "Direka untuk telefon,<br/>bukan pusat data.",
     "specs.body": "Dibina di atas llama.cpp dengan model GGUF terkuantum. Inferens C++ asli dengan kernel dioptimumkan untuk ARM bermakna kurang panas, lebih banyak token sesaat, dan tiada penggunaan latar belakang tidak dijangka.",
@@ -1667,8 +1646,7 @@ T["ms"] = {
     "faq.title": "Soalan yang anda ada<br/>sebelum bertanya.",
     "faq.sub": "Masih buntu? Buka isu di GitHub atau hubungi terus.",
     "cta.title": "<em>Mana-mana</em> model dalam poket anda.",
-    "cta.body": "Beberapa saat untuk dipasang. Beberapa minit untuk muat turun model. Kemudian ucap selamat tinggal kepada awan.",
-    "cta.primary": "Dapatkan di Google Play", "cta.ghost": "Baca sumber →",
+    "cta.body": "Beberapa saat untuk dipasang. Beberapa minit untuk muat turun model. Kemudian ucap selamat tinggal kepada awan.", "cta.ghost": "Baca sumber →",
     "footer.about": "Aplikasi Android sumber terbuka untuk menjalankan model bahasa besar secara setempat. Dibina di atas llama.cpp. Lesen MIT.",
     "footer.product": "Produk",
     "footer.product.models": "Model disokong", "footer.product.how": "Cara berfungsi",
@@ -1677,15 +1655,15 @@ T["ms"] = {
     "footer.build": "Build", "footer.build.github": "GitHub",
     "footer.build.releases": "Keluaran", "footer.build.contributing": "Menyumbang",
     "footer.build.issues": "Penjejak isu",
-    "footer.contact": "Hubungi", "footer.contact.play": "Google Play",
+    "footer.contact": "Hubungi",
     "footer.contact.license": "Lesen (MIT)",
-    "footer.copy": "© 2026 Andrew Druk · Dibina dengan llama.cpp",
+    "footer.copy": "© 2026 chidori-nagasa · Dibina dengan llama.cpp",
 }
 
 # ---------- FILIPINO (fil) ----------
 T["fil"] = {
     "nav.models": "Mga Modelo", "nav.how": "Paano gumagana", "nav.languages": "Mga Wika",
-    "nav.specs": "Sa loob", "nav.faq": "FAQ", "nav.cta": "Buksan sa Play Store",
+    "nav.specs": "Sa loob", "nav.faq": "FAQ",
     "hero.pill": "v1.5.0 · System prompts + 28 wika",
     "hero.title": "Magpatakbo ng malalaking modelo<br/>sa <em>iyong</em> telepono.",
     "hero.sub": "Walang ulap, walang Internet, walang pagsubaybay.",
@@ -1727,7 +1705,7 @@ T["fil"] = {
     "lang.title": "Nagsasalita ng wika mo.<br/>Hindi na kailangan i-set up.",
     "lang.sub": "Naka-translate ang buong app sa 28 wika. Sa unang launch, pipili kami ng modelong nakakaintindi ng wika mo.",
     "lang.locales": "mga wika",
-    "lang.foot": "May nakitang maling salin? <a href=\"https://github.com/andriydruk/LMPlayground/tree/main/app/src/main/res\">Magbukas po ng PR sa GitHub</a>.",
+    "lang.foot": "May nakitang maling salin? <a href=\"https://github.com/xdutsuay/chidori-nagasa/tree/main/app/src/main/res\">Magbukas po ng PR sa GitHub</a>.",
     "specs.eyebrow": "Sa loob",
     "specs.title": "Ginawa para sa telepono,<br/>hindi para sa data center.",
     "specs.body": "Itinayo sa llama.cpp gamit ang mga quantized GGUF na modelo. Native C++ inference na may ARM-optimized na kernel — kaunting init, mas maraming token kada segundo, at walang biglaang background drain.",
@@ -1738,8 +1716,7 @@ T["fil"] = {
     "faq.title": "Mga tanong na meron ka<br/>bago ka pa magtanong.",
     "faq.sub": "May problema pa? Magbukas ng issue sa GitHub o makipag-ugnayan nang direkta.",
     "cta.title": "<em>Anumang</em> modelo sa bulsa mo.",
-    "cta.body": "Ilang segundo i-install. Ilang minuto i-download ang modelo. Tapos na sa cloud.",
-    "cta.primary": "Kunin sa Google Play", "cta.ghost": "Basahin ang source →",
+    "cta.body": "Ilang segundo i-install. Ilang minuto i-download ang modelo. Tapos na sa cloud.", "cta.ghost": "Basahin ang source →",
     "footer.about": "Open source na Android app para magpatakbo ng malalaking modelo ng wika nang lokal. Itinayo sa llama.cpp. Lisensyang MIT.",
     "footer.product": "Produkto",
     "footer.product.models": "Sinusuportahang modelo", "footer.product.how": "Paano gumagana",
@@ -1748,15 +1725,15 @@ T["fil"] = {
     "footer.build": "Build", "footer.build.github": "GitHub",
     "footer.build.releases": "Mga Release", "footer.build.contributing": "Mag-ambag",
     "footer.build.issues": "Issue tracker",
-    "footer.contact": "Makipag-ugnayan", "footer.contact.play": "Google Play",
+    "footer.contact": "Makipag-ugnayan",
     "footer.contact.license": "Lisensya (MIT)",
-    "footer.copy": "© 2026 Andrew Druk · Itinayo gamit ang llama.cpp",
+    "footer.copy": "© 2026 chidori-nagasa · Itinayo gamit ang llama.cpp",
 }
 
 # ---------- TÜRKÇE (tr) ----------
 T["tr"] = {
     "nav.models": "Modeller", "nav.how": "Nasıl çalışır", "nav.languages": "Diller",
-    "nav.specs": "Kaputun altında", "nav.faq": "SSS", "nav.cta": "Play Store'da aç",
+    "nav.specs": "Kaputun altında", "nav.faq": "SSS",
     "hero.pill": "v1.5.0 · Sistem komutları + 28 dil",
     "hero.title": "Büyük dil modellerini<br/><em>kendi</em> telefonunda çalıştır.",
     "hero.sub": "Bulut yok, internet yok, izleme yok.",
@@ -1798,7 +1775,7 @@ T["tr"] = {
     "lang.title": "Senin dilini konuşur.<br/>Kutudan çıktığı gibi.",
     "lang.sub": "Tüm uygulama 28 dile çevrildi. İlk açılışta dilini konuşan bir model seçeriz.",
     "lang.locales": "dil",
-    "lang.foot": "Yanlış bir çeviri mi gördün? <a href=\"https://github.com/andriydruk/LMPlayground/tree/main/app/src/main/res\">Lütfen GitHub'da bir PR aç</a>.",
+    "lang.foot": "Yanlış bir çeviri mi gördün? <a href=\"https://github.com/xdutsuay/chidori-nagasa/tree/main/app/src/main/res\">Lütfen GitHub'da bir PR aç</a>.",
     "specs.eyebrow": "Kaputun altında",
     "specs.title": "Telefonlar için tasarlandı,<br/>veri merkezleri için değil.",
     "specs.body": "GGUF kuantize modellerle llama.cpp üzerinde inşa edildi. ARM optimize çekirdekli yerel C++ çıkarımı; daha az ısı, saniyede daha fazla token ve beklenmedik arka plan tüketimi yok demektir.",
@@ -1809,8 +1786,7 @@ T["tr"] = {
     "faq.title": "Sormadan önce sahip olduğun<br/>sorular.",
     "faq.sub": "Hâlâ sıkıştın mı? GitHub'da bir issue aç ya da doğrudan iletişime geç.",
     "cta.title": "Cebinde <em>her</em> model.",
-    "cta.body": "Saniyeler içinde kurulum. Dakikalar içinde model indirme. Sonra buluta veda.",
-    "cta.primary": "Google Play'den al", "cta.ghost": "Kaynağı oku →",
+    "cta.body": "Saniyeler içinde kurulum. Dakikalar içinde model indirme. Sonra buluta veda.", "cta.ghost": "Kaynağı oku →",
     "footer.about": "Büyük dil modellerini yerel olarak çalıştırmak için açık kaynak Android uygulaması. llama.cpp üzerine inşa edildi. MIT lisanslı.",
     "footer.product": "Ürün",
     "footer.product.models": "Desteklenen modeller", "footer.product.how": "Nasıl çalışır",
@@ -1819,15 +1795,15 @@ T["tr"] = {
     "footer.build": "Build", "footer.build.github": "GitHub",
     "footer.build.releases": "Sürümler", "footer.build.contributing": "Katkıda bulun",
     "footer.build.issues": "Sorun takipçisi",
-    "footer.contact": "İletişim", "footer.contact.play": "Google Play",
+    "footer.contact": "İletişim",
     "footer.contact.license": "Lisans (MIT)",
-    "footer.copy": "© 2026 Andrew Druk · llama.cpp ile inşa edildi",
+    "footer.copy": "© 2026 chidori-nagasa · llama.cpp ile inşa edildi",
 }
 
 # ---------- العربية (ar) ----------
 T["ar"] = {
     "nav.models": "النماذج", "nav.how": "كيف تعمل", "nav.languages": "اللغات",
-    "nav.specs": "تحت الغطاء", "nav.faq": "الأسئلة الشائعة", "nav.cta": "افتح في Play Store",
+    "nav.specs": "تحت الغطاء", "nav.faq": "الأسئلة الشائعة",
     "hero.pill": "v1.5.0 · موجّهات النظام + 28 لغة",
     "hero.title": "شغّل نماذج اللغة الكبيرة<br/>على <em>هاتفك</em>.",
     "hero.sub": "بدون سحابة، بدون إنترنت، بدون تتبّع.",
@@ -1869,7 +1845,7 @@ T["ar"] = {
     "lang.title": "يتحدّث لغتك.<br/>منذ اللحظة الأولى.",
     "lang.sub": "التطبيق بأكمله مترجم إلى 28 لغة. عند أوّل تشغيل، نختار نموذجًا يتحدّث لغتك.",
     "lang.locales": "لغة",
-    "lang.foot": "لاحظت ترجمة خاطئة؟ <a href=\"https://github.com/andriydruk/LMPlayground/tree/main/app/src/main/res\">من فضلك افتح PR على GitHub</a>.",
+    "lang.foot": "لاحظت ترجمة خاطئة؟ <a href=\"https://github.com/xdutsuay/chidori-nagasa/tree/main/app/src/main/res\">من فضلك افتح PR على GitHub</a>.",
     "specs.eyebrow": "تحت الغطاء",
     "specs.title": "صُمِّم للهواتف،<br/>لا لمراكز البيانات.",
     "specs.body": "مبنيّ على llama.cpp مع نماذج GGUF مكمَّاة. استدلال C++ أصلي مع نواة محسَّنة لـARM يعني حرارة أقل، عددًا أكبر من الرموز في الثانية، ولا استنزاف غير متوقّع في الخلفية.",
@@ -1880,8 +1856,7 @@ T["ar"] = {
     "faq.title": "أسئلة كانت لديك<br/>قبل أن تسأل.",
     "faq.sub": "ما زلت عالقًا؟ افتح issue على GitHub أو تواصل مباشرةً.",
     "cta.title": "<em>أيّ</em> نموذج في جيبك.",
-    "cta.body": "ثوانٍ للتثبيت. دقائق لتنزيل نموذج. ثم تودّع السحابة.",
-    "cta.primary": "احصل عليه على Google Play", "cta.ghost": "اقرأ المصدر ←",
+    "cta.body": "ثوانٍ للتثبيت. دقائق لتنزيل نموذج. ثم تودّع السحابة.", "cta.ghost": "اقرأ المصدر ←",
     "footer.about": "تطبيق Android مفتوح المصدر لتشغيل نماذج اللغة الكبيرة محليًا. مبنيّ على llama.cpp. مرخّص بـMIT.",
     "footer.product": "المنتج",
     "footer.product.models": "النماذج المدعومة", "footer.product.how": "كيف تعمل",
@@ -1890,15 +1865,15 @@ T["ar"] = {
     "footer.build": "البناء", "footer.build.github": "GitHub",
     "footer.build.releases": "الإصدارات", "footer.build.contributing": "المساهمة",
     "footer.build.issues": "متعقّب الـIssues",
-    "footer.contact": "التواصل", "footer.contact.play": "Google Play",
+    "footer.contact": "التواصل",
     "footer.contact.license": "الرخصة (MIT)",
-    "footer.copy": "© 2026 Andrew Druk · مبني بـllama.cpp",
+    "footer.copy": "© 2026 chidori-nagasa · مبني بـllama.cpp",
 }
 
 # ---------- עברית (iw) ----------
 T["iw"] = {
     "nav.models": "מודלים", "nav.how": "איך זה עובד", "nav.languages": "שפות",
-    "nav.specs": "מתחת למכסה", "nav.faq": "שאלות נפוצות", "nav.cta": "פתח ב-Play Store",
+    "nav.specs": "מתחת למכסה", "nav.faq": "שאלות נפוצות",
     "hero.pill": "v1.5.0 · הנחיות מערכת + 28 שפות",
     "hero.title": "הפעל מודלי שפה גדולים<br/>על <em>הטלפון שלך</em>.",
     "hero.sub": "בלי ענן, בלי אינטרנט, בלי מעקב.",
@@ -1940,7 +1915,7 @@ T["iw"] = {
     "lang.title": "מדבר את השפה שלך.<br/>מיד מהקופסה.",
     "lang.sub": "כל האפליקציה מתורגמת ל-28 שפות. בהפעלה הראשונה נבחר מודל שמדבר את שלך.",
     "lang.locales": "שפות",
-    "lang.foot": "שמת לב לתרגום שגוי? <a href=\"https://github.com/andriydruk/LMPlayground/tree/main/app/src/main/res\">בבקשה פתח PR ב-GitHub</a>.",
+    "lang.foot": "שמת לב לתרגום שגוי? <a href=\"https://github.com/xdutsuay/chidori-nagasa/tree/main/app/src/main/res\">בבקשה פתח PR ב-GitHub</a>.",
     "specs.eyebrow": "מתחת למכסה",
     "specs.title": "תוכנן לטלפונים,<br/>לא למרכזי נתונים.",
     "specs.body": "נבנה על llama.cpp עם מודלי GGUF מקוונטטים. היסק C++ מקורי עם ליבות מותאמות ARM פירושו פחות חום, יותר טוקנים בשנייה ושום צריכה מפתיעה ברקע.",
@@ -1951,8 +1926,7 @@ T["iw"] = {
     "faq.title": "שאלות שהיו לך<br/>לפני ששאלת.",
     "faq.sub": "עדיין תקוע? פתח issue ב-GitHub או צור קשר ישיר.",
     "cta.title": "<em>כל</em> מודל בכיס שלך.",
-    "cta.body": "שניות להתקנה. דקות להוריד מודל. ואז סיימת עם הענן.",
-    "cta.primary": "הורד מ-Google Play", "cta.ghost": "קרא את הקוד ←",
+    "cta.body": "שניות להתקנה. דקות להוריד מודל. ואז סיימת עם הענן.", "cta.ghost": "קרא את הקוד ←",
     "footer.about": "אפליקציית אנדרואיד בקוד פתוח להרצת מודלי שפה גדולים מקומית. נבנתה על llama.cpp. ברישיון MIT.",
     "footer.product": "מוצר",
     "footer.product.models": "מודלים נתמכים", "footer.product.how": "איך זה עובד",
@@ -1961,15 +1935,15 @@ T["iw"] = {
     "footer.build": "Build", "footer.build.github": "GitHub",
     "footer.build.releases": "גרסאות", "footer.build.contributing": "תרומה",
     "footer.build.issues": "מעקב issues",
-    "footer.contact": "צור קשר", "footer.contact.play": "Google Play",
+    "footer.contact": "צור קשר",
     "footer.contact.license": "רישיון (MIT)",
-    "footer.copy": "© 2026 Andrew Druk · נבנה עם llama.cpp",
+    "footer.copy": "© 2026 chidori-nagasa · נבנה עם llama.cpp",
 }
 
 # ---------- हिन्दी (hi) ----------
 T["hi"] = {
     "nav.models": "मॉडल", "nav.how": "कैसे काम करता है", "nav.languages": "भाषाएँ",
-    "nav.specs": "अंदर की बात", "nav.faq": "FAQ", "nav.cta": "Play Store में खोलें",
+    "nav.specs": "अंदर की बात", "nav.faq": "FAQ",
     "hero.pill": "v1.5.0 · सिस्टम प्रॉम्प्ट + 28 भाषाएँ",
     "hero.title": "बड़े भाषा मॉडल चलाएँ<br/>अपने <em>फ़ोन</em> पर।",
     "hero.sub": "कोई क्लाउड नहीं, कोई इंटरनेट नहीं, कोई ट्रैकिंग नहीं।",
@@ -2011,7 +1985,7 @@ T["hi"] = {
     "lang.title": "आपकी भाषा बोलता है।<br/>शुरू से ही।",
     "lang.sub": "पूरा ऐप 28 भाषाओं में अनुवादित है। पहली बार चलाने पर हम आपकी भाषा बोलने वाला मॉडल चुनते हैं।",
     "lang.locales": "भाषाएँ",
-    "lang.foot": "ग़लत अनुवाद दिखा? <a href=\"https://github.com/andriydruk/LMPlayground/tree/main/app/src/main/res\">कृपया GitHub पर PR खोलें</a>।",
+    "lang.foot": "ग़लत अनुवाद दिखा? <a href=\"https://github.com/xdutsuay/chidori-nagasa/tree/main/app/src/main/res\">कृपया GitHub पर PR खोलें</a>।",
     "specs.eyebrow": "अंदर की बात",
     "specs.title": "फ़ोन के लिए बना,<br/>डेटा सेंटर के लिए नहीं।",
     "specs.body": "GGUF क्वांटाइज़्ड मॉडल के साथ llama.cpp पर बना। ARM-ऑप्टिमाइज़्ड कर्नेल के साथ नेटिव C++ इन्फ़रेन्स यानी कम गर्मी, ज़्यादा टोकन प्रति सेकंड और बैकग्राउंड में अप्रत्याशित खपत नहीं।",
@@ -2022,8 +1996,7 @@ T["hi"] = {
     "faq.title": "वे सवाल जो आपके मन में थे<br/>पूछने से पहले।",
     "faq.sub": "अब भी अटके हैं? GitHub पर issue खोलें या सीधे संपर्क करें।",
     "cta.title": "<em>कोई भी</em> मॉडल आपकी जेब में।",
-    "cta.body": "इंस्टॉल होने में सेकंड। मॉडल डाउनलोड में मिनट। उसके बाद क्लाउड को अलविदा।",
-    "cta.primary": "Google Play पर पाएँ", "cta.ghost": "स्रोत पढ़ें →",
+    "cta.body": "इंस्टॉल होने में सेकंड। मॉडल डाउनलोड में मिनट। उसके बाद क्लाउड को अलविदा।", "cta.ghost": "स्रोत पढ़ें →",
     "footer.about": "बड़े भाषा मॉडल को लोकल पर चलाने के लिए ओपन-सोर्स Android ऐप। llama.cpp पर बना। MIT लाइसेंस।",
     "footer.product": "उत्पाद",
     "footer.product.models": "समर्थित मॉडल", "footer.product.how": "कैसे काम करता है",
@@ -2032,15 +2005,15 @@ T["hi"] = {
     "footer.build": "Build", "footer.build.github": "GitHub",
     "footer.build.releases": "रिलीज़", "footer.build.contributing": "योगदान",
     "footer.build.issues": "इश्यू ट्रैकर",
-    "footer.contact": "संपर्क", "footer.contact.play": "Google Play",
+    "footer.contact": "संपर्क",
     "footer.contact.license": "लाइसेंस (MIT)",
-    "footer.copy": "© 2026 Andrew Druk · llama.cpp के साथ निर्मित",
+    "footer.copy": "© 2026 chidori-nagasa · llama.cpp के साथ निर्मित",
 }
 
 # ---------- বাংলা (bn) ----------
 T["bn"] = {
     "nav.models": "মডেল", "nav.how": "কীভাবে কাজ করে", "nav.languages": "ভাষা",
-    "nav.specs": "ভেতরের কথা", "nav.faq": "প্রশ্নোত্তর", "nav.cta": "Play Store-এ খুলুন",
+    "nav.specs": "ভেতরের কথা", "nav.faq": "প্রশ্নোত্তর",
     "hero.pill": "v1.5.0 · সিস্টেম প্রম্পট + ২৮টি ভাষা",
     "hero.title": "বড় ভাষা মডেল চালান<br/><em>আপনার</em> ফোনে।",
     "hero.sub": "কোনো ক্লাউড নেই, কোনো ইন্টারনেট নেই, কোনো ট্র্যাকিং নেই।",
@@ -2082,7 +2055,7 @@ T["bn"] = {
     "lang.title": "আপনার ভাষায় কথা বলে।<br/>শুরু থেকেই।",
     "lang.sub": "পুরো অ্যাপ ২৮টি ভাষায় অনূদিত। প্রথমবার চালু করার সময় আমরা আপনার ভাষা জানে এমন একটি মডেল বেছে নিই।",
     "lang.locales": "ভাষা",
-    "lang.foot": "ভুল অনুবাদ দেখলেন? <a href=\"https://github.com/andriydruk/LMPlayground/tree/main/app/src/main/res\">দয়া করে GitHub-এ একটি PR খুলুন</a>।",
+    "lang.foot": "ভুল অনুবাদ দেখলেন? <a href=\"https://github.com/xdutsuay/chidori-nagasa/tree/main/app/src/main/res\">দয়া করে GitHub-এ একটি PR খুলুন</a>।",
     "specs.eyebrow": "ভেতরের কথা",
     "specs.title": "ফোনের জন্য তৈরি,<br/>ডেটা সেন্টারের জন্য নয়।",
     "specs.body": "GGUF কোয়ান্টাইজড মডেলসহ llama.cpp-এর উপর তৈরি। ARM-অপ্টিমাইজড কার্নেলসহ নেটিভ C++ ইনফারেন্স মানে কম তাপ, প্রতি সেকেন্ডে বেশি টোকেন এবং অপ্রত্যাশিত ব্যাকগ্রাউন্ড খরচ নয়।",
@@ -2093,8 +2066,7 @@ T["bn"] = {
     "faq.title": "প্রশ্ন যা আপনার মনে ছিল<br/>জিজ্ঞাসা করার আগে।",
     "faq.sub": "এখনও আটকে আছেন? GitHub-এ issue খুলুন বা সরাসরি যোগাযোগ করুন।",
     "cta.title": "<em>যেকোনো</em> মডেল আপনার পকেটে।",
-    "cta.body": "ইনস্টল করতে সেকেন্ড। একটি মডেল ডাউনলোড করতে মিনিট। তারপর ক্লাউডকে বিদায়।",
-    "cta.primary": "Google Play-তে পান", "cta.ghost": "সোর্স পড়ুন →",
+    "cta.body": "ইনস্টল করতে সেকেন্ড। একটি মডেল ডাউনলোড করতে মিনিট। তারপর ক্লাউডকে বিদায়।", "cta.ghost": "সোর্স পড়ুন →",
     "footer.about": "বড় ভাষা মডেল স্থানীয়ভাবে চালানোর জন্য ওপেন-সোর্স Android অ্যাপ। llama.cpp-এর উপর তৈরি। MIT লাইসেন্স।",
     "footer.product": "প্রোডাক্ট",
     "footer.product.models": "সমর্থিত মডেল", "footer.product.how": "কীভাবে কাজ করে",
@@ -2103,9 +2075,9 @@ T["bn"] = {
     "footer.build": "Build", "footer.build.github": "GitHub",
     "footer.build.releases": "রিলিজ", "footer.build.contributing": "অবদান রাখুন",
     "footer.build.issues": "ইস্যু ট্র্যাকার",
-    "footer.contact": "যোগাযোগ", "footer.contact.play": "Google Play",
+    "footer.contact": "যোগাযোগ",
     "footer.contact.license": "লাইসেন্স (MIT)",
-    "footer.copy": "© ২০২৬ Andrew Druk · llama.cpp দিয়ে তৈরি",
+    "footer.copy": "© ২০২৬ chidori-nagasa · llama.cpp দিয়ে তৈরি",
 }
 
 # ============================================================
@@ -3463,7 +3435,7 @@ for code in APP:
 # Output JS.
 out_path = os.path.join(DOCS, 'i18n.js')
 with open(out_path, 'w', encoding='utf-8') as f:
-    f.write('// Auto-generated translations bundle for LM Playground landing page.\n')
+    f.write('// Auto-generated translations bundle for the chidori-nagasa landing page.\n')
     f.write('// FAQ Q&A and phone chat strings come from the Android app strings.xml\n')
     f.write('// (professional translations). Other strings are best-effort; PRs welcome.\n')
     f.write('window.LMP_I18N = ')

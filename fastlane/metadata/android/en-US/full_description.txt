@@ -29,4 +29,4 @@ No accounts, ads, or analytics. Model catalog downloads use Hugging Face. Option
 
 OPEN SOURCE
 
-MIT License. Fork of LM Playground; inference powered by llama.cpp.
+MIT License. Third-party attributions in NOTICE.md; inference powered by llama.cpp.

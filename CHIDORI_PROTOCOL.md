@@ -144,7 +144,7 @@ side of the relationship.
 This section exists because Android apps break across iterations more easily
 than desktop or web apps in this team's experience — OS fragmentation, OEM
 background-task killing, permission model churn, and (here specifically) a
-native llama.cpp/NDK layer inherited from LMPlayground. These rules exist to
+  native llama.cpp/NDK layer. These rules exist to
 catch that class of regression before it ships, not to slow anyone down for
 its own sake.
 
@@ -160,15 +160,16 @@ its own sake.
 
 ### 3.2 Native layer (llama.cpp / NDK) changes
 
-- The native inference layer is inherited from LMPlayground and is the
+- The native inference layer is the
   highest-risk surface for silent regressions (crashes only on specific
   chipsets, OOM on low-RAM devices, etc.).
 - Any change touching `app/src/main/cpp` or the NDK/CMake build requires
   testing on at least one low-RAM physical device (not emulator-only) before
   merge, and the device/model tested must be noted in the PR.
-- Upstream LMPlayground changes are pulled in deliberately via a tracked
-  `vendor/lmplayground-sync` branch, reviewed, and merged — never rebased
-  over silently. See Section 3.5.
+- The native llama.cpp layer is maintained in this repository; llama.cpp
+  itself is tracked upstream. Local patches carried on top of it are
+  reviewed through the normal §3.1 merge gates and are never silently
+  overwritten by a vendored refresh. See Section 3.5.
 
 ### 3.3 Regression protection
 
@@ -185,20 +186,22 @@ its own sake.
   Section 2. UI code never constructs coordinator requests directly — this
   keeps the wire-contract surface area small and auditable when
   `protocol_version` changes.
-- `inference/` (on-device chat, wrapping the LMPlayground-derived engine) and
+- `inference/` (on-device chat, wrapping the native engine) and
   `net/coordinator` (desktop companion features) are kept as separate modules
   with no compile-time dependency on each other, so a coordinator-side bug
   can't take down local chat and vice versa.
 
-### 3.5 Upstream sync with LMPlayground
+### 3.5 Native layer maintenance
 
-- `chidori-nagasa` is a fork/derivative, not a permanent hard fork frozen at
-  one commit. Security and model-catalog updates from LMPlayground upstream
-  are reviewed at least monthly and pulled via the `vendor/lmplayground-sync`
-  branch.
-- Divergence from upstream (anything renamed, restructured, or removed) is
-  documented in `UPSTREAM_DIVERGENCE.md` so future syncs know what will
-  conflict and why.
+- The native inference layer under `app/src/main/cpp` is maintained in this
+  repository; llama.cpp itself is tracked upstream
+  (https://github.com/ggml-org/llama.cpp). Security and model-catalog
+  updates from llama.cpp upstream are reviewed and merged through the
+  normal §3.1 merge gates.
+- Local patches carried on top of the native layer (see `ARCHITECTURE.md`
+  "fd:N file descriptor paths") are documented and must be re-applied
+  deliberately, never lost in a vendored refresh. Third-party attribution
+  lives in `NOTICE.md`.
 
 ### 3.6 Release checklist gate
 

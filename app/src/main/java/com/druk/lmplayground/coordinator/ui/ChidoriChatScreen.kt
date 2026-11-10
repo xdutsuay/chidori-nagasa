@@ -39,7 +39,7 @@ import com.druk.lmplayground.coordinator.model.RemoteChatMessage
 /**
  * Remote chat surface (PRD.md §6.4) — routed through the paired desktop's
  * coordinator. Bubbles reuse the on-device [Message] composable so replies
- * render like native LMPlayground chat (markdown, selection, share/copy).
+ * render like the app's on-device chat (markdown, selection, share/copy).
  *
  * TODO(unify-transports): Same class of mistake as the former CloudChat
  * screen — this is a second list/input/banner instead of a DESKTOP source

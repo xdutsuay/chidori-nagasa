@@ -1,4 +1,4 @@
-LM Playground låter dig köra stora språkmodeller direkt på din Android-enhet. Ladda ner modeller, ladda dem med ett tryck och chatta — allt offline, allt privat. Inga molnservrar, inga API-nycklar, ingen data lämnar din enhet.
+chidori-nagasa låter dig köra stora språkmodeller direkt på din Android-enhet. Ladda ner modeller, ladda dem med ett tryck och chatta — allt offline, allt privat. Inga molnservrar, inga API-nycklar, ingen data lämnar din enhet.
 
 HUVUDFUNKTIONER
 
@@ -47,4 +47,4 @@ Från endast 267 MB för den minsta modellen. Större modeller (4B–8B) drar ny
 
 ÖPPEN KÄLLKOD
 
-LM Playground är öppen källkod under MIT-licensen. Drivs av llama.cpp med modeller från Hugging Face.
+chidori-nagasa är öppen källkod under MIT-licensen. Drivs av llama.cpp med modeller från Hugging Face.

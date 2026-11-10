@@ -3,14 +3,14 @@
 Status: Draft for v1
 Owner: chidori-nagasa (Android)
 Depends on: `CHIDORI_PROTOCOL.md` (binding — this PRD must not contradict it)
-Base codebase: LMPlayground (https://github.com/andriydruk/LMPlayground), MIT
+Base codebase: chidori-nagasa (native on-device inference layer: llama.cpp; see `NOTICE.md`)
 Sister product: chidori desktop IDE (https://github.com/xdutsuay/lclreason)
 
 ## 1. Summary
 
 chidori-nagasa is the Android companion to chidori, the desktop AI IDE. It does
-two things in v1: runs LLMs on-device for private offline chat (inherited from
-LMPlayground), and pairs with a running chidori desktop instance over the LAN
+two things in v1: runs LLMs on-device for private offline chat, and pairs
+with a running chidori desktop instance over the LAN
 to show coordinator status, agent run activity, and let the user chat with the
 desktop's local/remote models from their phone. This matches the "companion
 mobile app — coming soon" promise already published on the chidori site.
@@ -26,7 +26,7 @@ on-device inference away from the desktop at all.
 ## 3. Goals (v1)
 
 1. On-device chat with a local GGUF model, fully offline, private — the
-   LMPlayground feature set, rebranded and kept working.
+   core feature set, kept working.
 2. Pair a phone with a chidori desktop instance on the same LAN via mDNS
    (with manual host:port fallback).
 3. View live coordinator status and the list/detail of Ask/Agent/Plan/Debug
@@ -62,7 +62,7 @@ being at the desk.
 Core use cases:
 
 - U1: Open the app on a new phone, download and run a local model, chat
-  offline — no desktop involved at all. (Pure LMPlayground use case.)
+  offline — no desktop involved at all. (Pure on-device use case.)
 - U2: Open the app while chidori desktop is running on the same Wi-Fi, get
   auto-discovered via mDNS, pair via QR/code shown on desktop.
 - U3: After pairing, see coordinator status (idle/running/error) and a list
@@ -78,16 +78,16 @@ Core use cases:
 
 ## 6. Functional requirements
 
-### 6.1 On-device chat (from LMPlayground base)
+### 6.1 On-device chat
 
 - Retain: model catalog/download manager, chat UI with markdown rendering,
   reasoning-model thinking-step display, vision input where the model
   supports it, chat history/sessions, custom GGUF import, storage location
   picker.
-- Rebrand: app name, icon, package ID, and in-app copy from LM Playground to
-  chidori-nagasa; update licensing/acknowledgment screen to credit
-  LMPlayground and llama.cpp per `LICENSE`/`NOTICE` requirements.
-- No functional regression versus upstream LMPlayground's on-device chat —
+- Branding: app name, icon, package ID, and in-app copy are chidori-nagasa;
+  the licensing/acknowledgment screen credits third-party components per
+  `LICENSE`/`NOTICE` requirements.
+- No functional regression in on-device chat —
   this is covered by the regression suite in `TEST_PLAN.md`.
 
 ### 6.2 Discovery and pairing
@@ -132,18 +132,18 @@ Core use cases:
   third party, and this is stated in-app.
 - Reliability: losing LAN/Wi-Fi must degrade to a visible disconnected
   state within a few seconds, never a hang or crash.
-- Performance: on-device inference performance must not regress versus
-  upstream LMPlayground baseline on the same reference devices (see
+- Performance: on-device inference performance must not regress versus the
+  established baseline on the same reference devices (see
   `TEST_PLAN.md` §3).
-- Compatibility: Android versions and device tiers supported = whatever
-  LMPlayground currently supports at fork time; do not silently narrow this
+- Compatibility: Android versions and device tiers supported = whatever the
+  app currently supports; do not silently narrow this
   in v1.
 
 ## 8. Success criteria for v1 ship
 
 - All six use cases (U1–U7) pass manual QA on at least two physical devices
   (one flagship-tier, one low/mid-tier) per `TEST_PLAN.md`.
-- Zero P0/P1 regressions versus upstream LMPlayground on-device chat.
+- Zero P0/P1 regressions in on-device chat.
 - Pairing + coordinator monitor works against a real running `lclreason`
   v0.3.x instance on a standard home LAN and on a corporate/guest network
   requiring the manual fallback.
@@ -168,4 +168,4 @@ both directions, not client-mode-only code that gets thrown away later.
   with the `lclreason` side before `net/coordinator` implementation starts.
 - App store listing name/branding clearance (chidori-nagasa vs a shorter
   public-facing name).
-- Minimum Android API level — carry over from LMPlayground or raise it.
+- Minimum Android API level — carry over from the current build or raise it.

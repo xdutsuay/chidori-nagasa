@@ -1,19 +1,15 @@
 # Notice
 
-chidori-nagasa is a derivative work based on:
+chidori-nagasa includes portions derived from:
 
-**LM Playground**
-Copyright (c) 2024 Andriy Druk
+**LM Playground** — Copyright (c) 2024 Andriy Druk, MIT licence
 https://github.com/andriydruk/LMPlayground
-Licensed under the MIT License (see `LICENSE`).
 
-LM Playground is itself built on:
+The on-device inference layer is built on:
 
 **llama.cpp**
 https://github.com/ggml-org/llama.cpp
 (GGML/llama.cpp project and contributors)
-
-LM Playground's native inference layer is vendored from:
 
 **llama.cpp-android** (andriydruk fork)
 https://github.com/andriydruk/llama.cpp-android
@@ -26,11 +22,6 @@ chidori-nagasa is the companion app to **chidori** (desktop IDE). Product page:
 https://kaustubhtripathi.com/public/lab/lclreason/ — public desktop binaries:
 https://github.com/xdutsuay/chidori. The projects are governed by
 `CHIDORI_PROTOCOL.md` in this repo.
-
-## What changed from upstream
-
-Tracked in `UPSTREAM_DIVERGENCE.md` as changes accumulate — kept separate
-from this notice so attribution stays stable while the divergence log grows.
 
 ## On-device computer (COS) native components
 
