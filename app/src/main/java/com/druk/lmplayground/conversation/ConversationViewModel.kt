@@ -299,6 +299,8 @@ class ConversationViewModel(val app: Application) : AndroidViewModel(app) {
                 uiState.finalizeLastMessage()
             }
             _isGenerating.postValue(false)
+            val assistantMessage = uiState.messages.lastOrNull()
+                ?.takeIf { it.author == "Assistant" }
             // Generation (or cancellation) is done — freeze the
             // silent notification on "Response ready" with the
             // final token count, and attach Copy/Share actions
@@ -306,58 +308,71 @@ class ConversationViewModel(val app: Application) : AndroidViewModel(app) {
             // stripped, matching the in-chat share/copy). Skipped
             // on the superseded path above, so a newer in-flight
             // turn's "Generating…" line is preserved.
-            val readyBody = (uiState.messages.lastOrNull()
-                ?.takeIf { it.author == "Assistant" }
+            val readyBody = assistantMessage
                 ?.content
-                ?.let { stripThinkTags(it) })
+                ?.let { stripThinkTags(it) }
                 ?.takeIf { it.isNotBlank() }
-            notifications.update(
-                com.druk.lmplayground.R.string.inference_notification_ready_title,
-                notifications.tokensLine(totalTokens),
-                actionBody = readyBody,
-            )
-
-            // If the user isn't looking at the app, play a short
-            // chime so they know the answer is ready. Gated on the
-            // in-app setting, a non-blank response (so a cancelled/
-            // empty turn stays quiet), and background state; the
-            // helper itself also respects silent/vibrate/DND.
-            if (storagePreferences.soundOnCompletion &&
-                readyBody != null &&
-                (app as? App)?.isAppInForeground == false
-            ) {
-                com.druk.lmplayground.inference.ResponseSound.playIfAudible(app)
-            }
 
             // Persist whatever the assistant produced — including
             // a partially-streamed response on cancel — so
             // reload-from-DB matches what the user saw on screen.
-            val assistantMessage = uiState.messages.lastOrNull()
-            if (assistantMessage != null && assistantMessage.author == "Assistant") {
-                try {
-                    sessionStore.persistMessage(sessionId, assistantMessage)
-                    sessionStore.touchSessionTimestamp(sessionId)
-                    persistConversationMetadata(sessionId)
-                    try {
-                        val appRef = app as? App
-                        val modelLabel = _loadedModel.value?.name
-                            ?: _loadedModel.value?.filename
-                            ?: "local"
-                        appRef?.usageRepository?.record(
-                            com.druk.lmplayground.data.UsageEventEntity(
-                                createdAt = System.currentTimeMillis(),
-                                route = com.druk.lmplayground.data.UsageRoute.LOCAL,
-                                provider = "on-device",
-                                model = modelLabel,
-                                promptTokens = null,
-                                completionTokens = assistantMessage.responseTokens.takeIf { it > 0 }
-                                    ?: totalTokens.takeIf { it > 0 },
-                                costMicros = null,
-                                estimated = false,
-                                sessionId = sessionId,
-                            ),
+            // "Response ready" is announced only after the save.
+            val saved = TurnPersistence.finishAssistantTurn(
+                persist = {
+                    if (assistantMessage != null) {
+                        sessionStore.persistMessage(sessionId, assistantMessage)
+                        sessionStore.touchSessionTimestamp(sessionId)
+                        persistConversationMetadata(sessionId)
+                    }
+                },
+                announce = {
+                    notifications.update(
+                        com.druk.lmplayground.R.string.inference_notification_ready_title,
+                        notifications.tokensLine(totalTokens),
+                        actionBody = readyBody,
+                    )
+                    // If the user isn't looking at the app, play a short
+                    // chime so they know the answer is ready. Gated on the
+                    // in-app setting, a non-blank response (so a cancelled/
+                    // empty turn stays quiet), and background state; the
+                    // helper itself also respects silent/vibrate/DND.
+                    if (storagePreferences.soundOnCompletion &&
+                        readyBody != null &&
+                        (app as? App)?.isAppInForeground == false
+                    ) {
+                        com.druk.lmplayground.inference.ResponseSound.playIfAudible(app)
+                    }
+                },
+                onSaveFailed = { t ->
+                    _userError.postValue(
+                        app.getString(
+                            com.druk.lmplayground.R.string.chat_reply_save_failed,
+                            t.message ?: t.javaClass.simpleName,
                         )
-                    } catch (_: Throwable) { /* best-effort */ }
+                    )
+                },
+            )
+
+            if (saved && assistantMessage != null) {
+                try {
+                    val appRef = app as? App
+                    val modelLabel = _loadedModel.value?.name
+                        ?: _loadedModel.value?.filename
+                        ?: "local"
+                    appRef?.usageRepository?.record(
+                        com.druk.lmplayground.data.UsageEventEntity(
+                            createdAt = System.currentTimeMillis(),
+                            route = com.druk.lmplayground.data.UsageRoute.LOCAL,
+                            provider = "on-device",
+                            model = modelLabel,
+                            promptTokens = null,
+                            completionTokens = assistantMessage.responseTokens.takeIf { it > 0 }
+                                ?: totalTokens.takeIf { it > 0 },
+                            costMicros = null,
+                            estimated = false,
+                            sessionId = sessionId,
+                        ),
+                    )
                 } catch (_: Throwable) { /* best-effort */ }
             }
         }
@@ -746,9 +761,29 @@ class ConversationViewModel(val app: Application) : AndroidViewModel(app) {
 
     @MainThread
     private fun addLocalMessage(message: Message, imageUri: Uri? = null) {
-        // Persist the image so it survives the picker URI lifetime and is kept
-        // with the saved conversation (path stored on the message row below).
-        val persistedImageFile = imageUri?.let { imageStore.persistImageFile(it) }
+        // Pre-validate the message size BEFORE we mutate any UI state or
+        // write the image. If we appended the user/assistant placeholder
+        // first, an oversized message would throw later — leaving the chat
+        // stuck with `_isGenerating=true` and a half-empty assistant bubble.
+        // A clean abort here matches what the user expects: nothing
+        // visibly happened, but the input shows an error.
+        // Within the limit, persist the image so it survives the picker URI
+        // lifetime and is kept with the saved conversation.
+        val gate = TurnPersistence.gateImage(
+            contentChars = message.content.length,
+            maxPayloadBytes = InferenceLimits.MAX_PAYLOAD_BYTES,
+        ) { imageUri?.let { imageStore.persistImageFile(it) } }
+        if (gate !is ImageGate.Fits) {
+            _userError.postValue(
+                app.getString(
+                    com.druk.lmplayground.R.string.message_too_large,
+                    message.content.length * 2 / 1024,
+                    InferenceLimits.MAX_PAYLOAD_BYTES / 1024,
+                )
+            )
+            return
+        }
+        val persistedImageFile = gate.image
         val userMessage = if (persistedImageFile != null) {
             message.copy(imageUri = imageStore.imageContentUri(persistedImageFile))
         } else {
@@ -756,24 +791,6 @@ class ConversationViewModel(val app: Application) : AndroidViewModel(app) {
         }
 
         val enableThinking = _thinkingEnabled.value == true
-
-        // Pre-validate the message size BEFORE we mutate any UI state.
-        // If we appended the user/assistant placeholder first, an
-        // oversized message would throw later — leaving the chat stuck
-        // with `_isGenerating=true` and a half-empty assistant bubble.
-        // A clean abort here matches what the user expects: nothing
-        // visibly happened, but the input shows an error.
-        val sizeBytes = message.content.length * 2
-        if (sizeBytes > InferenceLimits.MAX_PAYLOAD_BYTES) {
-            _userError.postValue(
-                app.getString(
-                    com.druk.lmplayground.R.string.message_too_large,
-                    sizeBytes / 1024,
-                    InferenceLimits.MAX_PAYLOAD_BYTES / 1024,
-                )
-            )
-            return
-        }
 
         Snapshot.withMutableSnapshot {
             uiState.addMessage(userMessage)
@@ -803,9 +820,29 @@ class ConversationViewModel(val app: Application) : AndroidViewModel(app) {
         runtime.generatingJob = viewModelScope.launch {
             val ourJob = coroutineContext[Job]
 
-            // Persist user message (with the attached image path, if any)
-            val sessionId = ensureSession(message)
-            sessionStore.persistMessage(sessionId, userMessage, persistedImageFile?.absolutePath)
+            // Persist user message (with the attached image path, if any).
+            // On failure end the turn instead of leaving it generating.
+            val sessionId = TurnPersistence.beginUserTurn(
+                persistUser = {
+                    ensureSession(message).also { id ->
+                        sessionStore.persistMessage(id, userMessage, persistedImageFile?.absolutePath)
+                    }
+                },
+                onFailed = { t ->
+                    Snapshot.withMutableSnapshot {
+                        if (uiState.messages.lastOrNull()?.id == ourMessageId) {
+                            uiState.removeLastMessage()
+                        }
+                    }
+                    _isGenerating.postValue(false)
+                    _userError.postValue(
+                        app.getString(
+                            com.druk.lmplayground.R.string.chat_message_save_failed,
+                            t.message ?: t.javaClass.simpleName,
+                        )
+                    )
+                },
+            ) ?: return@launch
 
             generation.runTurn(
                 content = message.content,

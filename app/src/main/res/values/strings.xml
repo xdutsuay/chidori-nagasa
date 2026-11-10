@@ -581,6 +581,8 @@
     <string name="message_too_large">Message is %1$d KB, exceeds the %2$d KB limit. Try sending a shorter message.</string>
     <string name="replay_history_too_large">Conversation history is too large to reload into this model. Start a new chat to continue.</string>
     <string name="system_prompt_too_large">System prompt is %1$d KB, exceeds the %2$d KB limit. Try a shorter prompt.</string>
+    <string name="chat_reply_save_failed">Couldn\'t save this reply to chat history: %1$s</string>
+    <string name="chat_message_save_failed">Couldn\'t save your message, so no reply was generated: %1$s</string>
     <string name="history_message_too_large">A saved message in this conversation is too large to reload. Start a new chat to continue.</string>
     <string name="inference_engine_unavailable">Inference engine is not available right now. Try again in a moment.</string>
     <string name="model_load_failed_status">Couldn\'t load model</string>
