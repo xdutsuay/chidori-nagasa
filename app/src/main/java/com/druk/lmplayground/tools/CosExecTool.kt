@@ -3,6 +3,12 @@ package com.druk.lmplayground.tools
 import android.content.Context
 import com.druk.lmplayground.computer.ComputerExecResult
 import com.druk.lmplayground.computer.CosAgentBridge
+import com.druk.lmplayground.computer.activity.ActivitySummary
+import com.druk.lmplayground.computer.activity.ComputerActivity
+import com.druk.lmplayground.computer.activity.ComputerActivityLog
+import com.druk.lmplayground.computer.activity.Kind
+import com.druk.lmplayground.computer.activity.Outcome
+import com.druk.lmplayground.computer.activity.exitDetail
 import com.druk.lmplayground.storage.StoragePreferences
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -48,9 +54,12 @@ class CosExecTool internal constructor(
     }
 
     override fun execute(arguments: String): String {
+        // Visible to the catch blocks below; null until the command argument parsed.
+        var loggedCommand: String? = null
         return try {
             val command = CosExecFormatter.parseCommand(arguments)
                 ?: return CosExecFormatter.errorJson("Missing required argument: command")
+            loggedCommand = command
             if (command.isBlank()) {
                 return CosExecFormatter.errorJson("empty command")
             }
@@ -63,6 +72,11 @@ class CosExecTool internal constructor(
                 )
             ) {
                 if (!confirmGate.await(name, CosConfirmPolicy.summary(name, arguments))) {
+                    ComputerActivity.log.record(
+                        kind = Kind.COMMAND,
+                        summary = commandSummary(command),
+                        outcome = Outcome.DENIED,
+                    )
                     return CosConfirmPolicy.declinedJson(name)
                 }
                 if (mode == CosConfirmPolicy.Mode.ASK_ONCE) CosConfirmSession.markAskOnceApproved()
@@ -76,13 +90,34 @@ class CosExecTool internal constructor(
                     inFlight.remove(job)
                 }
             }
+            ComputerActivity.log.record(
+                kind = Kind.COMMAND,
+                summary = commandSummary(command),
+                outcome = if (result.exitCode == 0) Outcome.OK else Outcome.ERROR,
+                detail = if (result.exitCode == 0) null else exitDetail(result.exitCode),
+            )
             CosExecFormatter.formatResult(result)
         } catch (e: CancellationException) {
+            ComputerActivity.log.record(
+                kind = Kind.COMMAND,
+                summary = loggedCommand?.let(::commandSummary) ?: "",
+                outcome = Outcome.CANCELLED,
+            )
             CosExecFormatter.cancelledJson()
         } catch (e: Exception) {
             val message = (e.cause?.message ?: e.message ?: "Execution failed")
                 .replace("\"", "'")
+            ComputerActivity.log.record(
+                kind = Kind.COMMAND,
+                summary = loggedCommand?.let(::commandSummary) ?: "",
+                outcome = Outcome.ERROR,
+                detail = message,
+            )
             CosExecFormatter.errorJson(message)
         }
     }
+
+    /** Short collapsed command line for the activity log. */
+    private fun commandSummary(command: String): String =
+        ActivitySummary.forCommand(command, ComputerActivityLog.SUMMARY_MAX_LEN)
 }

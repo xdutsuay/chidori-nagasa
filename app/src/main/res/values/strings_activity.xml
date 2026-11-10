@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- User-visible strings for the Computer screen's Activity tab (agent activity log). -->
+<resources>
+    <string name="cos_activity_clear">Clear</string>
+    <string name="cos_activity_log_empty">No agent activity yet. Commands, GUI actions and screenshots the AI takes on this computer will appear here.</string>
+    <string name="cos_activity_kind_command">Command</string>
+    <string name="cos_activity_kind_screenshot">Screenshot</string>
+    <string name="cos_activity_kind_gui">GUI action</string>
+    <string name="cos_activity_outcome_ok">ok</string>
+    <string name="cos_activity_outcome_failed">failed</string>
+    <string name="cos_activity_outcome_denied">denied</string>
+    <string name="cos_activity_outcome_cancelled">cancelled</string>
+    <string name="cos_activity_screenshot_cd">Screenshot taken by the agent</string>
+    <string name="cos_activity_time_pattern">HH:mm:ss</string>
+</resources>

@@ -30,6 +30,19 @@ interface ChatDao {
     @Query("UPDATE chat_sessions SET modelFilename = :filename, modelName = :name WHERE id = :sessionId")
     suspend fun updateSessionModel(sessionId: String, filename: String, name: String)
 
+    @Query("""UPDATE chat_sessions SET
+        route = :route, cloudProviderId = :cloudProviderId, cloudModel = :cloudModel,
+        modelFilename = :filename, modelName = :name
+        WHERE id = :sessionId""")
+    suspend fun updateSessionRoute(
+        sessionId: String,
+        route: String,
+        cloudProviderId: String?,
+        cloudModel: String?,
+        filename: String,
+        name: String,
+    )
+
     @Query("UPDATE chat_sessions SET pinned = :pinned WHERE id = :sessionId")
     suspend fun updateSessionPinned(sessionId: String, pinned: Boolean)
 

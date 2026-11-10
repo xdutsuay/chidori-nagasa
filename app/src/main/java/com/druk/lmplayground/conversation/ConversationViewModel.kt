@@ -191,7 +191,7 @@ class ConversationViewModel(val app: Application) : AndroidViewModel(app) {
             val sessionId = _currentSessionId.value
             if (sessionId != null) {
                 viewModelScope.launch {
-                    sessionStore.updateSessionModel(sessionId, model.filename, model.name)
+                    sessionStore.switchSessionToLocal(sessionId, model.filename, model.name)
                 }
             }
         }
@@ -728,6 +728,7 @@ class ConversationViewModel(val app: Application) : AndroidViewModel(app) {
         _activeCloudSource.value = source
         // Tear down local model so the bar / input reflect the remote source.
         viewModelScope.launch {
+            runtime.cancelAndJoinGeneration()
             if (runtime.hasNativeHandles()) {
                 runtime.unloadNative()
             }
@@ -740,13 +741,14 @@ class ConversationViewModel(val app: Application) : AndroidViewModel(app) {
             _toolEnabledStates.postValue(emptyMap())
             NodeInferenceHub.clear()
         }
-        // Fresh thread when switching onto cloud (matches picking a new GGUF
-        // with an empty chat expectation). Keep messages if already mid-cloud
-        // same provider? Prefer clear session id so first send creates CLOUD row.
-        _currentSessionId.value = null
+        // Keep the conversation: the cloud turn sends uiState.messages as history,
+        // and the saved row follows the new route.
         _sessionModelHint.value = null
-        uiState.resetMessages()
-        toolRegistry.webLinkStore.clear()
+        _currentSessionId.value?.let { sessionId ->
+            viewModelScope.launch {
+                sessionStore.switchSessionToCloud(sessionId, source.provider.id, source.model, source.provider.name)
+            }
+        }
     }
 
     private fun clearCloudSource() {

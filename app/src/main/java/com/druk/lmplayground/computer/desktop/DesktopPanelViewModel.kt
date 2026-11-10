@@ -56,17 +56,20 @@ class DesktopPanelViewModel(app: Application) : AndroidViewModel(app) {
     fun refresh() = viewModelScope.launch(Dispatchers.IO) { bridge.refresh() }
 
     /** Size / metered / free-space prompt; computed before any byte is downloaded. */
-    suspend fun installPrompt(withFirefox: Boolean): DesktopInstallPolicy.Prompt = withContext(Dispatchers.IO) {
-        val app = getApplication<Application>()
-        DesktopInstallPolicy.prompt(
-            arch = bridge.arch(),
-            withFirefox = withFirefox,
-            network = DesktopInstallPolicy.readNetwork(app),
-            usableBytes = app.filesDir.usableSpace,
-        )
-    }
+    suspend fun installPrompt(withFirefox: Boolean, flavor: DesktopFlavor = DesktopFlavor.OPENBOX): DesktopInstallPolicy.Prompt =
+        withContext(Dispatchers.IO) {
+            val app = getApplication<Application>()
+            DesktopInstallPolicy.prompt(
+                arch = bridge.arch(),
+                withFirefox = withFirefox,
+                flavor = flavor,
+                network = DesktopInstallPolicy.readNetwork(app),
+                usableBytes = app.filesDir.usableSpace,
+            )
+        }
 
-    fun install(withFirefox: Boolean) = viewModelScope.launch { bridge.install(withFirefox) }
+    fun install(withFirefox: Boolean, flavor: DesktopFlavor = DesktopFlavor.OPENBOX) =
+        viewModelScope.launch { bridge.install(withFirefox, flavor) }
 
     fun start() = viewModelScope.launch { bridge.start() }
 

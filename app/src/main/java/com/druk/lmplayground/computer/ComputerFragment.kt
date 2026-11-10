@@ -17,6 +17,8 @@ import androidx.fragment.app.viewModels
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.fragment.findNavController
 import com.druk.lmplayground.computer.desktop.DesktopDebugPanel
+import com.druk.lmplayground.computer.desktop.DesktopExtrasDialog
+import com.druk.lmplayground.computer.desktop.DesktopExtrasPrefs
 import com.druk.lmplayground.computer.desktop.DesktopInstallDialog
 import com.druk.lmplayground.computer.desktop.DesktopInstallPolicy
 import com.druk.lmplayground.computer.desktop.DesktopPanelViewModel
@@ -50,6 +52,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
 import com.druk.lmplayground.R
+import com.druk.lmplayground.computer.activity.ActivityPanel
 import com.druk.lmplayground.computer.remote.RemoteComputersDialog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -74,8 +77,9 @@ class ComputerFragment : Fragment() {
                 val state by viewModel.state.collectAsStateWithLifecycle()
                 val desktop by desktopViewModel.panel.collectAsStateWithLifecycle()
                 val scope = rememberCoroutineScope()
+                val extrasContext = requireContext().applicationContext
                 var installPrompt by remember { mutableStateOf<DesktopInstallPolicy.Prompt?>(null) }
-                var withFirefox by remember { mutableStateOf(false) }
+                var showExtras by remember { mutableStateOf(false) }
                 var showRemote by remember { mutableStateOf(false) }
                 var resources by remember { mutableStateOf(CosResourceSampler.Sample(null, null)) }
                 val lifecycle = LocalLifecycleOwner.current.lifecycle
@@ -97,9 +101,13 @@ class ComputerFragment : Fragment() {
                         }
                     }
                 }
-                fun showPrompt(firefox: Boolean) {
-                    withFirefox = firefox
-                    scope.launch { installPrompt = desktopViewModel.installPrompt(firefox) }
+                fun showPrompt() {
+                    scope.launch {
+                        installPrompt = desktopViewModel.installPrompt(
+                            withFirefox = DesktopExtrasPrefs.firefox(extrasContext),
+                            flavor = DesktopExtrasPrefs.flavor(extrasContext),
+                        )
+                    }
                 }
                 ComputerScreen(
                     state = state,
@@ -119,7 +127,7 @@ class ComputerFragment : Fragment() {
                     onClearTerminal = viewModel::clearTerminal,
                     installDesktopLabel = DesktopInstallPolicy.menuLabel(desktopViewModel.bridge.arch()),
                     desktopIdle = DesktopStateMachine.canInstall(desktop.state),
-                    onInstallDesktop = { showPrompt(false) },
+                    onInstallDesktop = { showExtras = true },
                     headerStatus = when {
                         desktop.state is DesktopState.Running -> getString(R.string.cos_status_running)
                         state.status is ComputerStatus.Error -> getString(R.string.cos_status_error)
@@ -174,7 +182,7 @@ class ComputerFragment : Fragment() {
                                         // Install failure leaves marker unset → re-prompt with size.
                                         // Start failure with desktop installed → Start again.
                                         if (desktopViewModel.bridge.isInstalled()) desktopViewModel.start()
-                                        else showPrompt(false)
+                                        else showPrompt()
                                     },
                                 )
                                 Text(
@@ -187,30 +195,48 @@ class ComputerFragment : Fragment() {
                         }
                     },
                     activityPanel = {
-                        desktop.screenshotInfo?.let {
-                            Text(it, style = MaterialTheme.typography.labelMedium)
-                        }
-                        desktop.screenshot?.let { bmp ->
-                            Image(
-                                bitmap = bmp.asImageBitmap(),
-                                contentDescription = getString(R.string.cos_desktop_screenshot_cd),
-                                contentScale = ContentScale.Fit,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clip(RoundedCornerShape(14.dp)),
-                            )
-                        }
+                        ActivityPanel(
+                            header = {
+                                desktop.screenshotInfo?.let {
+                                    Text(it, style = MaterialTheme.typography.labelMedium)
+                                }
+                                desktop.screenshot?.let { bmp ->
+                                    Image(
+                                        bitmap = bmp.asImageBitmap(),
+                                        contentDescription = getString(R.string.cos_desktop_screenshot_cd),
+                                        contentScale = ContentScale.Fit,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clip(RoundedCornerShape(14.dp)),
+                                    )
+                                }
+                            },
+                        )
                     },
                 )
                 if (showRemote) RemoteComputersDialog(onDismiss = { showRemote = false })
+                if (showExtras) {
+                    DesktopExtrasDialog(
+                        initialFlavor = DesktopExtrasPrefs.flavor(extrasContext),
+                        initialFirefox = DesktopExtrasPrefs.firefox(extrasContext),
+                        onConfirm = { flavor, firefox ->
+                            DesktopExtrasPrefs.setFlavor(extrasContext, flavor)
+                            DesktopExtrasPrefs.setFirefox(extrasContext, firefox)
+                            showExtras = false
+                            showPrompt()
+                        },
+                        onDismiss = { showExtras = false },
+                    )
+                }
                 installPrompt?.let { p ->
                     DesktopInstallDialog(
                         prompt = p,
-                        withFirefox = withFirefox,
-                        onWithFirefoxChange = { showPrompt(it) },
                         onConfirm = {
                             installPrompt = null
-                            desktopViewModel.install(withFirefox)
+                            desktopViewModel.install(
+                                withFirefox = DesktopExtrasPrefs.firefox(extrasContext),
+                                flavor = DesktopExtrasPrefs.flavor(extrasContext),
+                            )
                         },
                         onDismiss = { installPrompt = null },
                     )

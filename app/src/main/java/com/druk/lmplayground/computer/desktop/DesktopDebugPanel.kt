@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -113,12 +112,10 @@ fun DesktopDebugPanel(
     }
 }
 
-/** Size-first confirm; metered / mobile data gets an explicit "Download anyway". */
+/** Size-first confirm; the flavour / Firefox choices live in DesktopExtrasDialog. */
 @Composable
 fun DesktopInstallDialog(
     prompt: DesktopInstallPolicy.Prompt,
-    withFirefox: Boolean,
-    onWithFirefoxChange: (Boolean) -> Unit,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -128,10 +125,6 @@ fun DesktopInstallDialog(
         text = {
             Column {
                 Text(prompt.message)
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Checkbox(checked = withFirefox, onCheckedChange = onWithFirefoxChange)
-                    Text("Also install Firefox ESR (opt-in, large)")
-                }
                 prompt.blockedReason?.let {
                     Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.testTag(TAG_DESKTOP_BLOCKED))
                 }

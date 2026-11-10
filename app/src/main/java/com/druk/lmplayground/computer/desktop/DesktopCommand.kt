@@ -12,6 +12,8 @@ data class DesktopConfig(
     val width: Int = 1280,
     val height: Int = 720,
     val depth: Int = 24,
+    /** Which window-manager session to launch (see DesktopFlavors). Default = the light one. */
+    val flavor: DesktopFlavor = DesktopFlavor.OPENBOX,
 ) {
     init {
         require(display in 0..MAX_DISPLAY) { "display :$display out of range 0..$MAX_DISPLAY" }
@@ -51,7 +53,7 @@ object DesktopCommand {
     const val STALE_MARKER = "COS-DESKTOP-STALE"
     const val EXIT_MARKER = "COS-DESKTOP-EXIT"
 
-    /** Binaries the session needs inside the guest; checked before anything starts. */
+    /** Binaries the session needs inside the guest for the default (Openbox) flavour. */
     val REQUIRED_BINARIES: List<String> = listOf("Xvfb", "xauth", "xdpyinfo", "openbox", "tint2", "xterm")
 
     /** How long the script waits for `xdpyinfo` to succeed (polls every 0.5 s). */
@@ -78,19 +80,20 @@ object DesktopCommand {
 
     /**
      * Guest shell script that runs the whole session in ONE proot process tree:
-     * 1. create the state dirs; check binaries ([REQUIRED_BINARIES]);
+     * 1. create the state dirs; check the flavour's binaries ([DesktopFlavors.requiredBinaries]);
      * 2. clean a stale lock / socket for display N (a live Xvfb holding it is an error);
      * 3. collision pre-check: if anything already answers on `:N` (e.g. a foreign server on
      *    the shared abstract socket, which our clients would try first), refuse;
      * 4. new 128-bit cookie via `xauth source -` from stdin (never in any argv / `ps`);
      * 5. Xvfb in the background ([xvfbArgv]); wait until `xdpyinfo` succeeds with the cookie;
-     * 6. openbox, tint2, xterm; print [READY_MARKER]; `wait` on Xvfb.
+     * 6. the flavour's session clients ([DesktopFlavors.sessionCommands] — openbox+tint2+xterm,
+     *    or XFCE); print [READY_MARKER]; `wait` on Xvfb.
      * The script (and with it proot, via `--kill-on-exit`) lives as long as Xvfb.
      */
     fun launchScript(config: DesktopConfig): String {
         val n = config.display
         val xvfb = xvfbArgv(config).joinToString(" ") { ShellQuote.quote(it) }
-        val bins = REQUIRED_BINARIES.joinToString(" ")
+        val bins = DesktopFlavors.requiredBinaries(config.flavor).joinToString(" ")
         return """
             |S=$GUEST_STATE_DIR; XA=$GUEST_XAUTHORITY; FB=$GUEST_FB_DIR; LOG=$GUEST_SESSION_LOG; N=$n
             |err() { echo "$ERROR_MARKER ${'$'}*"; exit 1; }
@@ -129,9 +132,7 @@ object DesktopCommand {
             |  i=${'$'}((i+1)); [ ${'$'}i -ge $READY_POLLS ] && { kill ${'$'}XPID; err "X server not ready after ${READY_POLLS / 2}s"; }
             |  sleep 0.5
             |done
-            |openbox >>"${'$'}LOG" 2>&1 &
-            |tint2 >>"${'$'}LOG" 2>&1 &
-            |xterm -geometry 100x28+24+24 >>"${'$'}LOG" 2>&1 &
+            |${DesktopFlavors.sessionCommands(config.flavor)}
             |echo "$READY_MARKER display=:${'$'}N width=${config.width} height=${config.height} depth=${config.depth}"
             |wait ${'$'}XPID
             |RC=${'$'}?

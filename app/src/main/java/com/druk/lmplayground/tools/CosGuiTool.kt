@@ -1,6 +1,12 @@
 package com.druk.lmplayground.tools
 
 import android.content.Context
+import com.druk.lmplayground.computer.activity.ActivitySummary
+import com.druk.lmplayground.computer.activity.ComputerActivity
+import com.druk.lmplayground.computer.activity.ComputerActivityLog
+import com.druk.lmplayground.computer.activity.Kind
+import com.druk.lmplayground.computer.activity.Outcome
+import com.druk.lmplayground.computer.activity.exitDetail
 import com.druk.lmplayground.computer.desktop.DesktopBridge
 import com.druk.lmplayground.computer.desktop.DesktopGeometry
 import com.druk.lmplayground.computer.desktop.input.XdotoolSession
@@ -69,6 +75,11 @@ class CosGuiTool internal constructor(
             )
         ) {
             if (!confirmGate.await(name, CosConfirmPolicy.summary(name, arguments))) {
+                ComputerActivity.log.record(
+                    kind = Kind.GUI,
+                    summary = argsSummary(arguments),
+                    outcome = Outcome.DENIED,
+                )
                 return CosConfirmPolicy.declinedJson(name)
             }
             if (mode == CosConfirmPolicy.Mode.ASK_ONCE) CosConfirmSession.markAskOnceApproved()
@@ -79,12 +90,28 @@ class CosGuiTool internal constructor(
 
         val action = when (val p = CosGuiArgs.parse(arguments)) {
             is CosGuiArgs.Parsed.Ok -> p.value
-            is CosGuiArgs.Parsed.Invalid -> return CosDesktopFormatter.invalidArgumentsJson(name, p.message)
+            is CosGuiArgs.Parsed.Invalid -> {
+                ComputerActivity.log.record(
+                    kind = Kind.GUI,
+                    summary = argsSummary(arguments),
+                    outcome = Outcome.ERROR,
+                    detail = p.message,
+                )
+                return CosDesktopFormatter.invalidArgumentsJson(name, p.message)
+            }
         }
         val geometry = DesktopGeometry(running.width, running.height)
         val argv = when (val a = CosGuiArgs.toArgv(action, geometry, desktop.lastScreenshotScale)) {
             is CosGuiArgs.Parsed.Ok -> a.value
-            is CosGuiArgs.Parsed.Invalid -> return CosDesktopFormatter.invalidArgumentsJson(name, a.message)
+            is CosGuiArgs.Parsed.Invalid -> {
+                ComputerActivity.log.record(
+                    kind = Kind.GUI,
+                    summary = argsSummary(arguments),
+                    outcome = Outcome.ERROR,
+                    detail = a.message,
+                )
+                return CosDesktopFormatter.invalidArgumentsJson(name, a.message)
+            }
         }
         return try {
             val result = inFlight.run {
@@ -92,6 +119,12 @@ class CosGuiTool internal constructor(
                 if (session != null) session.run(argv)
                 else bridge.execInDesktop(ShellQuote.join(listOf(XDOTOOL) + argv), EXEC_TIMEOUT)
             }
+            ComputerActivity.log.record(
+                kind = Kind.GUI,
+                summary = guiSummary(action),
+                outcome = if (result.exitCode == 0) Outcome.OK else Outcome.ERROR,
+                detail = if (result.exitCode == 0) null else exitDetail(result.exitCode),
+            )
             val out = JSONObject()
                 .put("exit_code", result.exitCode)
                 .put("action", action.name)
@@ -105,15 +138,49 @@ class CosGuiTool internal constructor(
             }
             out.toString()
         } catch (e: CancellationException) {
+            ComputerActivity.log.record(
+                kind = Kind.GUI,
+                summary = guiSummary(action),
+                outcome = Outcome.CANCELLED,
+            )
             CosDesktopFormatter.cancelledJson()
         } catch (e: Exception) {
+            val message = e.cause?.message ?: e.message ?: "exec failed"
+            ComputerActivity.log.record(
+                kind = Kind.GUI,
+                summary = guiSummary(action),
+                outcome = Outcome.ERROR,
+                detail = message,
+            )
             JSONObject()
                 .put("exit_code", 1)
                 .put("action", action.name)
-                .put("error", "$name failed: ${e.cause?.message ?: e.message ?: "exec failed"}")
+                .put("error", "$name failed: $message")
                 .toString()
         }
     }
+
+    /** Collapsed raw arguments, used when the GUI action itself could not be parsed. */
+    private fun argsSummary(arguments: String): String =
+        ActivitySummary.forCommand(arguments, ComputerActivityLog.SUMMARY_MAX_LEN)
+
+    /** Short one-line description of the GUI action, e.g. `click 120,340` or `type hello`. */
+    private fun guiSummary(action: CosGuiArgs.GuiAction): String = ActivitySummary.forCommand(
+        when (action) {
+            is CosGuiArgs.GuiAction.Click ->
+                "click ${action.x},${action.y}" + if (action.double) " x2" else ""
+            is CosGuiArgs.GuiAction.Move -> "move ${action.x},${action.y}"
+            is CosGuiArgs.GuiAction.Type -> "type ${action.text}"
+            is CosGuiArgs.GuiAction.Key -> "key ${action.combos.joinToString(" ")}"
+            is CosGuiArgs.GuiAction.Scroll -> buildString {
+                append("scroll")
+                if (action.dx != 0) append(" dx=${action.dx}")
+                if (action.dy != 0) append(" dy=${action.dy}")
+                if (action.x != null && action.y != null) append(" at ${action.x},${action.y}")
+            }
+        },
+        ComputerActivityLog.SUMMARY_MAX_LEN,
+    )
 
     /** Pointer position the argv moves to (first `mousemove x y`), for the result. */
     private fun screenPoint(argv: List<String>): Pair<Int, Int>? {

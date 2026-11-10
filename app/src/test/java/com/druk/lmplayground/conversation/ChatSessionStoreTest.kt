@@ -5,6 +5,7 @@ import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import com.druk.lmplayground.data.AppDatabase
 import com.druk.lmplayground.data.ChatRepository
+import com.druk.lmplayground.data.ChatRoute
 import com.druk.lmplayground.data.ConversationMetadata
 import com.druk.lmplayground.data.SystemPromptRepository
 import com.druk.lmplayground.models.ModelInfo
@@ -61,6 +62,23 @@ class ChatSessionStoreTest {
             model(),
             GenerationParams(),
             systemPrompt,
+        )
+    }
+
+    /** Creates a session with an explicit route (used to seed cloud-routed rows). */
+    private fun runCreateSessionWithRoute(
+        route: String,
+        cloudProviderId: String? = null,
+        cloudModel: String? = null,
+    ): String = runBlocking {
+        store.createSession(
+            Message(author = "User", content = "hello world"),
+            model(),
+            GenerationParams(),
+            "be brief",
+            route = route,
+            cloudProviderId = cloudProviderId,
+            cloudModel = cloudModel,
         )
     }
 
@@ -223,4 +241,146 @@ class ChatSessionStoreTest {
         nullStore.persistMessage("any", Message(author = "User", content = "q"))
         nullStore.deleteSession("any")
     }
+
+    @Test
+    fun switchSessionToCloudKeepsMessagesAndSetsFields() = runBlocking {
+        val id = runCreateSession()
+        store.persistMessage(id, Message(author = "User", content = "q1"))
+        store.persistMessage(id, Message(author = "Assistant", content = "a1", responseTokens = 7))
+
+        store.switchSessionToCloud(id, "provider-1", "gpt-test-model", "GPT Test Model")
+
+        val entity = store.getSession(id)
+        assertNotNull(entity)
+        assertEquals(ChatRoute.CLOUD, entity!!.route)
+        assertEquals("provider-1", entity.cloudProviderId)
+        assertEquals("gpt-test-model", entity.cloudModel)
+        assertEquals("gpt-test-model", entity.modelFilename)
+        assertEquals("GPT Test Model", entity.modelName)
+
+        // Messages are untouched by the route switch.
+        val messages = store.loadSessionMessages(id)!!
+        assertEquals(2, messages.size)
+        assertEquals("q1", messages[0].content)
+        assertEquals("User", messages[0].author)
+        assertEquals("a1", messages[1].content)
+        assertEquals("Assistant", messages[1].author)
+        assertEquals(7, messages[1].responseTokens)
+    }
+
+    @Test
+    fun switchSessionToLocalClearsCloudFields() = runBlocking {
+        val id = runCreateSessionWithRoute(
+            route = ChatRoute.CLOUD,
+            cloudProviderId = "provider-1",
+            cloudModel = "gpt-test-model",
+        )
+        // Precondition: the seeded row really is cloud-routed.
+        val before = store.getSession(id)!!
+        assertEquals(ChatRoute.CLOUD, before.route)
+        assertEquals("provider-1", before.cloudProviderId)
+        assertEquals("gpt-test-model", before.cloudModel)
+
+        store.switchSessionToLocal(id, "local-model.gguf", "Local Model")
+
+        val entity = store.getSession(id)
+        assertNotNull(entity)
+        assertEquals(ChatRoute.LOCAL, entity!!.route)
+        assertNull(entity.cloudProviderId)
+        assertNull(entity.cloudModel)
+        assertEquals("local-model.gguf", entity.modelFilename)
+        assertEquals("Local Model", entity.modelName)
+    }
+
+    @Test
+    fun switchSessionRoundTripLocalCloudLocal() = runBlocking {
+        val id = runCreateSession()
+        store.persistMessage(id, Message(author = "User", content = "q1"))
+        store.persistMessage(id, Message(author = "Assistant", content = "a1"))
+
+        store.switchSessionToCloud(id, "provider-9", "cloud-model-x", "Cloud Model X")
+        val cloud = store.getSession(id)!!
+        assertEquals(ChatRoute.CLOUD, cloud.route)
+        assertEquals("provider-9", cloud.cloudProviderId)
+        assertEquals("cloud-model-x", cloud.modelFilename)
+
+        store.switchSessionToLocal(id, "test-model.gguf", "Test Model")
+        val local = store.getSession(id)!!
+        assertEquals(ChatRoute.LOCAL, local.route)
+        assertNull(local.cloudProviderId)
+        assertNull(local.cloudModel)
+        assertEquals("test-model.gguf", local.modelFilename)
+        assertEquals("Test Model", local.modelName)
+
+        val messages = store.loadSessionMessages(id)!!
+        assertEquals(2, messages.size)
+        assertEquals("q1", messages[0].content)
+        assertEquals("a1", messages[1].content)
+    }
+
+    @Test
+    fun switchSessionLeavesOtherColumnsUnchanged() = runBlocking {
+        val id = runCreateSession(firstMessage = "title source", systemPrompt = "be brief")
+        store.pinSession(id, true)
+        store.persistWebLinks(id, mapOf("1" to "https://example.com/a"))
+        store.updateSessionParams(id, GenerationParams(temperature = 0.25f))
+
+        val before = store.getSession(id)!!
+
+        store.switchSessionToCloud(id, "provider-1", "cloud-model-y", "Cloud Model Y")
+        val afterCloud = store.getSession(id)!!
+        assertEquals(before.title, afterCloud.title)
+        assertEquals(before.systemPrompt, afterCloud.systemPrompt)
+        assertEquals(before.createdAt, afterCloud.createdAt)
+        assertEquals(before.pinned, afterCloud.pinned)
+        assertEquals(before.metadata, afterCloud.metadata)
+        assertEquals(before.contextSize, afterCloud.contextSize)
+        assertEquals(before.temperature, afterCloud.temperature)
+        assertEquals(before.topP, afterCloud.topP)
+        assertEquals(before.repetitionPenalty, afterCloud.repetitionPenalty)
+        assertEquals(before.topK, afterCloud.topK)
+        assertEquals(before.minP, afterCloud.minP)
+        assertEquals(before.seed, afterCloud.seed)
+        assertEquals(before.thinkingBudget, afterCloud.thinkingBudget)
+
+        store.switchSessionToLocal(id, "test-model.gguf", "Test Model")
+        val afterLocal = store.getSession(id)!!
+        assertEquals(before.title, afterLocal.title)
+        assertEquals(before.systemPrompt, afterLocal.systemPrompt)
+        assertEquals(before.createdAt, afterLocal.createdAt)
+        assertEquals(before.pinned, afterLocal.pinned)
+        assertEquals(before.metadata, afterLocal.metadata)
+        assertEquals(before.contextSize, afterLocal.contextSize)
+        assertEquals(before.temperature, afterLocal.temperature)
+        assertEquals(before.topP, afterLocal.topP)
+        assertEquals(before.repetitionPenalty, afterLocal.repetitionPenalty)
+        assertEquals(before.topK, afterLocal.topK)
+        assertEquals(before.minP, afterLocal.minP)
+        assertEquals(before.seed, afterLocal.seed)
+        assertEquals(before.thinkingBudget, afterLocal.thinkingBudget)
+    }
+
+    @Test
+    fun switchSessionUnknownIdIsNoOp() = runBlocking {
+        val id = runCreateSession()
+        val before = store.getSession(id)!!
+        val rowsBefore = chatSessionRowCount()
+
+        store.switchSessionToCloud("missing-id", "provider-1", "cloud-model-z", "Cloud Z")
+        store.switchSessionToLocal("missing-id", "local.gguf", "Local")
+
+        // No row created for the unknown id; existing row untouched; row count unchanged.
+        assertNull(store.getSession("missing-id"))
+        assertEquals(before, store.getSession(id))
+        assertEquals(rowsBefore, chatSessionRowCount())
+    }
+
+    /** Direct row count against the in-memory DB, independent of the store API. */
+    private fun chatSessionRowCount(): Long =
+        db.openHelper.writableDatabase
+            .query("SELECT COUNT(*) FROM chat_sessions")
+            .use { cursor ->
+                cursor.moveToFirst()
+                cursor.getLong(0)
+            }
 }

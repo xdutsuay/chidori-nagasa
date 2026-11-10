@@ -165,6 +165,23 @@ class ChatSessionStore(
         chatRepository?.updateSessionModel(sessionId, modelFilename, modelName)
     }
 
+    /** Re-points an existing session at a cloud provider; messages are untouched. */
+    suspend fun switchSessionToCloud(
+        sessionId: String,
+        cloudProviderId: String,
+        cloudModel: String,
+        displayName: String,
+    ) {
+        chatRepository?.updateSessionRoute(
+            sessionId, ChatRoute.CLOUD, cloudProviderId, cloudModel, cloudModel, displayName,
+        )
+    }
+
+    /** Re-points an existing session at a local GGUF; clears cloud fields; messages untouched. */
+    suspend fun switchSessionToLocal(sessionId: String, modelFilename: String, modelName: String) {
+        chatRepository?.updateSessionRoute(sessionId, ChatRoute.LOCAL, null, null, modelFilename, modelName)
+    }
+
     suspend fun updateSessionParams(sessionId: String, params: GenerationParams) {
         chatRepository?.updateSessionParams(
             sessionId,

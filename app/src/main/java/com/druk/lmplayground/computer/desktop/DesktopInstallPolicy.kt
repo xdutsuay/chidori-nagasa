@@ -52,8 +52,18 @@ object DesktopInstallPolicy {
      * Builds the confirm dialog content.
      * @param usableBytes free bytes on the volume holding `filesDir` (`File.usableSpace`)
      */
-    fun prompt(arch: String?, withFirefox: Boolean, network: NetworkInfo, usableBytes: Long): Prompt {
-        val sets = arch?.let { DesktopPackages.setsFor(it, withFirefox) }.orEmpty()
+    fun prompt(arch: String?, withFirefox: Boolean, network: NetworkInfo, usableBytes: Long): Prompt =
+        prompt(arch, withFirefox, DesktopFlavor.OPENBOX, network, usableBytes)
+
+    /** As above, for the chosen desktop [flavor] (XFCE adds its increment on top). */
+    fun prompt(
+        arch: String?,
+        withFirefox: Boolean,
+        flavor: DesktopFlavor,
+        network: NetworkInfo,
+        usableBytes: Long,
+    ): Prompt {
+        val sets = arch?.let { DesktopPackages.setsFor(it, withFirefox, flavor) }.orEmpty()
         val dl = DesktopPackages.downloadBytes(sets)
         val inst = DesktopPackages.installedBytes(sets)
         val metered = network.connected && (network.metered || network.cellular)
@@ -66,13 +76,19 @@ object DesktopInstallPolicy {
                     "${DesktopPackages.formatMiB(usableBytes)} free"
             else -> null
         }
-        val what = if (withFirefox) "Desktop + Firefox ESR" else "Desktop (Xvfb, openbox, tint2, xterm, NetSurf, PCManFM)"
+        val what = when {
+            withFirefox && flavor == DesktopFlavor.XFCE -> "Desktop + XFCE + Firefox ESR"
+            flavor == DesktopFlavor.XFCE -> "Desktop + XFCE (xfwm4, xfdesktop, panel, xfce4-terminal)"
+            withFirefox -> "Desktop + Firefox ESR"
+            else -> "Desktop (Xvfb, openbox, tint2, xterm, NetSurf, PCManFM)"
+        }
         val message = buildString {
             append(what).append('\n')
             append("Download: ").append(DesktopPackages.formatMiB(dl))
             append(" · on disk: ").append(DesktopPackages.formatMiB(inst)).append('\n')
             append("Packages are pinned Alpine ${CosConstants.ALPINE_SERIES} builds, verified by apk signatures.")
             if (withFirefox) append("\nFirefox goes beyond the 512 MiB COS soft cap.")
+            if (flavor == DesktopFlavor.XFCE) append("\nXFCE goes beyond the 512 MiB COS soft cap.")
             if (metered) {
                 append("\n\n")
                 append(

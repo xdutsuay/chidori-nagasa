@@ -41,6 +41,7 @@ object DesktopPackages {
 
     const val SET_DEFAULT = "desktop-default"
     const val SET_FIREFOX = "desktop-firefox-esr"
+    const val SET_XFCE = "desktop-xfce"
 
     /**
      * Default desktop set: minimal X stack (no VNC in v1) + a light browser and file manager.
@@ -72,6 +73,24 @@ object DesktopPackages {
 
     private val FIREFOX_PINS: Map<String, String> = linkedMapOf("firefox-esr" to "140.12.0-r0")
 
+    /**
+     * XFCE flavour increment on top of the default set (the shared X stack — Xvfb,
+     * xauth, xdpyinfo, xwd, xdotool — comes from [DEFAULT_PINS]; apk adds
+     * xfwm4/xfdesktop/xfce4-panel/xfconf/dbus-x11/thunar/… as `xfce4` dependencies).
+     * Pins + sizes from APKINDEX snapshots fetched 2026-11-10 (dl-cdn.alpinelinux.org,
+     * sha256 aarch64 main 5bdf9ba1801089651c6f83a21cd7c8ef495d6d11cffb61b5827ee87a6d6c65ab,
+     * aarch64 community ac06e17cb995ffeaea60bd966d0f011faf8e6688c3c3b62dccbfc8ff7392f7da,
+     * x86_64 main 1c393e745f0c3af8b94d6a6125373d00cc88b401ad468d28a5d0dc7f7ee7c829,
+     * x86_64 community 2f7e6294f27beb60fc4731c62f31ca4d49c334cb20ca7dba3f0987bb0e7e92a8);
+     * closure resolved like the M1 run (closure minus the 16 minirootfs base packages
+     * minus the default-set overlap; the resolver reproduced the recorded default-set
+     * installed bytes exactly on aarch64, within ~20 KiB elsewhere).
+     */
+    private val XFCE_PINS: Map<String, String> = linkedMapOf(
+        "xfce4" to "4.20-r0",
+        "xfce4-terminal" to "1.2.0-r0",
+    )
+
     /** Installed on demand when the developer VNC viewer is first started (same for both arches). */
     val VIEWER_PINS: Map<String, String> = mapOf("x11vnc" to "0.9.17-r1")
 
@@ -81,6 +100,9 @@ object DesktopPackages {
         // Firefox numbers are the increment on top of the default set.
         PinnedSet(SET_FIREFOX, "aarch64", FIREFOX_PINS, 32, 115_763_494L, 287_854_520L),
         PinnedSet(SET_FIREFOX, "x86_64", FIREFOX_PINS, 33, 123_468_692L, 330_394_900L),
+        // XFCE numbers are the increment on top of the default set.
+        PinnedSet(SET_XFCE, "aarch64", XFCE_PINS, 197, 127_474_247L, 334_912_254L),
+        PinnedSet(SET_XFCE, "x86_64", XFCE_PINS, 199, 137_856_850L, 354_719_582L),
     ).associateBy { it.id to it.arch }
 
     /**
@@ -108,10 +130,21 @@ object DesktopPackages {
 
     fun firefoxSet(arch: String): PinnedSet? = set(SET_FIREFOX, arch)
 
+    /** XFCE increment on top of the default set, for the flavour choice. */
+    fun xfceSet(arch: String): PinnedSet? = set(SET_XFCE, arch)
+
     /** Sets to install for a request, default first. Empty for an unsupported arch. */
     fun setsFor(arch: String, withFirefox: Boolean): List<PinnedSet> {
         val default = defaultSet(arch) ?: return emptyList()
         return if (withFirefox) listOfNotNull(default, firefoxSet(arch)) else listOf(default)
+    }
+
+    /** [setsFor] plus the XFCE increment when [flavor] is [DesktopFlavor.XFCE]. */
+    fun setsFor(arch: String, withFirefox: Boolean, flavor: DesktopFlavor): List<PinnedSet> {
+        val base = setsFor(arch, withFirefox)
+        if (flavor != DesktopFlavor.XFCE) return base
+        if (base.isEmpty()) return emptyList()
+        return base + listOfNotNull(xfceSet(arch))
     }
 
     fun downloadBytes(sets: List<PinnedSet>): Long = sets.sumOf { it.downloadBytes }

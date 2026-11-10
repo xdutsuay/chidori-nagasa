@@ -2,6 +2,7 @@ package com.druk.lmplayground.computer.desktop
 
 import android.content.Context
 import com.druk.lmplayground.computer.ComputerExecResult
+import com.druk.lmplayground.computer.CosConstants
 import com.druk.lmplayground.computer.LocalComputerRuntime
 import com.druk.lmplayground.computer.ProotCommand
 import com.druk.lmplayground.computer.ProotTerminator
@@ -106,30 +107,32 @@ class LocalDesktopBridge internal constructor(
     }
 
     /** Installs (or verifies) the pinned set; idempotent. Returns the resulting state. */
-    suspend fun install(withFirefox: Boolean = false): DesktopState = mutex.withLock {
-        withContext(Dispatchers.IO) { installLocked(withFirefox) }
+    suspend fun install(withFirefox: Boolean = false, flavor: DesktopFlavor = DesktopFlavor.OPENBOX): DesktopState = mutex.withLock {
+        withContext(Dispatchers.IO) { installLocked(withFirefox, flavor) }
     }
 
-    private suspend fun installLocked(withFirefox: Boolean): DesktopState {
+    private suspend fun installLocked(withFirefox: Boolean, flavor: DesktopFlavor): DesktopState {
         if (!DesktopStateMachine.canInstall(_state.value)) return _state.value
         move(DesktopStateMachine.Event.InstallStarted)
         val arch = runtime.alpineArch()
             ?: return installFail("unsupported CPU for the desktop")
-        val sets = DesktopPackages.setsFor(arch, withFirefox)
+        val sets = DesktopPackages.setsFor(arch, withFirefox, flavor)
         if (sets.isEmpty()) return installFail("no pinned desktop set for $arch")
         val pins = sets.fold(LinkedHashMap<String, String>()) { m, s -> m.apply { putAll(s.pins) } }
         log(
-            "desktop install sets=${sets.joinToString(",") { it.id }} arch=$arch " +
+            "desktop install sets=${sets.joinToString(",") { it.id }} arch=$arch flavor=${flavor.id} " +
                 "download=${DesktopPackages.formatMiB(DesktopPackages.downloadBytes(sets))} " +
                 "installed=${DesktopPackages.formatMiB(DesktopPackages.installedBytes(sets))}",
         )
+        ensureRepositories()?.let { return installFail(it) }
         if (verify(pins)?.ok == true) {
             log("desktop install: pinned packages already present; verified")
-            return installDone(sets)
+            return finishInstall(sets)
         }
         _installMessage.value = "Downloading package index"
         move(DesktopStateMachine.Event.InstallProgress(0f))
-        val cmd = "apk add -U " + sets.flatMap { it.apkAddArgs }.joinToString(" ") { ShellQuote.quote(it) }
+        val cmd = "apk add -U " + sets.flatMap { it.apkAddArgs }.joinToString(" ") { ShellQuote.quote(it) } +
+            if (flavor == DesktopFlavor.OPENBOX) " " + ShellQuote.quote(DesktopFlavors.WALLPAPER_PACKAGE) else ""
         val r = runtime.execStreaming(
             ProotCommand.guestShellArgv(cmd),
             cwdRelative = "root",
@@ -149,6 +152,49 @@ class LocalDesktopBridge internal constructor(
         }
         val v = verify(pins) ?: return installFail("could not list installed packages")
         if (!v.ok) return installFail("installed versions differ from pins: ${v.describe(pins)}")
+        return finishInstall(sets)
+    }
+
+    /** Post-apk guest extras: the firefox-esr launcher wrapper. Null on success. */
+    private suspend fun extrasError(sets: List<DesktopPackages.PinnedSet>): String? {
+        if (sets.none { it.id == DesktopPackages.SET_FIREFOX }) return null
+        val r = runtime.execStreaming(
+            ProotCommand.guestShellArgv(FirefoxLauncher.installCommand()),
+            cwdRelative = "root",
+            cancelReason = "desktop-firefox-wrapper",
+            timeoutMs = EXTRA_TIMEOUT_MS,
+        ) { }
+        if (r.exitCode == 0) {
+            log("desktop install: firefox launcher at ${FirefoxLauncher.GUEST_WRAPPER_PATH}")
+            return null
+        }
+        val tail = (r.stderr.ifBlank { r.stdout }).lineSequence().filter { it.isNotBlank() }.toList().takeLast(3)
+            .joinToString(" | ")
+        return "could not install ${FirefoxLauncher.GUEST_WRAPPER_PATH} (exit ${r.exitCode}): $tail"
+    }
+
+    /**
+     * Guarantees the community repo of the pinned Alpine version is enabled in
+     * `/etc/apk/repositories` (the shipped minirootfs has main + community; this
+     * guards reinstalls / edited rootfs images). Null on success.
+     */
+    private suspend fun ensureRepositories(): String? {
+        val cmd = DesktopFlavors.ensureRepositoriesCommand(CosConstants.ALPINE_VERSION, CosConstants.ALPINE_CDN_BASE)
+        val r = runtime.execStreaming(
+            ProotCommand.guestShellArgv(cmd),
+            cwdRelative = "root",
+            cancelReason = "desktop-repositories",
+            timeoutMs = EXTRA_TIMEOUT_MS,
+        ) { }
+        if (r.exitCode == 0) return null
+        val tail = (r.stderr.ifBlank { r.stdout }).lineSequence().filter { it.isNotBlank() }.toList().takeLast(3)
+            .joinToString(" | ")
+        return "could not update /etc/apk/repositories (exit ${r.exitCode}): $tail"
+    }
+
+    /** Marker + wrapper bookkeeping shared by the verify-shortcut and the apk path. */
+    private suspend fun finishInstall(sets: List<DesktopPackages.PinnedSet>): DesktopState {
+        extrasError(sets)?.let { return installFail(it) }
         return installDone(sets)
     }
 
@@ -191,9 +237,11 @@ class LocalDesktopBridge internal constructor(
         }
         move(DesktopStateMachine.Event.StartRequested)
         DesktopStaleCleanup.removeXLocks(runtime.hostRootfsDir, config.display)
+        val sessionConfig = withPersistedFlavor(config)
+        log("desktop start flavour=${sessionConfig.flavor.id}")
         val s = DesktopSession(
             runtime = runtime,
-            config = config,
+            config = sessionConfig,
             log = log,
             readyTimeoutMs = readyTimeoutMs,
             onUnexpectedExit = { msg ->
@@ -369,6 +417,12 @@ class LocalDesktopBridge internal constructor(
         }
     }
 
+    /** Applies the flavour persisted in SharedPreferences (no-op in JVM tests without a context). */
+    private fun withPersistedFlavor(config: DesktopConfig): DesktopConfig {
+        val ctx = appContext ?: return config
+        return config.copy(flavor = DesktopExtrasPrefs.flavor(ctx))
+    }
+
     /** Alpine arch of the rootfs (`aarch64` / `x86_64`), or null when it is not set up. */
     fun arch(): String? = runtime.alpineArch()
 
@@ -381,6 +435,9 @@ class LocalDesktopBridge internal constructor(
     companion object {
         /** Long-running `apk add` (~113 MiB on slow mobile links). */
         const val INSTALL_TIMEOUT_MS = 30L * 60 * 1000
+
+        /** Quick guest-side bookkeeping commands (repositories line, firefox wrapper). */
+        const val EXTRA_TIMEOUT_MS = 60_000L
 
         @Volatile private var instance: LocalDesktopBridge? = null
 

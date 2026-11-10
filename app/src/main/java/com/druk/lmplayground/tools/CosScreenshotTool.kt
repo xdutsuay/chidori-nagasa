@@ -1,6 +1,9 @@
 package com.druk.lmplayground.tools
 
 import android.content.Context
+import com.druk.lmplayground.computer.activity.ComputerActivity
+import com.druk.lmplayground.computer.activity.Kind
+import com.druk.lmplayground.computer.activity.Outcome
 import com.druk.lmplayground.computer.desktop.ImageFormat
 import com.druk.lmplayground.computer.desktop.PngInfo
 import com.druk.lmplayground.computer.desktop.ScreenshotScaling
@@ -43,13 +46,13 @@ class CosScreenshotTool internal constructor(
     override fun cancelInFlight() = inFlight.cancelAll()
 
     override fun execute(arguments: String): String {
-        if (!desktop.isComputerEnabled()) return CosDesktopFormatter.disabledJson(name)
+        if (!desktop.isComputerEnabled()) return recordGateFailure(null) { CosDesktopFormatter.disabledJson(name) }
         val bridge = desktop.bridge()
         val running = desktop.running()
-        if (bridge == null || running == null) return CosDesktopFormatter.desktopNotRunningJson(name)
+        if (bridge == null || running == null) return recordGateFailure(null) { CosDesktopFormatter.desktopNotRunningJson(name) }
         val maxEdge = when (val m = parseMaxEdge(arguments)) {
             is Result.Ok -> m.value
-            is Result.Bad -> return CosDesktopFormatter.invalidArgumentsJson(name, m.message)
+            is Result.Bad -> return recordGateFailure(m.message) { CosDesktopFormatter.invalidArgumentsJson(name, m.message) }
         }
         val fit = ScreenshotScaling.fit(running.width, running.height, maxEdge)
         val requestScale = (1.0 / fit.scale).toFloat()
@@ -68,6 +71,9 @@ class CosScreenshotTool internal constructor(
             val scale = running.width.toDouble() / imageW
             desktop.lastScreenshotScale = scale
             val id = images.put(bytes, if (format == ImageFormat.PNG) "image/png" else "image/jpeg")
+            ComputerActivity.log
+                .record(kind = Kind.SCREENSHOT, summary = "", outcome = Outcome.OK)
+                .let { ComputerActivity.attachImage(it.id, bytes) }
             JSONObject()
                 .put("exit_code", 0)
                 .put("width", running.width)
@@ -99,6 +105,21 @@ class CosScreenshotTool internal constructor(
         .put("exit_code", 1)
         .put("error", "$name failed: $message")
         .toString()
+
+    /**
+     * Records a failed (gating / bad-arguments) call in the activity log — summary
+     * stays blank so the panel shows the kind label — and returns the model-facing
+     * [resultJson].
+     */
+    private fun recordGateFailure(detail: String?, resultJson: () -> String): String {
+        ComputerActivity.log.record(
+            kind = Kind.SCREENSHOT,
+            summary = "",
+            outcome = Outcome.ERROR,
+            detail = detail,
+        )
+        return resultJson()
+    }
 
     private sealed class Result {
         data class Ok(val value: Int) : Result()

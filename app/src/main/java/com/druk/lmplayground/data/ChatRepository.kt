@@ -24,6 +24,15 @@ class ChatRepository(private val dao: ChatDao) {
     suspend fun updateSessionModel(sessionId: String, filename: String, name: String) =
         dao.updateSessionModel(sessionId, filename, name)
 
+    suspend fun updateSessionRoute(
+        sessionId: String,
+        route: String,
+        cloudProviderId: String?,
+        cloudModel: String?,
+        filename: String,
+        name: String,
+    ) = dao.updateSessionRoute(sessionId, route, cloudProviderId, cloudModel, filename, name)
+
     suspend fun updateSessionPinned(sessionId: String, pinned: Boolean) =
         dao.updateSessionPinned(sessionId, pinned)
 

@@ -240,19 +240,17 @@ fun ComputerScreen(
                         text = state.terminal,
                         modifier = Modifier.fillMaxSize(),
                     )
-                    ComputerTab.ACTIVITY -> Column(
-                        Modifier
-                            .fillMaxSize()
-                            .verticalScroll(rememberScrollState())
-                            .padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
-                    ) {
-                        Text(
-                            stringResource(R.string.cos_activity_empty),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        activityPanel?.invoke()
+                    ComputerTab.ACTIVITY -> Box(Modifier.fillMaxSize()) {
+                        if (activityPanel != null) {
+                            activityPanel.invoke()
+                        } else {
+                            Text(
+                                stringResource(R.string.cos_activity_empty),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(16.dp),
+                            )
+                        }
                     }
                 }
             }

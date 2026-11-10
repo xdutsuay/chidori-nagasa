@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- COS desktop extras (DesktopExtrasDialog / flavour + Firefox choices).
+     Kept separate from values/strings.xml so parallel desktop work never collides. -->
+<resources>
+    <string name="cos_desktop_extras_title">Desktop options</string>
+    <string name="cos_desktop_extras_flavor_label">Desktop session</string>
+    <string name="cos_desktop_flavor_openbox">Openbox (light)</string>
+    <string name="cos_desktop_flavor_xfce">XFCE (full desktop, larger download)</string>
+    <string name="cos_desktop_extras_firefox">Also install Firefox ESR (browser, large)</string>
+    <string name="cos_desktop_extras_confirm">Continue</string>
+    <string name="cos_desktop_extras_dismiss">Cancel</string>
+</resources>
