@@ -8,6 +8,7 @@ sealed class CloudError {
     data class Network(val message: String) : CloudError()
     data class Parse(val message: String) : CloudError()
     data class NoKey(val message: String = "No API key saved for this provider") : CloudError()
+    data class EmptyReply(val message: String = "The model returned an empty reply") : CloudError()
 
     fun userMessage(): String = when (this) {
         is Unauthorized -> message
@@ -17,12 +18,20 @@ sealed class CloudError {
         is Network -> message
         is Parse -> message
         is NoKey -> message
+        is EmptyReply -> message
     }
 }
 
 data class CloudChatMessage(
+    /** system | user | assistant | tool */
     val role: String,
     val content: String,
+    /** Assistant tool calls, `[{"id","name","arguments"}]`. */
+    val toolCallsJson: String? = null,
+    /** Tool result: the call it answers. */
+    val toolCallId: String? = null,
+    /** User message carrying a screenshot (PNG, base64). */
+    val imagePngBase64: String? = null,
 )
 
 data class CloudModelInfo(
@@ -39,5 +48,8 @@ data class CloudUsage(
 
 sealed class CloudStreamEvent {
     data class Delta(val text: String) : CloudStreamEvent()
+
+    /** Tool calls requested in this response, `[{"id","name","arguments"}]`; emitted once, before [Finished]. */
+    data class ToolCalls(val json: String) : CloudStreamEvent()
     data class Finished(val usage: CloudUsage?) : CloudStreamEvent()
 }

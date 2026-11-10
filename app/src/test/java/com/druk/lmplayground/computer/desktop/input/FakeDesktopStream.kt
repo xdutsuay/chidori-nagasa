@@ -78,5 +78,10 @@ class StreamingFakeBridge(
         return FakeDesktopStream(cmd, scriptWorks, shellHasXdotool, onLine).also { streams += it }
     }
 
-    val scriptLines: List<String> get() = streams.flatMap { it.lines }.filter { it != "getmouselocation" }
+    /** All stream lines with probe/marker bookkeeping removed (the actual xdotool payload). */
+    val commandLines: List<String> get() = streams.flatMap { it.lines }.filter { !it.isProbeOrMarker() }
 }
+
+/** Probe/marker lines the session writes for its own bookkeeping, in either mode. */
+private fun String.isProbeOrMarker() =
+    this == "getmouselocation" || startsWith("command -v xdotool") || startsWith("echo \"@@cos-sync")

@@ -31,7 +31,7 @@ class XdotoolSessionTest {
     private fun TestScope.settle() { runCurrent(); advanceTimeBy(5_000); runCurrent() }
 
     @Test
-    fun `starts lazily in script mode and streams commands`() = runTest {
+    fun `starts lazily in shell mode and streams detached commands`() = runTest {
         val s = session()
         settle()
         assertEquals(0, bridge.streams.size)
@@ -39,20 +39,49 @@ class XdotoolSessionTest {
         assertTrue(s.send(InputCommand.Click(10, 20)))
         assertTrue(s.send(InputCommand.Type("a; b")))
         settle()
-        assertEquals("exec xdotool -", bridge.streams.single().cmd)
-        assertEquals(XdotoolSession.Mode.SCRIPT, s.mode)
-        assertEquals(listOf("getmouselocation", "mousemove 10 20 click 1", "type --delay 12 -- \"a; b\""), bridge.streams.single().lines)
+        // SHELL is the first mode tried: exactly one stream, a guest shell.
+        assertEquals("exec /bin/sh", bridge.streams.single().cmd)
+        assertEquals(XdotoolSession.Mode.SHELL, s.mode)
+        // Every UI command line is a detached xdotool invocation (stdin </dev/null),
+        // so a child xdotool can never consume the shell's stdin script.
+        assertEquals(
+            listOf(
+                "'xdotool' 'mousemove' '10' '20' 'click' '1' </dev/null",
+                "'xdotool' 'type' '--delay' '12' '--' 'a; b' </dev/null",
+            ),
+            bridge.commandLines,
+        )
         assertTrue(bridge.base.commands.isEmpty())
     }
 
     @Test
     fun `run waits for the sync marker and reports stderr`() = runTest {
-        bridge.onLine = { st, l -> if (l.startsWith("key")) st.stderrLine("(symbol) No such key name 'Bogus'. Ignoring it.") }
+        bridge.onLine = { st, l -> if (l.contains("'key'")) st.stderrLine("(symbol) No such key name 'Bogus'. Ignoring it.") }
         val s = session()
         val r = s.run(listOf("key", "--", "Bogus"))
         assertEquals(0, r.exitCode)
         assertTrue(r.stderr.contains("No such key name"))
-        assertEquals(listOf("getmouselocation", "key -- Bogus", "getmouselocation"), bridge.streams.single().lines)
+        assertEquals(
+            listOf(
+                "command -v xdotool >/dev/null 2>&1; echo \"@@cos-sync \$?\"",
+                "'xdotool' 'key' '--' 'Bogus' </dev/null",
+                "echo \"@@cos-sync \$?\"",
+            ),
+            bridge.streams.single().lines,
+        )
+        assertEquals("", s.run(listOf("mousemove", "1", "1")).stderr)
+    }
+
+    @Test
+    fun `run in script mode reports exit 0 with stderr`() = runTest {
+        // SCRIPT is only reached when the SHELL probe fails.
+        bridge.shellHasXdotool = false
+        bridge.onLine = { st, l -> if (l.startsWith("key")) st.stderrLine("(symbol) No such key name 'Bogus'. Ignoring it.") }
+        val s = session()
+        val r = s.run(listOf("key", "--", "Bogus"))
+        assertEquals(0, r.exitCode) // script mode has no per-command status
+        assertTrue(r.stderr.contains("No such key name"))
+        assertEquals(listOf("getmouselocation", "key -- Bogus", "getmouselocation"), bridge.streams.last().lines)
         assertEquals("", s.run(listOf("mousemove", "1", "1")).stderr)
     }
 
@@ -64,7 +93,15 @@ class XdotoolSessionTest {
         s.send(InputCommand.MouseMove(4, 4)); s.send(InputCommand.MouseMove(5, 5))
         s.send(InputCommand.MouseUp())
         settle()
-        assertEquals(listOf("mousemove 3 3", "mousedown 1", "mousemove 5 5", "mouseup 1"), bridge.scriptLines)
+        assertEquals(
+            listOf(
+                "'xdotool' 'mousemove' '3' '3' </dev/null",
+                "'xdotool' 'mousedown' '1' </dev/null",
+                "'xdotool' 'mousemove' '5' '5' </dev/null",
+                "'xdotool' 'mouseup' '1' </dev/null",
+            ),
+            bridge.commandLines,
+        )
         assertEquals(3, s.droppedMoves)
     }
 
@@ -78,7 +115,14 @@ class XdotoolSessionTest {
         assertFalse(s.send(InputCommand.Click(4, 4))) // full of clicks: rejected
         assertEquals(1, s.rejected)
         settle()
-        assertEquals(listOf("mousemove 1 1 click 1", "mousemove 2 2 click 1", "mousemove 3 3 click 1"), bridge.scriptLines)
+        assertEquals(
+            listOf(
+                "'xdotool' 'mousemove' '1' '1' 'click' '1' </dev/null",
+                "'xdotool' 'mousemove' '2' '2' 'click' '1' </dev/null",
+                "'xdotool' 'mousemove' '3' '3' 'click' '1' </dev/null",
+            ),
+            bridge.commandLines,
+        )
         assertEquals(0, s.queueSize)
     }
 
@@ -89,25 +133,37 @@ class XdotoolSessionTest {
         val d = async { s.submit(InputCommand.Click(2, 2)) }
         settle()
         assertTrue(d.isCompleted)
-        assertEquals(listOf("mousemove 1 1 click 1", "mousemove 2 2 click 1"), bridge.scriptLines)
+        assertEquals(
+            listOf(
+                "'xdotool' 'mousemove' '1' '1' 'click' '1' </dev/null",
+                "'xdotool' 'mousemove' '2' '2' 'click' '1' </dev/null",
+            ),
+            bridge.commandLines,
+        )
     }
 
     @Test
     fun `restarts after the process dies`() = runTest {
         var killed = false
-        bridge.onLine = { st, l -> if (l.startsWith("mousemove 1 ") && !killed) { killed = true; st.die(1) } }
+        bridge.onLine = { st, l -> if (l.contains("'mousemove' '1' '1'") && !killed) { killed = true; st.die(1) } }
         val s = session()
         s.send(InputCommand.Click(1, 1)); settle()
         assertEquals(1, bridge.streams[0].exitCode.value)
         s.send(InputCommand.Click(2, 2)); settle()
         assertEquals(2, bridge.streams.size)
-        assertEquals(listOf("getmouselocation", "mousemove 2 2 click 1"), bridge.streams[1].lines)
-        assertEquals(XdotoolSession.Mode.SCRIPT, s.mode)
+        assertEquals(
+            listOf(
+                "command -v xdotool >/dev/null 2>&1; echo \"@@cos-sync \$?\"",
+                "'xdotool' 'mousemove' '2' '2' 'click' '1' </dev/null",
+            ),
+            bridge.streams[1].lines,
+        )
+        assertEquals(XdotoolSession.Mode.SHELL, s.mode)
     }
 
     @Test
     fun `a restart storm degrades to exec until the desktop restarts`() = runTest {
-        bridge.onLine = { st, l -> if (l.startsWith("mousemove")) st.die(1) }
+        bridge.onLine = { st, l -> if (l.contains("'mousemove'")) st.die(1) }
         val s = session(config = XdotoolSession.Config(maxRestarts = 3))
         repeat(6) { s.send(InputCommand.Click(it, it)); settle() }
         assertEquals(4, bridge.streams.size) // 3 restarts allowed, the 4th death degrades
@@ -121,7 +177,7 @@ class XdotoolSessionTest {
         bridge.base.state.value = DesktopState.Running(":7", 1280, 720, 24, "/root/.Xauthority", java.io.File("/x"), null)
         settle()
         s.send(InputCommand.Click(9, 9)); advanceTimeBy(60_000); settle()
-        assertEquals(XdotoolSession.Mode.SCRIPT, s.mode)
+        assertEquals(XdotoolSession.Mode.SHELL, s.mode)
         assertEquals(5, bridge.streams.size)
     }
 
@@ -147,7 +203,7 @@ class XdotoolSessionTest {
         bridge.streams[0].mute = true // a long `type` that never reaches the marker
         val call = async { s.run(listOf("type", "--delay", "12", "--", "long text")) }
         runCurrent()
-        assertTrue(bridge.streams[0].lines.contains("type --delay 12 -- \"long text\""))
+        assertTrue(bridge.streams[0].lines.contains("'xdotool' 'type' '--delay' '12' '--' 'long text' </dev/null"))
         call.cancel(CancellationException(CosAgentBridge.CHAT_STOP))
         settle()
         assertEquals(listOf(CosAgentBridge.CHAT_STOP), bridge.streams[0].closeReasons)
@@ -163,7 +219,7 @@ class XdotoolSessionTest {
         val call = async { s.run(listOf("mousemove", "1", "1")) }
         call.cancel(CancellationException(CosAgentBridge.CHAT_STOP)) // before the writer ran
         settle()
-        assertTrue(bridge.scriptLines.isEmpty())
+        assertTrue(bridge.commandLines.isEmpty())
         assertTrue(bridge.streams.all { it.closeReasons.isEmpty() })
     }
 
@@ -178,24 +234,57 @@ class XdotoolSessionTest {
     }
 
     @Test
-    fun `falls back to a guest shell when script mode does not answer`() = runTest {
-        bridge.scriptWorks = false
+    fun `shell mode is tried first and wins when its probe answers`() = runTest {
         val s = session()
         val r = s.run(listOf("type", "--delay", "12", "--", "it's \$HOME"))
         assertEquals(0, r.exitCode)
         assertEquals(XdotoolSession.Mode.SHELL, s.mode)
-        val sh = bridge.streams.last()
+        assertEquals(1, bridge.streams.size) // the script stream is never opened
+        val sh = bridge.streams.single()
         assertEquals("exec /bin/sh", sh.cmd)
         assertEquals(
             listOf(
-                "command -v xdotool >/dev/null 2>&1; echo \"@@cos-sync \$?\"",
-                "'xdotool' 'type' '--delay' '12' '--' 'it'\\''s \$HOME'",
+                "'xdotool' 'type' '--delay' '12' '--' 'it'\\''s \$HOME' </dev/null",
                 "echo \"@@cos-sync \$?\"",
             ),
-            sh.lines,
+            sh.lines.filter { !it.startsWith("command -v xdotool") },
         )
         sh.shellExit = 1
         assertEquals(1, s.run(listOf("key", "--", "x")).exitCode)
+    }
+
+    @Test
+    fun `falls back to script mode when the shell probe fails`() = runTest {
+        bridge.shellHasXdotool = false
+        val s = session()
+        val r = s.run(listOf("key", "--", "Return"))
+        assertEquals(0, r.exitCode)
+        assertEquals(XdotoolSession.Mode.SCRIPT, s.mode)
+        assertEquals(2, bridge.streams.size) // shell tried first, then script
+        assertEquals("exec /bin/sh", bridge.streams[0].cmd)
+        assertEquals(listOf("desktop-input-probe-failed"), bridge.streams[0].closeReasons)
+        assertEquals("exec xdotool -", bridge.streams[1].cmd)
+        assertEquals(listOf("getmouselocation", "key -- Return", "getmouselocation"), bridge.streams[1].lines)
+    }
+
+    @Test
+    fun `shell mode run - type then key Return are separate detached commands`() = runTest {
+        // Regression: in the old SCRIPT mode a `key -- Return` after a `type` line was
+        // silently lost; SHELL mode must run each command as its own detached xdotool.
+        val s = session()
+        assertEquals(0, s.run(listOf("type", "--delay", "12", "--", "hello")).exitCode)
+        assertEquals(0, s.run(listOf("key", "--", "Return")).exitCode)
+        assertEquals(1, bridge.streams.size)
+        assertEquals(
+            listOf(
+                "command -v xdotool >/dev/null 2>&1; echo \"@@cos-sync \$?\"",
+                "'xdotool' 'type' '--delay' '12' '--' 'hello' </dev/null",
+                "echo \"@@cos-sync \$?\"",
+                "'xdotool' 'key' '--' 'Return' </dev/null",
+                "echo \"@@cos-sync \$?\"",
+            ),
+            bridge.streams.single().lines,
+        )
     }
 
     @Test
@@ -222,14 +311,15 @@ class XdotoolSessionTest {
 
     @Test
     fun `injection - hostile text cannot leave the type command`() = runTest {
+        bridge.shellHasXdotool = false // SCRIPT mode: the shell probe must fail first
         val s = session()
         s.run(InputCommand.Type("x\"; key ctrl+alt+Delete; '\n\$1 #c").toArgv(com.druk.lmplayground.computer.desktop.DesktopGeometry(1, 1)))
-        val lines = bridge.scriptLines.filter { it != "getmouselocation" }
+        val lines = bridge.commandLines
         assertEquals(
             listOf("type --delay 12 -- 'x\"; key ctrl+alt+Delete; ' \"'\"", "key Return", "key dollar", "type --delay 12 -- \"1 #c\""),
             lines,
         )
-        assertEquals(1, bridge.streams.size)
+        assertEquals(2, bridge.streams.size) // failed shell probe + the script stream
     }
 
     private companion object {

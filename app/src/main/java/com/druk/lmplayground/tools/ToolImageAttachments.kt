@@ -60,13 +60,19 @@ class ToolImageAttachments(private val capacity: Int = 2) {
         val arr = runCatching { JSONArray(resultsJson) }.getOrNull()
             ?: return Prepared(resultsJson, null, null)
         val withImage = mutableListOf<Pair<Int, String>>()
+        var markedUnverified = false
         for (i in 0 until arr.length()) {
             val entry = arr.optJSONObject(i) ?: continue
             val content = runCatching { JSONObject(entry.optString("content")) }.getOrNull() ?: continue
+            if (!vision && entry.optString("name") == CosToolDefaults.COS_GUI) {
+                content.put("unverified", UNVERIFIED_NOTE)
+                entry.put("content", content.toString())
+                markedUnverified = true
+            }
             val id = content.optString("image_id", "")
             if (id.isNotEmpty() && get(id) != null) withImage += i to id
         }
-        if (withImage.isEmpty()) return Prepared(resultsJson, null, null)
+        if (withImage.isEmpty()) return Prepared(if (markedUnverified) arr.toString() else resultsJson, null, null)
         var staged: ByteArray? = null
         var attachedId: String? = null
         withImage.forEachIndexed { n, (i, imageId) ->
@@ -81,14 +87,23 @@ class ToolImageAttachments(private val capacity: Int = 2) {
                     staged = image.bytes
                     attachedId = entry.optString("id").ifEmpty { null }
                 }
-                isLast -> content.put(
-                    "image",
-                    "not shown: the current model has no vision module; use a vision model to see screenshots",
-                )
+                isLast -> content.put("image", NO_VISION_NOTE)
                 else -> content.put("image", "superseded by a later screenshot in this round")
             }
             entry.put("content", content.toString())
         }
         return Prepared(arr.toString(), staged, attachedId)
+    }
+
+    companion object {
+        /** Screenshot result for a model that cannot take images. */
+        const val NO_VISION_NOTE =
+            "not shown: you cannot see this screenshot because the current model has no vision. " +
+                "Do not describe or guess what is on the screen; tell the user you could not see it."
+
+        /** `cos_gui` result for a model that cannot see the screen. */
+        const val UNVERIFIED_NOTE =
+            "you cannot see the screen, so the effect of this action is unverified. " +
+                "Tell the user it is unverified instead of describing the result."
     }
 }

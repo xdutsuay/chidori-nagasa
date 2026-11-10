@@ -776,6 +776,7 @@ class ConversationFragment : Fragment() {
                                 .align(Alignment.BottomCenter)
                                 .onSizeChanged { bottomBarHeightPx = it.height }
                         ) {
+                            CosConfirmCard()
                             // On pick: the picker row handles its own flight
                             // animation per-card, then fires onPick — which flips
                             // the visibility gate. Exit uses ExitTransition.None

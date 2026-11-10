@@ -129,7 +129,7 @@ class ToolRegistry {
                 register(CosExecTool(context))
                 // CP2: COS desktop tools, advertised only while the desktop runs.
                 register(CosScreenshotTool(desktop, toolImages))
-                register(CosGuiTool(desktop))
+                register(CosGuiTool(context, desktop))
             }
         }
     }

@@ -33,6 +33,7 @@ class CosGuiTool internal constructor(
     private val sessionFor: (DesktopBridge) -> XdotoolSession? = { XdotoolSession.shared(it) },
     private val confirmMode: () -> CosConfirmPolicy.Mode = { CosConfirmPolicy.Mode.AUTO },
     private val askOnceApproved: () -> Boolean = { CosConfirmSession.isAskOnceApproved() },
+    private val confirmGate: CosConfirmGate = CosConfirmGate.shared,
 ) : Tool {
     constructor(context: Context, desktop: DesktopToolContext = DesktopToolContext.forApp(context)) : this(
         desktop = desktop,
@@ -52,18 +53,25 @@ class CosGuiTool internal constructor(
 
     override fun isAvailable(): Boolean = desktop.isDesktopAvailable()
 
-    override fun cancelInFlight() = inFlight.cancelAll()
+    override fun cancelInFlight() {
+        confirmGate.cancelAll()
+        inFlight.cancelAll()
+    }
 
     override fun execute(arguments: String): String {
         if (!desktop.isComputerEnabled()) return CosDesktopFormatter.disabledJson(name)
+        val mode = confirmMode()
         if (CosConfirmPolicy.needsConfirm(
                 toolName = name,
                 argumentsJson = arguments,
-                mode = confirmMode(),
+                mode = mode,
                 askOnceAlreadyApproved = askOnceApproved(),
             )
         ) {
-            return CosConfirmPolicy.confirmationDeniedJson(name)
+            if (!confirmGate.await(name, CosConfirmPolicy.summary(name, arguments))) {
+                return CosConfirmPolicy.declinedJson(name)
+            }
+            if (mode == CosConfirmPolicy.Mode.ASK_ONCE) CosConfirmSession.markAskOnceApproved()
         }
         val bridge = desktop.bridge()
         val running = desktop.running()

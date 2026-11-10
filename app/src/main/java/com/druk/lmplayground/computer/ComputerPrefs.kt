@@ -20,7 +20,7 @@ object ComputerPrefs {
      * `auto` | `ask_once` | `always` (see [com.druk.lmplayground.tools.CosConfirmPolicy.Mode]).
      */
     const val KEY_CONFIRM_MODE = "computer.confirm_mode"
-    const val DEFAULT_CONFIRM_MODE = "auto"
+    const val DEFAULT_CONFIRM_MODE = "ask_once"
 
     /** CP7 evidence-first dogfood: done claims must attach proof paths. */
     const val KEY_EVIDENCE_DOGFOOD = "computer.evidence_dogfood"

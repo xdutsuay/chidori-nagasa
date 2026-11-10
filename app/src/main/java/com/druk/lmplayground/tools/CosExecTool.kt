@@ -24,6 +24,7 @@ class CosExecTool internal constructor(
     private val runner: suspend (String) -> ComputerExecResult,
     private val confirmMode: () -> CosConfirmPolicy.Mode = { CosConfirmPolicy.Mode.AUTO },
     private val askOnceApproved: () -> Boolean = { CosConfirmSession.isAskOnceApproved() },
+    private val confirmGate: CosConfirmGate = CosConfirmGate.shared,
 ) : Tool {
     constructor(context: Context) : this(
         runner = { command -> CosAgentBridge.exec(context, command) },
@@ -42,6 +43,7 @@ class CosExecTool internal constructor(
     private val inFlight = ConcurrentHashMap.newKeySet<Job>()
 
     override fun cancelInFlight() {
+        confirmGate.cancelAll()
         inFlight.forEach { it.cancel(CancellationException(CosAgentBridge.CHAT_STOP)) }
     }
 
@@ -52,14 +54,18 @@ class CosExecTool internal constructor(
             if (command.isBlank()) {
                 return CosExecFormatter.errorJson("empty command")
             }
+            val mode = confirmMode()
             if (CosConfirmPolicy.needsConfirm(
                     toolName = name,
                     argumentsJson = arguments,
-                    mode = confirmMode(),
+                    mode = mode,
                     askOnceAlreadyApproved = askOnceApproved(),
                 )
             ) {
-                return CosConfirmPolicy.confirmationDeniedJson(name)
+                if (!confirmGate.await(name, CosConfirmPolicy.summary(name, arguments))) {
+                    return CosConfirmPolicy.declinedJson(name)
+                }
+                if (mode == CosConfirmPolicy.Mode.ASK_ONCE) CosConfirmSession.markAskOnceApproved()
             }
             val result = runBlocking {
                 val job = async(Dispatchers.IO) { runner(command) }

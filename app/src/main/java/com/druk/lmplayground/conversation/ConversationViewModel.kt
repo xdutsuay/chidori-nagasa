@@ -38,6 +38,11 @@ import com.druk.lmplayground.models.resolveCapabilities
 import com.druk.lmplayground.storage.StoragePreferences
 import com.druk.lmplayground.storage.StorageRepository
 import com.druk.lmplayground.tools.ToolRegistry
+import com.druk.lmplayground.cloud.CloudToolLoop
+import com.druk.lmplayground.computer.CosPromptNote
+import com.druk.lmplayground.tools.CosConfirmSession
+import com.druk.lmplayground.tools.CosToolDefaults
+import android.util.Base64
 import androidx.compose.runtime.snapshots.Snapshot
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -860,6 +865,33 @@ class ConversationViewModel(val app: Application) : AndroidViewModel(app) {
     }
 
     @MainThread
+    /**
+     * Per-chat tool toggles for the cloud source (same prefs as a local model,
+     * keyed by the source's `cloud:<id>` filename); returns the tools JSON to offer.
+     */
+    private fun hydrateCloudTools(source: ActiveCloudSource): String {
+        val states = mutableMapOf<String, Boolean>()
+        for (tool in toolRegistry.getAllTools()) {
+            val enabled = storagePreferences.effectiveToolEnabled(source.displayModelInfo().filename, tool.name)
+            toolRegistry.setToolEnabled(tool.name, enabled)
+            states[tool.name] = enabled
+        }
+        _toolEnabledStates.postValue(states)
+        return if (toolRegistry.hasEnabledTools()) toolRegistry.toOpenAIToolsJson() else "[]"
+    }
+
+    /** User system prompt plus the live COS note, or null when both are empty. */
+    private fun cloudSystemMessage(toolsJson: String): CloudChatMessage? {
+        val active = toolsJson != "[]"
+        val live = CosPromptNote.liveState(
+            CosPromptNote.stateFor(app),
+            cosExecAvailable = active && toolRegistry.isToolActive(CosToolDefaults.COS_EXEC),
+            desktopToolsAvailable = active && CosToolDefaults.DESKTOP_TOOLS.any { toolRegistry.isToolActive(it) },
+        )
+        val prompt = CosPromptNote.compose(_systemPrompt.value.orEmpty(), live)
+        return prompt.takeIf { it.isNotBlank() }?.let { CloudChatMessage("system", it) }
+    }
+
     private fun addCloudMessage(message: Message) {
         val source = _activeCloudSource.value ?: return
         val appRef = app as? App
@@ -897,35 +929,50 @@ class ConversationViewModel(val app: Application) : AndroidViewModel(app) {
                 val sessionId = ensureSession(userMessage)
                 sessionStore.persistMessage(sessionId, userMessage)
 
-                val history = uiState.messages.dropLast(1).map {
-                    CloudChatMessage(
-                        role = if (it.author == "User") "user" else "assistant",
-                        content = it.content,
-                    )
-                }
-                var usage: CloudUsage? = null
-                appRef.cloudClient.streamChat(
-                    source.provider.baseUrl,
-                    key,
-                    model,
+                val toolsJson = hydrateCloudTools(source)
+                val history = listOfNotNull(cloudSystemMessage(toolsJson)) +
+                    uiState.messages.dropLast(1).map {
+                        CloudChatMessage(
+                            role = if (it.author == "User") "user" else "assistant",
+                            content = it.content,
+                        )
+                    }
+                CosConfirmSession.reset()
+                val loop = CloudToolLoop(
+                    chat = { messages ->
+                        appRef.cloudClient.streamChat(source.provider.baseUrl, key, model, messages, toolsJson)
+                    },
+                    executeTools = { calls -> ToolCallRunner.run(toolRegistry, calls) },
+                    prepareImages = { results, vision -> toolRegistry.toolImages.prepare(results, vision) },
+                    imageBytesToBase64 = { Base64.encodeToString(it, Base64.NO_WRAP) },
+                )
+                val turn = loop.run(
                     history,
-                ).collect { event ->
-                    when (event) {
-                        is CloudStreamEvent.Delta -> {
+                    object : CloudToolLoop.Listener {
+                        override fun onDelta(fullText: String) {
                             Snapshot.withMutableSnapshot {
                                 val last = uiState.messages.lastOrNull()
                                 if (last != null && last.id == ourMessageId) {
                                     uiState.updateLastMessage(
-                                        last.content + event.text,
+                                        fullText,
                                         thinkingTokens = last.thinkingTokens,
                                         responseTokens = last.responseTokens,
                                     )
                                 }
                             }
                         }
-                        is CloudStreamEvent.Finished -> usage = event.usage
-                    }
-                }
+
+                        override fun onToolCalls(toolCallsJson: String, resultsJson: String, durationMs: Long) {
+                            val infos = ToolCallInfoMapper.buildToolCallInfoList(toolCallsJson, resultsJson, durationMs)
+                            Snapshot.withMutableSnapshot {
+                                if (uiState.messages.lastOrNull()?.id == ourMessageId) {
+                                    uiState.addToolCallsToLastMessage(infos)
+                                }
+                            }
+                        }
+                    },
+                )
+                val usage: CloudUsage? = turn.usage
 
                 Snapshot.withMutableSnapshot {
                     val last = uiState.messages.lastOrNull()

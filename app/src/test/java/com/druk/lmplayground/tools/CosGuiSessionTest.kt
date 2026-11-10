@@ -33,15 +33,15 @@ class CosGuiSessionTest {
         assertEquals(640, r.getInt("screen_x"))
         val t = JSONObject(gui.execute("""{"action":"type","text":"echo \"hi\"; it's ${'$'}HOME\n"}"""))
         assertEquals(0, t.getInt("exit_code"))
-        assertEquals(
-            listOf(
-                "mousemove 640 360 click --repeat 2 1",
-                "type --delay 12 -- 'echo \"hi\"; it' \"'s \$HOME\"", "key Return",
-            ),
-            bridge.scriptLines,
-        )
-        assertTrue(bridge.base.commands.isEmpty())
+        // SHELL mode (the first mode tried): one detached xdotool line + sync marker per
+        // call. The type text's trailing \n stays inside the quoted token.
         assertEquals(1, bridge.streams.size)
+        assertTrue(bridge.base.commands.isEmpty())
+        assertEquals(
+            "'xdotool' 'mousemove' '640' '360' 'click' '--repeat' '2' '1' </dev/null\n" +
+                "'xdotool' 'type' '--delay' '12' '--' 'echo \"hi\"; it'\\''s \$HOME\n' </dev/null",
+            bridge.commandLines.joinToString("\n"),
+        )
     }
 
     @Test
@@ -52,8 +52,8 @@ class CosGuiSessionTest {
     }
 
     @Test
-    fun `script-mode stderr is passed through with exit 0`() {
-        bridge.onLine = { st, l -> if (l.startsWith("key")) st.stderrLine("(symbol) No such key name 'Hyper_Q'. Ignoring it.") }
+    fun `stderr is passed through with the real exit code`() {
+        bridge.onLine = { st, l -> if (l.contains("'key'")) st.stderrLine("(symbol) No such key name 'Hyper_Q'. Ignoring it.") }
         val r = JSONObject(gui.execute("""{"action":"key","keys":"Hyper_Q"}"""))
         assertEquals(0, r.getInt("exit_code"))
         assertTrue(r.getString("stderr").contains("No such key name"))
@@ -68,7 +68,7 @@ class CosGuiSessionTest {
         try {
             val f = pool.submit<String> { gui.execute("""{"action":"type","text":"very long text"}""") }
             val deadline = System.currentTimeMillis() + 5_000
-            while (bridge.streams.single().lines.none { it.startsWith("type") } && System.currentTimeMillis() < deadline) Thread.sleep(5)
+            while (bridge.streams.single().lines.none { it.contains("type") } && System.currentTimeMillis() < deadline) Thread.sleep(5)
             gui.cancelInFlight()
             val r = JSONObject(f.get(5, TimeUnit.SECONDS))
             assertEquals(130, r.getInt("exit_code"))

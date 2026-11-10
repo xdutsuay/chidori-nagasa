@@ -28,6 +28,29 @@ object CloudSseParser {
         }
     }
 
+    /** Tool-call fragments in this `data:` line; empty for text, `[DONE]` and junk. */
+    fun toolCallDeltasFromDataLine(data: String): List<CloudToolCallDelta> {
+        val trimmed = data.trim()
+        if (trimmed.isEmpty() || trimmed == "[DONE]") return emptyList()
+        return try {
+            val delta = JSONObject(trimmed).optJSONArray("choices")
+                ?.optJSONObject(0)?.optJSONObject("delta") ?: return emptyList()
+            val calls = delta.optJSONArray("tool_calls") ?: return emptyList()
+            (0 until calls.length()).mapNotNull { i ->
+                val call = calls.optJSONObject(i) ?: return@mapNotNull null
+                val fn = call.optJSONObject("function")
+                CloudToolCallDelta(
+                    index = call.optInt("index", i),
+                    id = call.optStringOrNull("id"),
+                    name = fn?.optStringOrNull("name"),
+                    argumentsChunk = fn?.optStringOrNull("arguments"),
+                )
+            }
+        } catch (_: Exception) {
+            emptyList()
+        }
+    }
+
     fun usageFromDataLine(data: String): CloudUsage? {
         val trimmed = data.trim()
         if (trimmed.isEmpty() || trimmed == "[DONE]") return null
@@ -50,6 +73,9 @@ object CloudSseParser {
         429 -> CloudError.RateLimited()
         else -> CloudError.Http(code, bodySnippet.take(200).ifBlank { "HTTP $code" })
     }
+
+    private fun JSONObject.optStringOrNull(key: String): String? =
+        if (has(key) && !isNull(key)) optString(key) else null
 
     private fun JSONObject.optIntOrNull(key: String): Int? =
         if (has(key) && !isNull(key)) optInt(key) else null

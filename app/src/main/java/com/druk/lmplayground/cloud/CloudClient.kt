@@ -56,7 +56,9 @@ class CloudClient(
         }
 
     /**
-     * Streams assistant text deltas. Emits [CloudStreamEvent.Finished] once
+     * Streams assistant text deltas. When [toolsJson] offers tools, streamed
+     * tool-call fragments are reassembled and emitted once as
+     * [CloudStreamEvent.ToolCalls]. Emits [CloudStreamEvent.Finished] last
      * with any usage object seen on the stream (often on the last chunk).
      */
     fun streamChat(
@@ -64,16 +66,9 @@ class CloudClient(
         apiKey: String,
         model: String,
         messages: List<CloudChatMessage>,
+        toolsJson: String? = null,
     ): Flow<CloudStreamEvent> = flow {
-        val payload = JSONObject().apply {
-            put("model", model)
-            put("stream", true)
-            put("messages", JSONArray().apply {
-                for (m in messages) {
-                    put(JSONObject().put("role", m.role).put("content", m.content))
-                }
-            })
-        }
+        val payload = CloudPayload.requestJson(model, messages, toolsJson)
         val request = Request.Builder()
             .url(CloudEndpoints.chatCompletionsUrl(baseUrl))
             .header("Authorization", "Bearer $apiKey")
@@ -93,17 +88,20 @@ class CloudClient(
                     ?: throw CloudClientException(CloudError.Parse("Empty response body"))
                 val reader = BufferedReader(source.inputStream().reader(Charsets.UTF_8))
                 var lastUsage: CloudUsage? = null
+                val toolCalls = CloudToolCallAccumulator()
                 while (true) {
                     val line = reader.readLine() ?: break
                     if (!line.startsWith("data:")) continue
                     val data = line.removePrefix("data:").trim()
                     CloudSseParser.usageFromDataLine(data)?.let { lastUsage = it }
+                    CloudSseParser.toolCallDeltasFromDataLine(data).forEach(toolCalls::add)
                     when (val delta = CloudSseParser.deltaFromDataLine(data)) {
                         null -> break
                         "" -> Unit
                         else -> emit(CloudStreamEvent.Delta(delta))
                     }
                 }
+                if (!toolCalls.isEmpty()) emit(CloudStreamEvent.ToolCalls(toolCalls.toJson()))
                 emit(CloudStreamEvent.Finished(lastUsage))
             }
         } catch (e: CloudClientException) {

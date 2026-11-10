@@ -32,12 +32,13 @@ import kotlin.time.Duration.Companion.milliseconds
  * [DesktopBridge.openDesktopStream] (see docs/COS_DESKTOP_INPUT.md).
  *
  * Modes, chosen when the stream is (re)started:
- * - [Mode.SCRIPT]: `exec xdotool -`, one script line per command ([XdotoolScript]);
- *   probed with `getmouselocation`, whose stdout line (`x:.. y:.. screen:.. window:..`)
- *   is also the FIFO sync marker for [run].
- * - [Mode.SHELL]: fallback when the script probe fails: `exec /bin/sh` reading one
- *   `xdotool …` line per command ([ShellQuote]); sync marker `echo "@@cos-sync $?"`
- *   (so [run] gets the real exit code).
+ * - [Mode.SHELL]: `exec /bin/sh` reading one `xdotool … </dev/null` line per command
+ *   ([ShellQuote]); sync marker `echo "@@cos-sync $?"` (so [run] gets the real exit
+ *   code). Tried first: in script mode xdotool 4.x drops a `key` sent in a later
+ *   write after a `type` while still reporting success.
+ * - [Mode.SCRIPT]: fallback when the shell probe fails: `exec xdotool -`, one script
+ *   line per command ([XdotoolScript]); probed with `getmouselocation`, whose stdout
+ *   line (`x:.. y:.. screen:.. window:..`) is also the FIFO sync marker for [run].
  * - [Mode.EXEC]: the bridge has no stream support (default [DesktopBridge.openDesktopStream]),
  *   the stream cannot start, or it restarted too often: one [DesktopBridge.execInDesktop]
  *   per command (the CP2 cos_gui path).
@@ -279,7 +280,7 @@ class XdotoolSession internal constructor(
                 item.sync?.complete(CosExecResult(2, "", "cannot encode for xdotool script mode: ${e.message}"))
                 return
             }
-            else -> listOf(ShellQuote.join(listOf(XDOTOOL) + item.argv))
+            else -> listOf(ShellQuote.join(listOf(XDOTOOL) + item.argv) + SHELL_STDIN_DETACH)
         }
         val sync = item.sync
         if (sync != null) l.clearStderr()
@@ -346,7 +347,7 @@ class XdotoolSession internal constructor(
             val backoff = (config.backoffBaseMs shl (recent - 1).coerceAtMost(20)).coerceAtMost(config.backoffMaxMs)
             delay(backoff)
         }
-        val l = open(Mode.SCRIPT) ?: if (unsupported) null else open(Mode.SHELL)
+        val l = open(Mode.SHELL) ?: if (unsupported) null else open(Mode.SCRIPT)
         if (l == null) {
             // Neither mode works (no xdotool, broken stream): stop retrying until the desktop restarts.
             if (!unsupported) degraded = true
@@ -412,6 +413,8 @@ class XdotoolSession internal constructor(
     companion object {
         const val XDOTOOL = "xdotool"
         const val SHELL_MARKER = "@@cos-sync "
+        /** A child xdotool must not read the shell's stdin (the command stream). */
+        internal const val SHELL_STDIN_DETACH = " </dev/null"
         private val SCRIPT_MARKER = Regex("^x:-?\\d+ y:-?\\d+ screen:\\d+ window:\\d+\\s*$")
 
         internal fun marker(m: Mode) = if (m == Mode.SCRIPT) "getmouselocation" else "echo \"$SHELL_MARKER$?\""

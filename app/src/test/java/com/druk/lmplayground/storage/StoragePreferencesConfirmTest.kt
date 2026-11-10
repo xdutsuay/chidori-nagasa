@@ -3,6 +3,7 @@ package com.druk.lmplayground.storage
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import com.druk.lmplayground.computer.CosConstants
+import com.druk.lmplayground.computer.ComputerPrefs
 import com.druk.lmplayground.tools.CosConfirmPolicy
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -14,7 +15,7 @@ import org.robolectric.RobolectricTestRunner
 
 /**
  * CP7: [StoragePreferences] must expose the COS tool confirmation mode
- * ([CosConfirmPolicy.Mode], default [CosConfirmPolicy.Mode.AUTO] per
+ * ([CosConfirmPolicy.Mode], default [CosConfirmPolicy.Mode.ASK_ONCE] per
  * `ComputerPrefs.DEFAULT_CONFIRM_MODE`) and the evidence-dogfood toggle,
  * both persisted through [CosConstants.PREFS_NAME].
  */
@@ -35,8 +36,9 @@ class StoragePreferencesConfirmTest {
         context.getSharedPreferences(CosConstants.PREFS_NAME, Context.MODE_PRIVATE)
 
     @Test
-    fun `confirm mode defaults to AUTO`() {
-        assertEquals(CosConfirmPolicy.Mode.AUTO, prefs.getCosConfirmMode())
+    fun `confirm mode defaults to ASK_ONCE`() {
+        assertEquals(CosConfirmPolicy.Mode.ASK_ONCE, prefs.getCosConfirmMode())
+        assertEquals("ask_once", ComputerPrefs.DEFAULT_CONFIRM_MODE)
     }
 
     @Test

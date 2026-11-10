@@ -17,10 +17,11 @@ object CosConfirmPolicy {
         ;
 
         companion object {
+            /** Unset or unknown values read as [ASK_ONCE]: acting on the desktop asks first by default. */
             fun fromStorage(raw: String?): Mode = when (raw?.trim()?.lowercase()) {
-                "ask_once", "ask-once", "askonce" -> ASK_ONCE
+                "auto" -> AUTO
                 "always" -> ALWAYS
-                else -> AUTO
+                else -> ASK_ONCE
             }
         }
 
@@ -67,6 +68,29 @@ object CosConfirmPolicy {
             }
             else -> false
         }
+    }
+
+    /** Tool result when the user denied the confirm card, it timed out, or Stop was pressed. */
+    fun declinedJson(toolName: String): String =
+        JSONObject()
+            .put("exit_code", 1)
+            .put("declined", true)
+            .put(
+                "error",
+                "declined: the user did not approve $toolName, so it was not run. " +
+                    "Ask the user how to continue instead of retrying it.",
+            )
+            .toString()
+
+    /** Short human summary of a pending call for the confirm card. */
+    fun summary(toolName: String, argumentsJson: String): String {
+        val args = runCatching { JSONObject(argumentsJson) }.getOrNull() ?: return toolName
+        return when (toolName) {
+            CosToolDefaults.COS_EXEC -> args.optString("command")
+            else -> args.keys().asSequence()
+                .filter { args.opt(it).toString().isNotBlank() }
+                .joinToString(" ") { "$it=${args.opt(it)}" }
+        }.ifBlank { toolName }
     }
 
     fun confirmationDeniedJson(toolName: String): String =

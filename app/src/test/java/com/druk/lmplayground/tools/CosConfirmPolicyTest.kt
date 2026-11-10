@@ -1,5 +1,7 @@
 package com.druk.lmplayground.tools
 
+import org.json.JSONObject
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -224,5 +226,32 @@ class CosConfirmPolicyTest {
                 "web_search", "rm -rf /", CosConfirmPolicy.Mode.ALWAYS, false,
             ),
         )
+    }
+
+    // --- Mode.fromStorage: ask-once is the default (F4) ---
+
+    @Test
+    fun `fromStorage null blank and junk default to ASK_ONCE`() {
+        assertEquals(CosConfirmPolicy.Mode.ASK_ONCE, CosConfirmPolicy.Mode.fromStorage(null))
+        assertEquals(CosConfirmPolicy.Mode.ASK_ONCE, CosConfirmPolicy.Mode.fromStorage(""))
+        assertEquals(CosConfirmPolicy.Mode.ASK_ONCE, CosConfirmPolicy.Mode.fromStorage("   "))
+        assertEquals(CosConfirmPolicy.Mode.ASK_ONCE, CosConfirmPolicy.Mode.fromStorage("junk"))
+    }
+
+    @Test
+    fun `fromStorage parses auto and always`() {
+        assertEquals(CosConfirmPolicy.Mode.AUTO, CosConfirmPolicy.Mode.fromStorage("auto"))
+        assertEquals(CosConfirmPolicy.Mode.ALWAYS, CosConfirmPolicy.Mode.fromStorage("always"))
+        assertEquals(CosConfirmPolicy.Mode.ASK_ONCE, CosConfirmPolicy.Mode.fromStorage("ask_once"))
+    }
+
+    // --- declinedJson: the model is told the user declined ---
+
+    @Test
+    fun `declinedJson reports exit 1 and declined with a declined error`() {
+        val j = JSONObject(CosConfirmPolicy.declinedJson("cos_gui"))
+        assertEquals(1, j.getInt("exit_code"))
+        assertTrue(j.getBoolean("declined"))
+        assertTrue(j.getString("error").startsWith("declined"))
     }
 }
