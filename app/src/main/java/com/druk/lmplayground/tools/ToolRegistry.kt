@@ -4,7 +4,7 @@ import android.content.Context
 import org.json.JSONArray
 import org.json.JSONObject
 
-class ToolRegistry {
+class ToolRegistry(private val nowMs: () -> Long = { System.nanoTime() / 1_000_000 }) {
     private val tools = mutableMapOf<String, Tool>()
     private val enabledState = mutableMapOf<String, Boolean>()
 
@@ -86,6 +86,7 @@ class ToolRegistry {
             val id = call.getString("id")
 
             val tool = getTool(name)
+            val started = nowMs()
             // Enforce the per-chat toggle at execution time, not only in the advertised
             // schema: a model can still emit a call to a tool it saw earlier (e.g.
             // cos_exec after the user switched it off) while other tools keep the
@@ -99,17 +100,22 @@ class ToolRegistry {
                 // with cos_exec's disabled shape or a "desktop not running" error.
                 else -> tool.execute(arguments)
             }
+            val durationMs = (nowMs() - started).coerceAtLeast(0)
 
             val result = JSONObject()
             result.put("id", id)
             result.put("name", name)
             result.put("content", content)
+            result.put(DURATION_MS, durationMs)
             results.put(result)
         }
         return results.toString()
     }
 
     companion object {
+        /** Per-call wall time on each result entry (not part of the content the model sees). */
+        const val DURATION_MS = "duration_ms"
+
         /** Result for calls skipped because Stop was pressed earlier in the batch. */
         val CANCELLED_ERROR: String = """{"error":"cancelled: the user pressed Stop; not run"}"""
 

@@ -1,5 +1,6 @@
 package com.druk.lmplayground.conversation
 
+import com.druk.lmplayground.tools.ToolRegistry
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -17,9 +18,12 @@ object ToolCallInfoMapper {
         val calls = JSONArray(toolCallsJson)
         val results = JSONArray(toolResultsJson)
         val resultMap = mutableMapOf<String, String>()
+        val durationMap = mutableMapOf<String, Long>()
         for (i in 0 until results.length()) {
             val r = results.getJSONObject(i)
-            resultMap[r.getString("id")] = r.getString("content")
+            val id = r.getString("id")
+            resultMap[id] = r.getString("content")
+            if (r.has(ToolRegistry.DURATION_MS)) durationMap[id] = r.getLong(ToolRegistry.DURATION_MS)
         }
         val count = calls.length().coerceAtLeast(1)
         val perCallMs = totalDurationMs / count
@@ -31,7 +35,7 @@ object ToolCallInfoMapper {
                 name = call.getString("name"),
                 arguments = call.getString("arguments"),
                 result = result,
-                durationMs = perCallMs,
+                durationMs = durationMap[id] ?: perCallMs,
                 stopped = isStoppedResult(result),
                 exitCode = parseExitCode(result),
             )
