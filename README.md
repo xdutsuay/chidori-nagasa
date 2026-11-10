@@ -41,14 +41,11 @@ LM Playground already nails on-device chat. chidori-nagasa keeps that working an
 | **Windows native builds** | Gradle probes for `glslc.exe`, Vulkan SDK / SPIRV headers, `-PggmlVulkan=off` escape hatch |
 | **CINDI (COS desktop)** | Opt-in graphical Alpine desktop (Xvfb fbdir + xdotool); chat tools `cos_screenshot` / `cos_gui`; live viewer on the Computer screen |
 
-The wire protocol, product scope, and engineering rules live in [`CHIDORI_PROTOCOL.md`](CHIDORI_PROTOCOL.md), [`WIRE_CONTRACT.md`](WIRE_CONTRACT.md), [`PRD.md`](PRD.md), and [`ROADMAP.md`](ROADMAP.md). Desktop implementers: start at [`DESKTOP_HANDOFF.md`](DESKTOP_HANDOFF.md).
-
-**CP2 → CP5 execution plan (agents / God):** [`docs/plans/CP2-CP5-MASTER-PLAN.md`](docs/plans/CP2-CP5-MASTER-PLAN.md).  
-**Security / telemetry inventory:** [`docs/SECURITY-TELEMETRY.md`](docs/SECURITY-TELEMETRY.md).
+The wire protocol, product scope, and roadmap live in [`CHIDORI_PROTOCOL.md`](CHIDORI_PROTOCOL.md), [`WIRE_CONTRACT.md`](WIRE_CONTRACT.md), [`PRD.md`](PRD.md), and [`ROADMAP.md`](ROADMAP.md). Desktop implementers: start at [`DESKTOP_HANDOFF.md`](DESKTOP_HANDOFF.md). The app's network and telemetry notes are in [`docs/SECURITY-TELEMETRY.md`](docs/SECURITY-TELEMETRY.md).
 
 ## Download
 
-Grab a debug-signed APK from [Releases](https://github.com/xdutsuay/chidori-nagasa/releases) (no Play Store account). Current app version: **2.2.0** (`com.xdutsuay.chidori.nagasa`).
+Download a sideloadable APK from [Releases](https://github.com/xdutsuay/chidori-nagasa/releases) (no Play Store account). This checkout builds version **3.0.0** (`com.xdutsuay.chidori.nagasa`); check Releases for the latest published APK.
 
 Sideload notes:
 
@@ -89,7 +86,7 @@ Full design notes: [`docs/COS.md`](docs/COS.md).
 
 1. Open the drawer (☰) → **Computer**, and switch the **Computer (COS)** toggle on.
 2. Tap **⋮ → Install rootfs**. The status line goes from *Not set up* to *Ready ·
-   Rootfs: alpine*.
+   alpine · COS storage …* (the size is what the rootfs actually uses on disk).
 3. Type commands in the terminal at the bottom (`cos:/ $`), e.g. `cat /etc/os-release`
    or `apk add curl`.
 
@@ -99,7 +96,27 @@ Full design notes: [`docs/COS.md`](docs/COS.md).
 </p>
 
 *Left: Computer switched on before the rootfs is installed (“Not set up”). Right:
-after ⋮ → Install rootfs (“Ready · Rootfs: alpine · 16.4 MB · proot”).*
+after ⋮ → Install rootfs. These screenshots predate the current Computer screen,
+which shows a Running/Stopped pill, live CPU / memory / COS storage, and
+Desktop · Terminal · Activity tabs.*
+
+### Other computers (your own VM)
+
+**⋮ → Other computers** adds a Linux VM you control (AWS, GCP, a home server) over
+SSH. Connect-only: the app never creates, starts or bills a cloud VM.
+
+1. On the VM, as root: `bash scripts/cindi-vm/setup.sh` (Debian/Ubuntu; installs
+   Xvfb + Openbox + xdotool + ImageMagick, creates an unprivileged `cindi` user
+   without sudo, and installs the `cindi-desktop` helper). Nothing new listens on the
+   network; the desktop starts only when the agent asks for it.
+2. In the app: **Add** (host, port, user `cindi`) → **Copy key** → append it to
+   `/home/cindi/.ssh/authorized_keys` on the VM.
+3. **Test** → confirm the host-key fingerprint (it is pinned; a changed key is
+   refused) → **Use for agent**. Chat desktop tools now act on the VM; the chat
+   header and the dialog say it leaves the phone. **Use this phone** switches back.
+
+Keys are per-computer, generated on the phone and stored encrypted with an Android
+Keystore key; **Rotate key** replaces one.
 
 ### COS in 5 minutes (CINDI)
 
@@ -174,34 +191,31 @@ source links and the sha256 of each packaged `.so` are in
 
 ### CINDI — drive the on-device Linux desktop
 
-**CINDI** is the product name for *using* COS as a bot-driven desktop: install a
-pinned X11 stack (~114 MiB download), run **Xvfb** with an app-private `-fbdir`
-framebuffer (no VNC / no listening TCP in v1), see it live on the Computer
-screen, and let chat tools screenshot or click/type via **xdotool**.
+**CINDI** is the product name for using COS as a bot-driven desktop. Install the
+pinned X11 stack (~114 MiB download), run **Xvfb** with an app-private framebuffer,
+and view it in the Computer screen. Chat tools can attach a screenshot with
+`cos_screenshot` and click or type through validated `cos_gui` actions using
+**xdotool**.
+
+The in-app viewer reads the private framebuffer directly; it does not expose the
+desktop on Wi-Fi. Developer options also include a temporary external viewer:
+`x11vnc` binds to `127.0.0.1` and is reachable from a connected computer through
+`adb forward`. The viewer ends when stopped, when its lease expires, or when the
+desktop stops. This is a USB/ADB development path, not LAN sharing.
+
+The Computer status currently reports the on-device COS storage footprint. It
+does not yet show live CPU or memory use.
 
 | Piece | Docs |
 |-------|------|
 | Install / session / security flags | [`docs/COS.md`](docs/COS.md) (Desktop M1) |
 | Chat tools `cos_screenshot`, `cos_gui` | [`docs/COS_DESKTOP_TOOLS.md`](docs/COS_DESKTOP_TOOLS.md) |
 | Touch / keyboard → xdotool | [`docs/COS_DESKTOP_INPUT.md`](docs/COS_DESKTOP_INPUT.md) |
-| Checkpoint plan (CP2–CP5) | [`docs/plans/CP2-CP5-MASTER-PLAN.md`](docs/plans/CP2-CP5-MASTER-PLAN.md) |
+| Security and telemetry | [`docs/SECURITY-TELEMETRY.md`](docs/SECURITY-TELEMETRY.md) |
 
-**Status (2026-11-05):** CP2 on **`origin/main`** (`27c7528`). CP3 tip
-`cp/kma-cp3-history-cos-hardening` @ `4ad8f28` (installed on Realme): Room tool-row
-restore, desktop FGS, DNS refresh, Direct/Trackpad + Rotate viewer — **not merged**
-yet. Branch map: [`docs/BRANCH-SANITY.md`](docs/BRANCH-SANITY.md).
-**Backlog:** “Add desktop context to CINDI chat” — see master plan.
-
-## Status & roadmap (short)
-
-| Now | Next |
-|-----|------|
-| On-device chat + COS shell + CINDI desktop on `main` (CP2) | CP3 history restore / desktop FGS / cleanup |
-| CP3 branch `cp/kma-cp3-history-cos-hardening` | CP4 release hardening (local scripts; no CI until unlocked) |
-| Companion pairing / monitor | CP5 phone-as-node over paired channel (KMA-20) |
-
-Full phase list: [`ROADMAP.md`](ROADMAP.md). Security / no-telemetry stance and
-vulnerable points: [`docs/SECURITY-TELEMETRY.md`](docs/SECURITY-TELEMETRY.md).
+See [`ROADMAP.md`](ROADMAP.md) for planned work. Branch names and checkpoint
+progress are intentionally kept out of this README so the project overview does
+not go stale with each merge.
 
 ## Supported models
 
