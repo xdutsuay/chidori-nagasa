@@ -800,13 +800,15 @@ class ToolCallingTest {
     }
 
     @Test
-    fun testTask_webFetchLmPlaygroundIdentifiesApp() {
-        // Target our own site (https://lmplayground.app) — the rendered
-        // body text is ~2.6 KB after Jsoup strips nav/footer/script, with
-        // "LM Playground" and "Android" prominent in both title and body.
-        // Smaller, more stable, and more recognizable than the previous
-        // httpbin.org/html target (5 KB of Moby-Dick excerpt) which a 2B
-        // model couldn't reliably summarize in a 512-token budget.
+    fun testTask_webFetchCindiPageIdentifiesApp() {
+        // Target our own site's public CINDI page
+        // (https://kaustubhtripathi.com/public/apps/cindi/) — "CINDI" and
+        // "Android" appear in both the page title ("CINDI — on-device AI
+        // for Android") and the rendered body text, so the result is
+        // recognizable by a small on-device model within a 512-token
+        // budget. More stable than the previous httpbin.org/html target
+        // (5 KB of Moby-Dick excerpt) which a 2B model couldn't reliably
+        // summarize in a 512-token budget.
         val modelFile = findModel()
         assumeTrue("No model found", modelFile != null)
         val model = loadModel(modelFile!!)
@@ -825,7 +827,7 @@ class ToolCallingTest {
             // visible output; (3) we ask for the page title, which
             // web_fetch returns as a top-level field — always present.
             prompt = "Use the web_fetch tool with max_length=200 to retrieve " +
-                "https://lmplayground.app, then in one short sentence give me the page title.",
+                "https://kaustubhtripathi.com/public/apps/cindi/, then in one short sentence give me the page title.",
             // Even with max_length=200 the model may ignore the hint and
             // pull the full 2.6 KB body. With thinking auto-enabled for
             // Gemma 4 (see runToolCycle), generation can spend a lot of
@@ -841,11 +843,12 @@ class ToolCallingTest {
         }
         assertEquals("Should call web_fetch", "web_fetch", outcome.toolName)
         // Tool result is deterministic — both literals appear in the
-        // fetched body text, and "LM Playground" sits in the title field
-        // even when the model truncates content via max_length.
+        // fetched body text, and both sit in the title field ("CINDI —
+        // on-device AI for Android") even when the model truncates
+        // content via max_length.
         assertTrue(
-            "Tool content must include 'LM Playground'. content head=${outcome.toolContent.take(400)}",
-            outcome.toolContent.contains("LM Playground")
+            "Tool content must include 'CINDI'. content head=${outcome.toolContent.take(400)}",
+            outcome.toolContent.contains("CINDI")
         )
         assertTrue(
             "Tool content must include 'Android'. content head=${outcome.toolContent.take(400)}",
@@ -857,9 +860,8 @@ class ToolCallingTest {
         val resp = outcome.finalResponse
         assertTrue(
             "Final response should surface fetched content " +
-                "(LM Playground / Android). response=$resp",
-            resp.contains("LM Playground", ignoreCase = true) ||
-                resp.contains("Playground", ignoreCase = true) ||
+                "(CINDI / Android). response=$resp",
+            resp.contains("CINDI", ignoreCase = true) ||
                 resp.contains("Android", ignoreCase = true)
         )
     }

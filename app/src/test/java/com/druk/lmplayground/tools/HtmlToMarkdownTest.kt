@@ -111,10 +111,10 @@ class HtmlToMarkdownTest {
     fun `relative href is resolved against baseUri`() {
         val out = md(
             """<html><body><a href="/about">About</a></body></html>""",
-            baseUri = "https://lmplayground.app/"
+            baseUri = "https://example.com/"
         )
         assertTrue("relative href should resolve, got:\n$out",
-            out.contains("[About](https://lmplayground.app/about)"))
+            out.contains("[About](https://example.com/about)"))
     }
 
     @Test
