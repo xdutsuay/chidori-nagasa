@@ -81,22 +81,28 @@ class LibraryIndexer(context: Context, private val store: LibraryStore, private 
         var done = 0
         var skipped = 0
         val kept = mutableSetOf<String>()
+        val pdfSupported = PdfTextExtractor.isAvailable()
         files.forEach { f ->
             val fileName = f.name.orEmpty()
             val size = f.length()
-            if (!LibraryFormats.isSupported(fileName) || size > MAX_FILE_BYTES) {
+            if (!LibraryFormats.isSupported(fileName, pdfSupported) || size > LibraryFormats.maxBytes(fileName)) {
                 skipped++
             } else {
                 val docUri = f.uri.toString()
                 kept += docUri
                 val modified = f.lastModified()
                 if (store.needsIndex(docUri, size, modified)) {
-                    val raw = resolver.openInputStream(f.uri)?.use { it.readBytes().toString(Charsets.UTF_8) }
-                    if (raw == null) {
+                    val text = if (LibraryFormats.isPdf(fileName)) {
+                        PdfTextExtractor.pages(resolver, f.uri)?.let(LibraryPdfText::join)?.takeIf { it.isNotBlank() }
+                    } else {
+                        resolver.openInputStream(f.uri)?.use { it.readBytes().toString(Charsets.UTF_8) }
+                            ?.let { LibraryFormats.toPlainText(fileName, it) }
+                    }
+                    if (text == null) {
                         skipped++
                         kept -= docUri
+                        done--
                     } else {
-                        val text = LibraryFormats.toPlainText(fileName, raw)
                         store.replaceDocument(sourceId, docUri, fileName, size, modified, LibraryChunker.chunk(text))
                     }
                 }
@@ -125,7 +131,6 @@ class LibraryIndexer(context: Context, private val store: LibraryStore, private 
     }
 
     companion object {
-        const val MAX_FILE_BYTES = 2L * 1024 * 1024
         const val MAX_FILES = 2000
         const val MAX_DEPTH = 8
     }

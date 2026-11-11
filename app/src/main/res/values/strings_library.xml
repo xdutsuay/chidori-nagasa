@@ -10,7 +10,7 @@
     <string name="library_reindex_all">Re-index all</string>
 
     <string name="library_empty_title">Nothing in your library yet</string>
-    <string name="library_empty_body">Add a text file or a folder of them — the assistant will search their contents during chats.</string>
+    <string name="library_empty_body">Add a text or PDF file, or a folder of them — the assistant will search their contents during chats. PDFs need Android 15 or later; scanned PDFs without text are skipped.</string>
 
     <string name="library_source_remove">Remove</string>
     <string name="library_remove_confirm_title">Remove source?</string>

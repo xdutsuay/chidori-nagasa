@@ -58,7 +58,19 @@ object LibraryFormats {
         return fileName.substring(dot + 1).lowercase()
     }
 
-    fun isSupported(fileName: String): Boolean = extensionOf(fileName) in TEXT_EXTENSIONS
+    const val PDF_EXTENSION = "pdf"
+    const val MAX_TEXT_BYTES = 2L * 1024 * 1024
+    const val MAX_PDF_BYTES = 20L * 1024 * 1024
+
+    /** True for a `.pdf` name (extension case-insensitive). */
+    fun isPdf(fileName: String): Boolean = extensionOf(fileName) == PDF_EXTENSION
+
+    /** Text formats always; PDF only when [pdfSupported] (the phone can extract PDF text). */
+    fun isSupported(fileName: String, pdfSupported: Boolean = false): Boolean =
+        extensionOf(fileName) in TEXT_EXTENSIONS || (pdfSupported && isPdf(fileName))
+
+    /** Largest file the indexer reads: [MAX_PDF_BYTES] for PDFs, [MAX_TEXT_BYTES] otherwise. */
+    fun maxBytes(fileName: String): Long = if (isPdf(fileName)) MAX_PDF_BYTES else MAX_TEXT_BYTES
 
     fun toPlainText(fileName: String, raw: String): String {
         if (extensionOf(fileName) in HTML_EXTENSIONS) {
@@ -68,6 +80,29 @@ object LibraryFormats {
         }
         return raw.replace("\r\n", "\n")
     }
+}
+
+/**
+ * Turns extracted PDF page texts into one Library document.
+ *
+ * Only the first [MAX_PAGES] entries of `pages` are used. Each page's text has CRLF turned into LF,
+ * trailing whitespace removed from every line, and is trimmed; blank pages are dropped. A kept page
+ * becomes `"Page N\n" + text`, where N is its 1-based position in `pages`. Kept pages are joined
+ * with `"\n\n"`. No kept pages → `""`.
+ */
+object LibraryPdfText {
+    const val MAX_PAGES = 500
+
+    fun join(pages: List<String>): String =
+        pages.take(MAX_PAGES)
+            .mapIndexedNotNull { index, page ->
+                val text = page.replace("\r\n", "\n")
+                    .lineSequence()
+                    .joinToString("\n") { it.trimEnd() }
+                    .trim()
+                if (text.isEmpty()) null else "Page ${index + 1}\n$text"
+            }
+            .joinToString("\n\n")
 }
 
 /** Turns a free-text question into a safe SQLite FTS MATCH expression. */
