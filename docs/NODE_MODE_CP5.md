@@ -5,7 +5,7 @@ local branch until God OK.
 
 ## Bind policy (shipped)
 
-- Data plane ([NodeOpenAiServer](../app/src/main/java/com/druk/lmplayground/coordinator/node/NodeOpenAiServer.kt)):
+- Data plane ([NodeOpenAiServer](../app/src/main/java/com/xdutsuay/chidori/coordinator/node/NodeOpenAiServer.kt)):
   bind **LAN unicast** from `ConnectivityManager` / `primaryIpv4()`, never
   plaintext `0.0.0.0` / `::`.
 - Unit tests use `127.0.0.1`.
@@ -15,7 +15,7 @@ local branch until God OK.
 ## Trust
 
 - Opt-in offer after one-tap pairing; require loaded on-device model.
-- Phone allowlist = paired `instance_id`s ([NodePeerPolicy](../app/src/main/java/com/druk/lmplayground/coordinator/node/NodePeerPolicy.kt)).
+- Phone allowlist = paired `instance_id`s ([NodePeerPolicy](../app/src/main/java/com/xdutsuay/chidori/coordinator/node/NodePeerPolicy.kt)).
 - Each register carries a fresh `register_nonce` (UUID). Phone [ReplayGuard]
   and desktop `nodeRegisterNonceCache` both reject reuse (HTTP 409).
 - Unpaired peers never get past pairing bearer on `:8027`.

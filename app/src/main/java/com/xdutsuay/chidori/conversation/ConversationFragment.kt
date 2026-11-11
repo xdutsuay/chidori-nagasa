@@ -1,0 +1,1052 @@
+package com.xdutsuay.chidori.conversation
+
+import android.content.ActivityNotFoundException
+import android.content.pm.PackageManager
+import android.net.Uri
+import android.os.Bundle
+import android.view.LayoutInflater
+import android.widget.Toast
+import android.view.View
+import android.view.ViewGroup
+import android.view.ViewGroup.LayoutParams
+import android.view.ViewGroup.LayoutParams.MATCH_PARENT
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.FileProvider
+import java.io.File
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.PermanentNavigationDrawer
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberDrawerState
+import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
+import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
+import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
+import androidx.fragment.app.Fragment
+import androidx.fragment.app.viewModels
+import androidx.core.os.bundleOf
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.fragment.findNavController
+import com.xdutsuay.chidori.App
+import com.xdutsuay.chidori.MainActivity
+import com.xdutsuay.chidori.R
+import com.xdutsuay.chidori.computer.ComputerChromeStatus
+import com.xdutsuay.chidori.computer.desktop.DesktopBridges
+import com.xdutsuay.chidori.coordinator.notifications.NeedsYouBadgeStore
+import com.xdutsuay.chidori.coordinator.ui.ChidoriPendingOpen
+import com.xdutsuay.chidori.data.UsageAggregator
+import com.xdutsuay.chidori.models.SelectModelDialog
+import com.xdutsuay.chidori.settings.SettingsFragment
+import com.xdutsuay.chidori.storage.StorageViewModel
+import com.xdutsuay.chidori.theme.PlaygroundTheme
+import dev.chrisbanes.haze.HazeStyle
+import dev.chrisbanes.haze.HazeTint
+import dev.chrisbanes.haze.hazeEffect
+import dev.chrisbanes.haze.hazeSource
+import dev.chrisbanes.haze.rememberHazeState
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.util.Calendar
+
+class ConversationFragment : Fragment() {
+
+    private val viewModel: ConversationViewModel by viewModels()
+    private val storageViewModel: StorageViewModel by viewModels()
+
+    private var attachedImageUri = mutableStateOf<Uri?>(null)
+
+    // Destination of an in-flight camera capture. Kept as both a Uri (handed to
+    // the camera app / set as the attachment) and a File (so we can check
+    // length() / delete() the temp without re-parsing the FileProvider Uri).
+    private var pendingCaptureUri: Uri? = null
+    private var pendingCaptureFile: File? = null
+
+    private val cameraAvailable by lazy {
+        requireContext().packageManager.hasSystemFeature(PackageManager.FEATURE_CAMERA_ANY)
+    }
+
+    private val pickMediaLauncher = registerForActivityResult(
+        ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        // Picking a library image supersedes any unsent camera capture — drop its
+        // temp so the cache never holds more than the current attachment's file.
+        if (uri != null) clearPendingCapture()
+        attachedImageUri.value = uri
+    }
+
+    private val takePictureLauncher = registerForActivityResult(
+        ActivityResultContracts.TakePicture()
+    ) { success ->
+        val file = pendingCaptureFile
+        // Gate on a non-empty file: some OEM camera apps report success but write
+        // nothing, and a 0-byte JPEG would silently degrade the turn to text-only.
+        if (success && file != null && file.length() > 0L) {
+            // Keep pendingCaptureFile referenced so it can be pruned after the
+            // turn is sent / cleared / superseded (see clearPendingCapture).
+            attachedImageUri.value = pendingCaptureUri
+        } else {
+            clearPendingCapture()
+        }
+    }
+
+    /** Delete the in-flight/last camera temp (if any) and forget it. */
+    private fun clearPendingCapture() {
+        runCatching { pendingCaptureFile?.delete() }
+        pendingCaptureFile = null
+        pendingCaptureUri = null
+    }
+
+    /**
+     * Capture a photo via the system camera app into a temp file under
+     * cacheDir/chat_images, then route the result through the same attachment
+     * path as the photo picker. No CAMERA permission is needed — the camera app
+     * does the capture and we only receive the written image.
+     */
+    private fun launchCamera() {
+        // Drop any temp from a prior capture that was never sent.
+        clearPendingCapture()
+        val uri = try {
+            val dir = File(requireContext().cacheDir, "chat_images").apply { mkdirs() }
+            val file = File(dir, "capture_${System.currentTimeMillis()}.jpg")
+            val uri = FileProvider.getUriForFile(
+                requireContext(), "${requireContext().packageName}.fileprovider", file
+            )
+            pendingCaptureFile = file
+            pendingCaptureUri = uri
+            uri
+        } catch (e: Exception) {
+            Toast.makeText(requireContext(), R.string.camera_unavailable, Toast.LENGTH_SHORT).show()
+            return
+        }
+        try {
+            takePictureLauncher.launch(uri)
+        } catch (e: ActivityNotFoundException) {
+            clearPendingCapture()
+            Toast.makeText(requireContext(), R.string.camera_unavailable, Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        // The camera app is memory-heavy and frequently triggers our process
+        // death while it is foregrounded. Persist the pending capture destination
+        // so the result callback can still map back to the temp file on return.
+        pendingCaptureFile?.let { outState.putString(KEY_PENDING_CAPTURE_FILE, it.absolutePath) }
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        // Listen with Fragment lifecycle (not viewLifecycleOwner) so the
+        // result still arrives while this fragment is on the back stack
+        // with its view destroyed after navigating to Cloud APIs.
+        parentFragmentManager.setFragmentResultListener(
+            REQUEST_OPEN_CLOUD_PROVIDER,
+            this,
+        ) { _, bundle ->
+            val id = bundle.getString(KEY_CLOUD_PROVIDER_ID) ?: return@setFragmentResultListener
+            viewModel.selectCloudProviderById(id)
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // After returning from the Tools screen (which marks the flag), hide the
+        // "Set up tools" button — re-checking here instead of on tap avoids the
+        // button visibly disappearing under the user's finger.
+        viewModel.refreshToolsSetupVisibility()
+    }
+
+    @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3WindowSizeClassApi::class)
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View = ComposeView(inflater.context).apply {
+        layoutParams = LayoutParams(MATCH_PARENT, MATCH_PARENT)
+
+        // Recover a capture that was in flight when the process was killed.
+        savedInstanceState?.getString(KEY_PENDING_CAPTURE_FILE)?.let { path ->
+            val file = File(path)
+            pendingCaptureFile = file
+            pendingCaptureUri = runCatching {
+                FileProvider.getUriForFile(
+                    requireContext(), "${requireContext().packageName}.fileprovider", file
+                )
+            }.getOrNull()
+        }
+
+        setContent {
+
+            val messages = viewModel.uiState.messages
+            val isGenerating by viewModel.isGenerating.observeAsState()
+            val progress by viewModel.modelLoadingProgress.observeAsState(0f)
+            val modelInfo by viewModel.loadedModel.observeAsState()
+            val modelStatus by viewModel.loadedModelStatus.observeAsState()
+            val cloudSource by viewModel.activeCloudSource.observeAsState()
+            val supportsThinking by viewModel.supportsThinking.observeAsState(false)
+            val supportsToolCalling by viewModel.supportsToolCalling.observeAsState(false)
+            val showToolsSetup by viewModel.showToolsSetup.observeAsState(false)
+            val toolEnabledStates by viewModel.toolEnabledStates.observeAsState(emptyMap())
+            val thinkingEnabled by viewModel.thinkingEnabled.observeAsState(false)
+            val supportsVision by viewModel.supportsVision.observeAsState(false)
+            val currentImageUri by attachedImageUri
+            val isModelReady by viewModel.isModelReady.observeAsState(false)
+            val models by viewModel.models.observeAsState(emptyList())
+            val app = requireActivity().application as App
+            val cloudProviders by app.cloudProviderRepository.observeAll().observeAsState(emptyList())
+            val sessions by viewModel.sessions.observeAsState(emptyList())
+            val currentSessionId by viewModel.currentSessionId.observeAsState()
+            val generationParams by viewModel.generationParams.observeAsState(GenerationParams())
+            val maxContextSize by viewModel.maxContextSize.observeAsState(4096)
+            val sessionModelHint by viewModel.sessionModelHint.observeAsState()
+            val visionModuleHint by viewModel.visionModuleHint.observeAsState()
+            val systemPrompt by viewModel.systemPrompt.observeAsState("")
+            val systemPromptId by viewModel.systemPromptId.observeAsState()
+            val recentSystemPrompts by viewModel.recentSystemPrompts.observeAsState(emptyList())
+            val userError by viewModel.userError.observeAsState()
+            val pendingRamWarning by viewModel.pendingRamWarning.observeAsState()
+            val modelLoadError by viewModel.modelLoadError.observeAsState()
+            var showParamsSheet by remember { mutableStateOf(false) }
+
+            // Surface transient ViewModel errors (e.g. message-too-large)
+            // as Toasts. The ViewModel can't show UI directly, so we
+            // observe a one-shot LiveData and clear it after consumption.
+            val toastContext = LocalContext.current
+            LaunchedEffect(userError) {
+                val msg = userError ?: return@LaunchedEffect
+                Toast.makeText(toastContext, msg, Toast.LENGTH_LONG).show()
+                viewModel.consumeUserError()
+            }
+
+            // Storage configuration state
+            val isStorageConfigured by storageViewModel.isStorageConfigured.observeAsState(true)
+            var showStorageSetupDialog by remember { mutableStateOf(false) }
+
+            // Migration state
+            val pendingMigration by storageViewModel.pendingMigration.observeAsState()
+            val migrationProgress by storageViewModel.migrationProgress.observeAsState()
+
+            PlaygroundTheme {
+
+                val scrollState = rememberLazyListState()
+                val scope = rememberCoroutineScope()
+                val drawerState = rememberDrawerState(DrawerValue.Closed)
+                var hubSessionFilter by remember { mutableStateOf(HubSessionFilter.ALL) }
+                var hubSearchQuery by remember { mutableStateOf("") }
+                var usageFooterText by remember { mutableStateOf<String?>(null) }
+                val needsYouBadgeCount by NeedsYouBadgeStore.count.collectAsStateWithLifecycle()
+
+                LaunchedEffect(Unit) {
+                    val app = requireContext().applicationContext as App
+                    val startOfDay = Calendar.getInstance().apply {
+                        set(Calendar.HOUR_OF_DAY, 0)
+                        set(Calendar.MINUTE, 0)
+                        set(Calendar.SECOND, 0)
+                        set(Calendar.MILLISECOND, 0)
+                    }.timeInMillis
+                    val events = withContext(Dispatchers.IO) {
+                        app.usageRepository.since(startOfDay)
+                    }
+                    val totals = UsageAggregator.totals(events)
+                    usageFooterText = formatUsageDrawerFooter(
+                        totals.requests,
+                        totals.promptTokens + totals.completionTokens,
+                    )
+                }
+
+                fun navigateHub(destination: HubDestination) {
+                    val nav = findNavController()
+                    if (nav.currentDestination?.id != R.id.nav_home) return
+                    when (destination) {
+                        HubDestination.CHATS -> { /* stay */ }
+                        HubDestination.CHIDORI_DESKTOP -> nav.navigate(R.id.action_home_to_chidori)
+                        HubDestination.ASK_DESKTOP -> {
+                            ChidoriPendingOpen.openRemoteChat = true
+                            nav.navigate(R.id.action_home_to_chidori)
+                        }
+                        HubDestination.NEEDS_YOU -> nav.navigate(R.id.action_home_to_needs_you)
+                        HubDestination.COMPUTER -> nav.navigate(R.id.action_home_to_computer)
+                        HubDestination.LIBRARY -> nav.navigate(R.id.action_home_to_library)
+                        HubDestination.CLOUD_APIS -> nav.navigate(R.id.action_home_to_cloud_apis)
+                        HubDestination.USAGE -> nav.navigate(R.id.action_home_to_usage)
+                        HubDestination.MODELS -> nav.navigate(R.id.action_home_to_models)
+                        HubDestination.SETTINGS -> nav.navigate(R.id.action_home_to_settings)
+                    }
+                }
+
+                // "Follow the latest" flag for the message list. Hoisted here so
+                // the jump-to-bottom button (rendered at the root, above all
+                // chrome) can re-arm it. New messages re-enable following.
+                var piningBottom by remember { mutableStateOf(false) }
+                LaunchedEffect(messages.size) { piningBottom = true }
+                val jumpEnabled by remember {
+                    derivedStateOf { scrollState.canScrollForward }
+                }
+
+                // Restore the pre-frost behavior: the top bar is flush (no
+                // tint/elevation) while the list is at the very top, and only
+                // frosts once content scrolls underneath it. Drive the haze
+                // effect's alpha from this so it fades in like the old M3
+                // container-color transition.
+                val isScrolled by remember {
+                    derivedStateOf {
+                        scrollState.firstVisibleItemIndex > 0 ||
+                            scrollState.firstVisibleItemScrollOffset > 0
+                    }
+                }
+                val topBarFrost by animateFloatAsState(
+                    targetValue = if (isScrolled) 1f else 0f,
+                    label = "topBarFrost"
+                )
+
+                val colorScheme = MaterialTheme.colorScheme
+
+                // Frosted-glass chrome: the message list scrolls full-bleed
+                // behind a translucent, blurred top bar and input dock. The
+                // shared HazeState links the source (the list) to the overlays.
+                // Real blur needs API 32+; on older devices Haze draws the
+                // fallbackTint scrim instead — kept near-opaque so the bars
+                // still read as solid chrome rather than washed-out content.
+                val hazeState = rememberHazeState()
+                val hazeStyle = HazeStyle(
+                    // The color sitting behind the blurred content (the chat
+                    // background painted on the root Box), so Haze composites the
+                    // gaps between message bubbles correctly.
+                    backgroundColor = colorScheme.background,
+                    // Tint with a lighter "elevated surface" tone at fairly high
+                    // opacity. A low-alpha surface tint let the dark chat bleed
+                    // through and read darker than the old solid bars; this keeps
+                    // the chrome clearly lighter than the content (so it reads as
+                    // raised) while still showing the blur through it.
+                    tints = listOf(HazeTint(colorScheme.surfaceContainerHigh.copy(alpha = 0.78f))),
+                    blurRadius = 24.dp,
+                    noiseFactor = 0f,
+                    fallbackTint = HazeTint(colorScheme.surfaceContainerHigh.copy(alpha = 0.97f))
+                )
+
+                // Only show the permanent sidebar when there's enough actual
+                // window width to comfortably fit master (320dp) + detail.
+                // At Medium (600-839dp), e.g. 7" tablet portrait or split-screen,
+                // the chat pane would be squeezed to ~280dp — worse than just
+                // hiding the sidebar behind a hamburger.
+                val widthSize = calculateWindowSizeClass(requireActivity()).widthSizeClass
+                val showPermanent = widthSize == WindowWidthSizeClass.Expanded
+
+                // Foldable book posture: if a vertical hinge is in the window,
+                // align the sidebar boundary with it so the seam between
+                // master/detail lands on the crease instead of arbitrarily
+                // bisecting one display. Fall back to 320dp on flat devices.
+                val hingeWidth = com.xdutsuay.chidori.util.rememberHingeWidthDp(requireActivity())
+                val sidebarWidth = if (hingeWidth != androidx.compose.ui.unit.Dp.Unspecified) {
+                    // Clamp the lower bound so the master pane doesn't shrink
+                    // below the comfortable 320dp the rest of the UI expects.
+                    maxOf(320.dp, hingeWidth)
+                } else {
+                    320.dp
+                }
+
+                // The bar paints no container of its own — the frosted blur
+                // behind it provides the separation, so both the resting and
+                // scrolled container colors are transparent.
+                val topBarColors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                    containerColor = Color.Transparent,
+                    scrolledContainerColor = Color.Transparent
+                )
+                val inputFocusRequester = remember { FocusRequester() }
+
+                // Measured heights of the floating top bar and bottom dock,
+                // fed back into the list as content padding (so the first/last
+                // messages clear the chrome) and as the float offset for the
+                // jump-to-bottom / model-hint buttons. The bottom value tracks
+                // the dock as it grows with multi-line text and the keyboard.
+                val density = LocalDensity.current
+                var topBarHeightPx by remember { mutableIntStateOf(0) }
+                var bottomBarHeightPx by remember { mutableIntStateOf(0) }
+                val topBarHeight = with(density) { topBarHeightPx.toDp() }
+                val bottomBarHeight = with(density) { bottomBarHeightPx.toDp() }
+                var modelReport by remember { mutableStateOf<String?>(null) }
+
+                // When model finishes loading, jump to bottom and open keyboard
+                LaunchedEffect(isModelReady) {
+                    if (isModelReady) {
+                        val lastIndex = scrollState.layoutInfo.totalItemsCount - 1
+                        if (lastIndex >= 0) {
+                            scrollState.animateScrollToItem(lastIndex)
+                        }
+                        inputFocusRequester.requestFocus()
+                    }
+                }
+
+                // Check if storage is configured on first launch
+                LaunchedEffect(Unit) {
+                    storageViewModel.checkStorageConfigured()
+                }
+
+                // Show setup dialog if storage not configured
+                LaunchedEffect(isStorageConfigured) {
+                    if (!isStorageConfigured) {
+                        showStorageSetupDialog = true
+                    }
+                }
+
+                // Storage Setup Dialog
+                if (showStorageSetupDialog && !isStorageConfigured && pendingMigration == null) {
+                    AlertDialog(
+                        onDismissRequest = { /* Cannot dismiss - must choose folder */ },
+                        title = { Text(stringResource(R.string.choose_storage_folder)) },
+                        text = {
+                            Text(stringResource(R.string.choose_storage_folder_message))
+                        },
+                        confirmButton = {
+                            TextButton(
+                                onClick = {
+                                    (activity as? MainActivity)?.launchFolderPicker { uri ->
+                                        if (uri != null) {
+                                            storageViewModel.requestStorageFolderChange(uri)
+                                            showStorageSetupDialog = false
+                                        }
+                                    }
+                                }
+                            ) {
+                                Text(stringResource(R.string.choose_folder))
+                            }
+                        }
+                    )
+                }
+
+                // Migration confirmation dialog
+                pendingMigration?.let { migration ->
+                    val totalSize = migration.modelsToMigrate.sumOf { it.sizeBytes }
+                    val sizeFormatted = android.text.format.Formatter.formatFileSize(context, totalSize)
+
+                    AlertDialog(
+                        onDismissRequest = { storageViewModel.cancelMigration() },
+                        title = { Text(stringResource(R.string.migrate_models_title)) },
+                        text = {
+                            Column {
+                                Text(
+                                    if (migration.isFromDownloads) {
+                                        stringResource(R.string.migrate_models_from_downloads, migration.modelsToMigrate.size, sizeFormatted)
+                                    } else {
+                                        stringResource(R.string.migrate_models_message, migration.modelsToMigrate.size, sizeFormatted)
+                                    }
+                                )
+                            }
+                        },
+                        confirmButton = {
+                            TextButton(onClick = { storageViewModel.confirmMigration() }) {
+                                Text(stringResource(R.string.migrate))
+                            }
+                        },
+                        dismissButton = {
+                            TextButton(onClick = { storageViewModel.skipMigration() }) {
+                                Text(stringResource(R.string.skip))
+                            }
+                        }
+                    )
+                }
+
+                // Migration progress dialog
+                migrationProgress?.let { progress ->
+                    AlertDialog(
+                        onDismissRequest = { /* Cannot dismiss while migrating */ },
+                        title = { Text(stringResource(R.string.migrating_models)) },
+                        text = {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                CircularProgressIndicator()
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Text(stringResource(R.string.migration_progress, progress.currentIndex, progress.totalCount))
+                                Text(
+                                    text = progress.currentModel,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        },
+                        confirmButton = { }
+                    )
+                }
+
+                pendingRamWarning?.let { warning ->
+                    AlertDialog(
+                        onDismissRequest = { viewModel.dismissRamWarning() },
+                        title = { Text(stringResource(R.string.low_ram_warning_title)) },
+                        text = {
+                            Text(
+                                stringResource(
+                                    R.string.low_ram_warning_message,
+                                    warning.neededRam,
+                                    warning.totalRam,
+                                )
+                            )
+                        },
+                        confirmButton = {
+                            TextButton(onClick = { viewModel.confirmLoadDespiteRamWarning() }) {
+                                Text(stringResource(R.string.load_anyway))
+                            }
+                        },
+                        dismissButton = {
+                            TextButton(onClick = { viewModel.dismissRamWarning() }) {
+                                Text(stringResource(R.string.cancel))
+                            }
+                        }
+                    )
+                }
+
+                modelLoadError?.let { message ->
+                    AlertDialog(
+                        onDismissRequest = { viewModel.consumeModelLoadError() },
+                        title = { Text(stringResource(R.string.model_load_failed_title)) },
+                        text = { Text(message) },
+                        confirmButton = {
+                            TextButton(onClick = { viewModel.consumeModelLoadError() }) {
+                                Text(stringResource(R.string.model_load_failed_dismiss))
+                            }
+                        }
+                    )
+                }
+
+                if (showParamsSheet) {
+                    GenerationParamsSheet(
+                        params = generationParams,
+                        maxContextSize = maxContextSize,
+                        supportsThinking = supportsThinking,
+                        supportsToolCalling = supportsToolCalling,
+                        tools = viewModel.toolRegistry.getAllTools(),
+                        toolEnabledStates = toolEnabledStates,
+                        onToolEnabledChanged = { name, enabled -> viewModel.setToolEnabled(name, enabled) },
+                        systemPrompt = systemPrompt,
+                        systemPromptId = systemPromptId,
+                        recentSystemPrompts = recentSystemPrompts,
+                        canUpdateLinkedPrompt = systemPromptId != null,
+                        onParamsChanged = { viewModel.updateGenerationParams(it) },
+                        onUpdateLinkedPrompt = { viewModel.updateLinkedSystemPrompt(it) },
+                        onSaveAsNewPrompt = { viewModel.createAndApplySystemPrompt(it) },
+                        onClearSystemPrompt = { viewModel.clearSystemPrompt() },
+                        onApplyPrompt = { viewModel.applySystemPrompt(it.id, it.text) },
+                        onDismiss = { showParamsSheet = false }
+                    )
+                }
+
+                val mainContent: @Composable () -> Unit = {
+                    // Picker sits just above the composer. Visible only when:
+                    //   - model is ready
+                    //   - chat is empty
+                    //   - library has entries
+                    //   - the session has no prompt selected yet
+                    val pickerVisible = isModelReady &&
+                        messages.isEmpty() &&
+                        recentSystemPrompts.isNotEmpty() &&
+                        systemPrompt.isEmpty()
+
+                    // Surface restores what the old Scaffold provided: it paints
+                    // the chat background AND propagates the correct content
+                    // color (onBackground) to descendants. A bare Box leaves text
+                    // at the default LocalContentColor (black). It's also the base
+                    // the frosted bars blur over.
+                    Surface(
+                        modifier = Modifier.fillMaxSize(),
+                        color = colorScheme.background
+                    ) {
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        // ---- Background (haze source): full-bleed content the
+                        // frosted bars blur. Content padding keeps the first and
+                        // last messages clear of the floating chrome.
+                        if (modelInfo == null && cloudSource == null && messages.isEmpty()) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .hazeSource(hazeState)
+                                    .padding(top = topBarHeight, bottom = bottomBarHeight),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                WhatsNewText(
+                                    // Show the "Set up tools" button only until
+                                    // the user taps it once (then persisted off).
+                                    onSetUpTools = if (showToolsSetup) {
+                                        {
+                                            // Don't hide on tap (avoids the button
+                                            // vanishing under the finger). The flag is
+                                            // set when the Tools screen opens; we
+                                            // re-check it in onResume.
+                                            if (findNavController().currentDestination?.id == R.id.nav_home) {
+                                                findNavController().navigate(
+                                                    R.id.action_home_to_settings,
+                                                    bundleOf(
+                                                        SettingsFragment.ARG_OPEN_DETAIL
+                                                            to SettingsFragment.DETAIL_TOOLS
+                                                    )
+                                                )
+                                            }
+                                        }
+                                    } else null
+                                )
+                            }
+                        } else {
+                            Messages(
+                                messages = messages,
+                                modifier = Modifier.fillMaxSize(),
+                                scrollState = scrollState,
+                                contentPadding = PaddingValues(
+                                    top = topBarHeight,
+                                    bottom = bottomBarHeight
+                                ),
+                                bottomInset = bottomBarHeight,
+                                hazeState = hazeState,
+                                hazeStyle = hazeStyle,
+                                isGenerating = isGenerating == true,
+                                piningBottom = piningBottom,
+                                onPiningBottomChange = { piningBottom = it },
+                                sessionModelHint = sessionModelHint,
+                                onSessionModelHintClick = { filename ->
+                                    viewModel.loadModelByFilename(filename)
+                                },
+                                onSessionModelHintDismiss = {
+                                    viewModel.dismissSessionModelHint()
+                                },
+                                visionModuleHint = visionModuleHint?.name,
+                                onVisionModuleHintClick = {
+                                    viewModel.downloadVisionModule()
+                                    Toast.makeText(
+                                        requireContext(),
+                                        R.string.vision_module_downloading,
+                                        Toast.LENGTH_LONG,
+                                    ).show()
+                                },
+                                onTokenCountClicked = {
+                                    modelReport = viewModel.getReport()
+                                },
+                                onImageClick = { uri ->
+                                    val intent = android.content.Intent(android.content.Intent.ACTION_VIEW).apply {
+                                        setDataAndType(uri, "image/*")
+                                        addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                    }
+                                    try {
+                                        startActivity(intent)
+                                    } catch (_: Exception) { }
+                                }
+                            )
+                        }
+
+                        // ---- Frosted top bar + optional cloud provenance ----
+                        val activeCloud = cloudSource
+                        Column(
+                            modifier = Modifier
+                                .align(Alignment.TopCenter)
+                                .onSizeChanged { topBarHeightPx = it.height }
+                        ) {
+                            val desktopBridge = DesktopBridges.bridge
+                            val computerStatus = if (desktopBridge != null) {
+                                val deskState by desktopBridge.state.collectAsStateWithLifecycle()
+                                val chrome = ComputerChromeStatus.from(deskState)
+                                if (ComputerChromeStatus.showInHeader(chrome)) {
+                                    stringResource(
+                                        R.string.computer_chrome_note,
+                                        ComputerChromeStatus.label(chrome),
+                                    )
+                                } else {
+                                    null
+                                }
+                            } else {
+                                null
+                            }
+                            ConversationBar(
+                                modelInfo = activeCloud?.displayModelInfo() ?: modelInfo,
+                                computerStatus = computerStatus,
+                                modelStatus = if (activeCloud != null) {
+                                    activeCloud.model
+                                } else {
+                                    modelStatus
+                                },
+                                showNavIcon = !showPermanent,
+                                compact = showPermanent,
+                                onNavIconPressed = {
+                                    scope.launch { drawerState.open() }
+                                },
+                                colors = topBarColors,
+                                onModelNamePressed = {
+                                    viewModel.loadModelList()
+                                },
+                                onNewSessionPressed = {
+                                    viewModel.newConversation()
+                                },
+                                modifier = Modifier
+                                    .hazeEffect(hazeState, hazeStyle) { alpha = topBarFrost }
+                                    .drawWithContent {
+                                        drawContent()
+                                        val strokeWidth = 2.dp.toPx()
+                                        val y = size.height - strokeWidth / 2f
+                                        drawLine(
+                                            colorScheme.primary,
+                                            start = Offset(0f, y),
+                                            end = Offset(size.width * progress, y),
+                                            strokeWidth = strokeWidth
+                                        )
+                                    }
+                            )
+                            if (needsYouBadgeCount > 0) {
+                                Surface(
+                                    color = MaterialTheme.colorScheme.tertiaryContainer,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable { navigateHub(HubDestination.NEEDS_YOU) },
+                                ) {
+                                    Text(
+                                        text = stringResource(
+                                            R.string.needs_you_home_banner,
+                                            needsYouBadgeCount,
+                                        ),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onTertiaryContainer,
+                                        modifier = Modifier.padding(
+                                            horizontal = 16.dp,
+                                            vertical = 10.dp,
+                                        ),
+                                    )
+                                }
+                            }
+                            // CP6: always-on provenance — Local GGUF or Cloud API.
+                            // Desktop remote chat keeps its own strip on ChidoriChatScreen.
+                            when {
+                                activeCloud != null -> RouteProvenanceBanner(
+                                    text = stringResource(
+                                        R.string.provenance_cloud,
+                                        activeCloud.provider.name,
+                                    ),
+                                    leavesDevice = true,
+                                )
+                                modelInfo != null -> RouteProvenanceBanner(
+                                    text = stringResource(
+                                        R.string.provenance_local,
+                                        modelInfo!!.name.ifBlank { modelInfo!!.filename },
+                                    ),
+                                    leavesDevice = false,
+                                )
+                            }
+                        }
+
+                        // ---- Bottom dock (picker + frosted input) ----
+                        Column(
+                            modifier = Modifier
+                                .align(Alignment.BottomCenter)
+                                .onSizeChanged { bottomBarHeightPx = it.height }
+                        ) {
+                            CosConfirmCard()
+                            // On pick: the picker row handles its own flight
+                            // animation per-card, then fires onPick — which flips
+                            // the visibility gate. Exit uses ExitTransition.None
+                            // so the row disappears immediately after the card
+                            // finishes flying (no double-animation).
+                            androidx.compose.animation.AnimatedVisibility(
+                                visible = pickerVisible,
+                                enter = androidx.compose.animation.fadeIn(
+                                    animationSpec = androidx.compose.animation.core.tween(220)
+                                ) + androidx.compose.animation.slideInVertically(
+                                    animationSpec = androidx.compose.animation.core.tween(220),
+                                    initialOffsetY = { it / 2 }
+                                ),
+                                exit = androidx.compose.animation.ExitTransition.None
+                            ) {
+                                SystemPromptPickerRow(
+                                    prompts = recentSystemPrompts,
+                                    selectedText = systemPrompt,
+                                    onPick = { viewModel.applySystemPrompt(it.id, it.text) },
+                                    modifier = Modifier.padding(bottom = 8.dp)
+                                )
+                            }
+                            UserInput(
+                                integrateWithSurface = showPermanent,
+                                hazeState = hazeState,
+                                hazeStyle = hazeStyle,
+                                modifier = Modifier
+                                    .navigationBarsPadding()
+                                    .imePadding(),
+                                focusRequester = inputFocusRequester,
+                                status = when {
+                                    isGenerating == true -> UserInputStatus.GENERATING
+                                    cloudSource != null -> UserInputStatus.IDLE
+                                    modelInfo == null || !isModelReady -> UserInputStatus.NOT_LOADED
+                                    else -> UserInputStatus.IDLE
+                                },
+                                supportsThinking = supportsThinking && cloudSource == null,
+                                thinkingEnabled = thinkingEnabled,
+                                onThinkingToggle = { viewModel.toggleThinking() },
+                                supportsVision = supportsVision && cloudSource == null,
+                                cameraAvailable = cameraAvailable,
+                                attachedImageUri = currentImageUri,
+                                onAttachImage = {
+                                    pickMediaLauncher.launch(
+                                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                                    )
+                                },
+                                onTakePhoto = { launchCamera() },
+                                onClearImage = {
+                                    attachedImageUri.value = null
+                                    clearPendingCapture()
+                                },
+                                onSwipeUp = {
+                                    if (isModelReady) showParamsSheet = true
+                                },
+                                onMessageSent = { content ->
+                                    val imageUri = attachedImageUri.value
+                                    attachedImageUri.value = null
+                                    viewModel.addMessage(
+                                        Message("User", content),
+                                        imageUri = imageUri
+                                    )
+                                    // addMessage has already copied the capture into
+                                    // filesDir (synchronous persist); drop the cache temp.
+                                    clearPendingCapture()
+                                },
+                                onCancelClicked = {
+                                    viewModel.cancelGeneration()
+                                },
+                                // let this element handle the padding so that the
+                                // frost extends behind the navigation bar
+                                resetScroll = {
+                                    scope.launch {
+                                        val lastIndex = scrollState.layoutInfo.totalItemsCount - 1
+                                        if (lastIndex >= 0) {
+                                            scrollState.animateScrollToItem(lastIndex)
+                                        }
+                                    }
+                                }
+                            )
+                        }
+
+                        // Jump-to-bottom: rendered last so it sits above all the
+                        // chrome with both a frosted background and a real
+                        // elevation shadow. Hidden while the model hint is up.
+                        JumpToBottom(
+                            enabled = jumpEnabled &&
+                                sessionModelHint == null &&
+                                (modelInfo != null || cloudSource != null || messages.isNotEmpty()),
+                            onClicked = {
+                                scope.launch {
+                                    val last = scrollState.layoutInfo.totalItemsCount - 1
+                                    if (last >= 0) scrollState.animateScrollToItem(last)
+                                }
+                                piningBottom = true
+                            },
+                            modifier = Modifier
+                                .align(Alignment.BottomCenter)
+                                .padding(bottom = bottomBarHeight),
+                            hazeState = hazeState,
+                            hazeStyle = hazeStyle
+                        )
+
+                        // Frosted model picker — only while the user asked for
+                        // the list (models non-empty via loadModelList). Remote
+                        // keys ride along in that same sheet; they must not keep
+                        // the overlay open on their own.
+                        if (models.isNotEmpty() &&
+                            (models.any { it.isDownloaded } || cloudProviders.isNotEmpty())
+                        ) {
+                            SelectModelDialog(
+                                models = models,
+                                cloudProviders = cloudProviders,
+                                isModelLoaded = modelInfo != null,
+                                hazeState = hazeState,
+                                hazeStyle = hazeStyle,
+                                onLoadModel = { model ->
+                                    viewModel.loadModel(model)
+                                },
+                                onOpenCloudProvider = { provider ->
+                                    viewModel.selectCloudProvider(provider)
+                                },
+                                onManageCloudApis = {
+                                    val nav = findNavController()
+                                    if (nav.currentDestination?.id == R.id.nav_home) {
+                                        nav.navigate(R.id.action_home_to_cloud_apis)
+                                    }
+                                },
+                                onUnloadModel = {
+                                    viewModel.unloadModel()
+                                },
+                                onGenerationParams = {
+                                    showParamsSheet = true
+                                },
+                                onBrowseModels = {
+                                    val nav = findNavController()
+                                    if (nav.currentDestination?.id == R.id.nav_home) {
+                                        nav.navigate(R.id.action_home_to_models)
+                                    }
+                                },
+                                onDismissRequest = {
+                                    viewModel.resetModelList()
+                                }
+                            )
+                        }
+                    }
+                    }
+
+                    // Models exist but none are downloaded and no remote keys →
+                    // jump straight to the Models screen. With cloud providers the
+                    // frosted picker above stays up. Session-info stays a platform dialog.
+                    if (models.isNotEmpty()) {
+                        if (models.none { it.isDownloaded } && cloudProviders.isEmpty()) {
+                            LaunchedEffect(Unit) {
+                                viewModel.resetModelList()
+                                if (findNavController().currentDestination?.id == R.id.nav_home) {
+                                    findNavController().navigate(R.id.action_home_to_models)
+                                }
+                            }
+                        }
+                    } else if (modelReport != null) {
+                        AlertDialog(
+                            onDismissRequest = {
+                                modelReport = null
+                            },
+                            title = {
+                                Text(text = stringResource(R.string.session_info))
+                            },
+                            text = {
+                                Text(
+                                    text = modelReport!!,
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                            },
+                            confirmButton = {
+                                TextButton(onClick = { modelReport = null }) {
+                                    Text(text = stringResource(R.string.close))
+                                }
+                            }
+                        )
+                    }
+                }
+
+                if (showPermanent) {
+                    PermanentNavigationDrawer(
+                        drawerContent = {
+                            PermanentSessionList(
+                                sessions = sessions,
+                                currentSessionId = currentSessionId,
+                                needsYouBadgeCount = needsYouBadgeCount,
+                                sessionFilter = hubSessionFilter,
+                                onSessionFilterChanged = { hubSessionFilter = it },
+                                searchQuery = hubSearchQuery,
+                                onSearchQueryChanged = { hubSearchQuery = it },
+                                usageFooterText = usageFooterText,
+                                width = sidebarWidth,
+                                onSessionSelected = { sessionId ->
+                                    viewModel.loadSession(sessionId)
+                                },
+                                onDeleteSession = { sessionId ->
+                                    viewModel.deleteSession(sessionId)
+                                },
+                                onRenameSession = { sessionId, newTitle ->
+                                    viewModel.renameSession(sessionId, newTitle)
+                                },
+                                onPinSession = { sessionId, pinned ->
+                                    viewModel.pinSession(sessionId, pinned)
+                                },
+                                onDestinationSelected = { dest -> navigateHub(dest) },
+                                onSettingsClicked = {
+                                    if (findNavController().currentDestination?.id == R.id.nav_home) {
+                                        findNavController().navigate(R.id.action_home_to_settings)
+                                    }
+                                }
+                            )
+                        }
+                    ) { mainContent() }
+                } else {
+                    ModalNavigationDrawer(
+                        drawerState = drawerState,
+                        drawerContent = {
+                            SessionListDrawer(
+                                sessions = sessions,
+                                currentSessionId = currentSessionId,
+                                needsYouBadgeCount = needsYouBadgeCount,
+                                sessionFilter = hubSessionFilter,
+                                onSessionFilterChanged = { hubSessionFilter = it },
+                                searchQuery = hubSearchQuery,
+                                onSearchQueryChanged = { hubSearchQuery = it },
+                                usageFooterText = usageFooterText,
+                                onSessionSelected = { sessionId ->
+                                    viewModel.loadSession(sessionId)
+                                    scope.launch { drawerState.close() }
+                                },
+                                onDeleteSession = { sessionId ->
+                                    viewModel.deleteSession(sessionId)
+                                },
+                                onRenameSession = { sessionId, newTitle ->
+                                    viewModel.renameSession(sessionId, newTitle)
+                                },
+                                onPinSession = { sessionId, pinned ->
+                                    viewModel.pinSession(sessionId, pinned)
+                                },
+                                onDestinationSelected = { dest ->
+                                    scope.launch {
+                                        drawerState.close()
+                                        navigateHub(dest)
+                                    }
+                                },
+                                onSettingsClicked = {
+                                    scope.launch {
+                                        drawerState.close()
+                                        if (findNavController().currentDestination?.id == R.id.nav_home) {
+                                            findNavController().navigate(R.id.action_home_to_settings)
+                                        }
+                                    }
+                                }
+                            )
+                        }
+                    ) { mainContent() }
+                }
+
+            }
+        }
+    }
+
+    companion object {
+        private const val KEY_PENDING_CAPTURE_FILE = "pending_capture_file"
+        const val REQUEST_OPEN_CLOUD_PROVIDER = "open_cloud_provider"
+        const val KEY_CLOUD_PROVIDER_ID = "cloud_provider_id"
+    }
+}

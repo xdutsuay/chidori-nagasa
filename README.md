@@ -252,7 +252,7 @@ not go stale with each merge.
 
 </details>
 
-Most models use Q4_K_M; Qwen 3.5 uses Q3_K_M; GPT-OSS ships MXFP4. Catalog: [`ModelInfoProvider.kt`](app/src/main/java/com/druk/lmplayground/models/ModelInfoProvider.kt).
+Most models use Q4_K_M; Qwen 3.5 uses Q3_K_M; GPT-OSS ships MXFP4. Catalog: [`ModelInfoProvider.kt`](app/src/main/java/com/xdutsuay/chidori/models/ModelInfoProvider.kt).
 
 ## Build
 

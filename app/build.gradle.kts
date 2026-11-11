@@ -209,7 +209,7 @@ val legacyUserKeystore = File(System.getProperty("user.home"), ".android/keystor
 
 android {
     compileSdk = libs.versions.compileSdk.get().toInt()
-    namespace = "com.druk.lmplayground"
+    namespace = "com.xdutsuay.chidori"
 
     defaultConfig {
         applicationId = "com.xdutsuay.chidori.nagasa"

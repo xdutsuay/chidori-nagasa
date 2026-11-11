@@ -134,7 +134,7 @@ class InferenceClient(
             // callers are already on background dispatchers (Dispatchers
             // .Default / IO) — never the main thread. Enforce that contract
             // loudly in debug builds instead of silently janking the UI.
-            if (com.druk.lmplayground.BuildConfig.DEBUG) {
+            if (com.xdutsuay.chidori.BuildConfig.DEBUG) {
                 check(Looper.myLooper() != Looper.getMainLooper()) {
                     "requireConnected() must not block the main thread; use awaitConnected()"
                 }
