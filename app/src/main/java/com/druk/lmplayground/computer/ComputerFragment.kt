@@ -46,6 +46,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
@@ -83,6 +85,7 @@ class ComputerFragment : Fragment() {
                 var showRemote by remember { mutableStateOf(false) }
                 var resources by remember { mutableStateOf(CosResourceSampler.Sample(null, null)) }
                 val lifecycle = LocalLifecycleOwner.current.lifecycle
+                val haptics = LocalHapticFeedback.current
                 LaunchedEffect(state.enabled, lifecycle) {
                     if (!state.enabled) {
                         resources = CosResourceSampler.Sample(null, null)
@@ -138,7 +141,10 @@ class ComputerFragment : Fragment() {
                     headerAction = {
                         if (desktop.canStop) {
                             FilledTonalButton(
-                                onClick = desktopViewModel::stop,
+                                onClick = {
+                                    haptics.performHapticFeedback(HapticFeedbackType.ToggleOff)
+                                    desktopViewModel.stop()
+                                },
                                 contentPadding = PaddingValues(horizontal = 12.dp),
                                 modifier = Modifier.padding(end = 2.dp),
                             ) {
@@ -147,7 +153,10 @@ class ComputerFragment : Fragment() {
                             }
                         } else {
                             FilledTonalButton(
-                                onClick = desktopViewModel::start,
+                                onClick = {
+                                    haptics.performHapticFeedback(HapticFeedbackType.ToggleOn)
+                                    desktopViewModel.start()
+                                },
                                 enabled = desktop.canStart,
                                 contentPadding = PaddingValues(horizontal = 12.dp),
                                 modifier = Modifier.padding(end = 2.dp),

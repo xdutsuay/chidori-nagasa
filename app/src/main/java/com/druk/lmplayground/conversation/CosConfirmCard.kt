@@ -14,6 +14,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -29,6 +31,7 @@ import com.druk.lmplayground.tools.CosConfirmGate
 fun CosConfirmCard(gate: CosConfirmGate = CosConfirmGate.shared, modifier: Modifier = Modifier) {
     val pending by gate.pending.collectAsStateWithLifecycle()
     val request = pending ?: return
+    val haptics = LocalHapticFeedback.current
     Card(
         modifier = modifier
             .fillMaxWidth()
@@ -51,10 +54,16 @@ fun CosConfirmCard(gate: CosConfirmGate = CosConfirmGate.shared, modifier: Modif
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.padding(top = 8.dp),
             ) {
-                Button(onClick = { gate.resolve(request.id, approved = true) }) {
+                Button(onClick = {
+                    haptics.performHapticFeedback(HapticFeedbackType.Confirm)
+                    gate.resolve(request.id, approved = true)
+                }) {
                     Text(stringResource(R.string.cos_confirm_allow))
                 }
-                OutlinedButton(onClick = { gate.resolve(request.id, approved = false) }) {
+                OutlinedButton(onClick = {
+                    haptics.performHapticFeedback(HapticFeedbackType.Reject)
+                    gate.resolve(request.id, approved = false)
+                }) {
                     Text(stringResource(R.string.cos_confirm_deny))
                 }
             }

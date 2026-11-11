@@ -1,5 +1,17 @@
 package com.druk.lmplayground.computer
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -38,6 +50,7 @@ import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.material3.DropdownMenu
@@ -114,6 +127,7 @@ fun ComputerScreen(
 ) {
     val cosSwitchCd = stringResource(R.string.cd_cos_desktop_switch)
     var tab by rememberSaveable { mutableStateOf(ComputerTab.DESKTOP) }
+    val animate = rememberComputerAnimationsEnabled()
     CosFirstRunDialogHost()
     Scaffold(
         topBar = {
@@ -130,7 +144,7 @@ fun ComputerScreen(
                             overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.weight(1f, fill = false),
                         )
-                        if (headerStatus != null) StatusPill(headerStatus, headerActive)
+                        if (headerStatus != null) StatusPill(headerStatus, headerActive, animate)
                     }
                 },
                 navigationIcon = {
@@ -222,34 +236,60 @@ fun ComputerScreen(
                     .weight(1f)
                     .fillMaxWidth(),
             ) {
-                when (tab) {
-                    ComputerTab.DESKTOP -> Column(Modifier.fillMaxSize()) {
-                        Box(
-                            Modifier
-                                .weight(1f)
-                                .fillMaxWidth(),
-                        ) {
-                            desktopPanel?.invoke()
-                        }
-                        CollapsedTerminalRow(
-                            lastLine = ComputerScreenModel.lastTerminalLine(state.terminal),
-                            onExpand = { tab = ComputerTab.TERMINAL },
-                        )
-                    }
-                    ComputerTab.TERMINAL -> CosTerminalOutput(
-                        text = state.terminal,
-                        modifier = Modifier.fillMaxSize(),
-                    )
-                    ComputerTab.ACTIVITY -> Box(Modifier.fillMaxSize()) {
-                        if (activityPanel != null) {
-                            activityPanel.invoke()
+                AnimatedContent(
+                    targetState = tab,
+                    transitionSpec = {
+                        if (animate) {
+                            fadeIn(tween(ComputerMotion.TAB_TRANSITION_MS)) togetherWith
+                                fadeOut(tween(ComputerMotion.TAB_TRANSITION_MS))
                         } else {
-                            Text(
-                                stringResource(R.string.cos_activity_empty),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(16.dp),
+                            EnterTransition.None togetherWith ExitTransition.None
+                        }
+                    },
+                    label = "computerTab",
+                    modifier = Modifier.fillMaxSize(),
+                ) { shown ->
+                    when (shown) {
+                        ComputerTab.DESKTOP -> Column(Modifier.fillMaxSize()) {
+                            Box(
+                                Modifier
+                                    .weight(1f)
+                                    .fillMaxWidth(),
+                            ) {
+                                Box(
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .then(
+                                            if (animate) {
+                                                Modifier.animateContentSize(tween(ComputerMotion.RESIZE_MS))
+                                            } else {
+                                                Modifier
+                                            },
+                                        ),
+                                ) {
+                                    desktopPanel?.invoke()
+                                }
+                            }
+                            CollapsedTerminalRow(
+                                lastLine = ComputerScreenModel.lastTerminalLine(state.terminal),
+                                onExpand = { tab = ComputerTab.TERMINAL },
                             )
+                        }
+                        ComputerTab.TERMINAL -> CosTerminalOutput(
+                            text = state.terminal,
+                            modifier = Modifier.fillMaxSize(),
+                        )
+                        ComputerTab.ACTIVITY -> Box(Modifier.fillMaxSize()) {
+                            if (activityPanel != null) {
+                                activityPanel.invoke()
+                            } else {
+                                Text(
+                                    stringResource(R.string.cos_activity_empty),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(16.dp),
+                                )
+                            }
                         }
                     }
                 }
@@ -389,7 +429,7 @@ data class CosResourceStrip(val cpu: String, val memory: String, val storage: St
 enum class ComputerTab { DESKTOP, TERMINAL, ACTIVITY }
 
 @Composable
-private fun StatusPill(label: String, active: Boolean) {
+private fun StatusPill(label: String, active: Boolean, animate: Boolean) {
     val bg = if (active) {
         MaterialTheme.colorScheme.primaryContainer
     } else {
@@ -404,18 +444,57 @@ private fun StatusPill(label: String, active: Boolean) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(6.dp),
-            modifier = Modifier.padding(horizontal = 9.dp, vertical = 3.dp),
+            modifier = Modifier
+                .padding(horizontal = 9.dp, vertical = 3.dp)
+                .then(if (animate) Modifier.animateContentSize(tween(ComputerMotion.RESIZE_MS)) else Modifier),
         ) {
-            Box(
-                Modifier
-                    .size(7.dp)
-                    .clip(CircleShape)
-                    .background(if (active) RunningGreen else fg.copy(alpha = 0.6f)),
-            )
+            if (active) {
+                PulsingDot(
+                    color = CosTerminalPalette.running,
+                    animate = animate,
+                    contentDescription = stringResource(R.string.cd_cos_running_indicator),
+                )
+            } else {
+                Box(
+                    Modifier
+                        .size(STATUS_DOT_SIZE)
+                        .clip(CircleShape)
+                        .background(fg.copy(alpha = 0.6f)),
+                )
+            }
             Text(label, style = MaterialTheme.typography.labelMedium, color = fg, maxLines = 1)
         }
     }
 }
+
+/** Soft breathing dot; static (full alpha) when [animate] is false. */
+@Composable
+private fun PulsingDot(color: Color, animate: Boolean, contentDescription: String) {
+    val alpha = if (animate) {
+        val pulse = rememberInfiniteTransition(label = "runningPulse")
+        pulse.animateFloat(
+            initialValue = 1f,
+            targetValue = ComputerMotion.PULSE_MIN_ALPHA,
+            animationSpec = infiniteRepeatable(
+                animation = tween(ComputerMotion.PULSE_PERIOD_MS / 2),
+                repeatMode = RepeatMode.Reverse,
+            ),
+            label = "runningPulseAlpha",
+        ).value
+    } else {
+        1f
+    }
+    Box(
+        Modifier
+            .semantics { this.contentDescription = contentDescription }
+            .size(STATUS_DOT_SIZE)
+            .alpha(alpha)
+            .clip(CircleShape)
+            .background(color),
+    )
+}
+
+private val STATUS_DOT_SIZE = 7.dp
 
 @Composable
 private fun ResourceStripRow(res: CosResourceStrip) {
@@ -513,8 +592,6 @@ private fun CollapsedTerminalRow(lastLine: String, onExpand: () -> Unit) {
     }
 }
 
-private val RunningGreen = Color(0xFF4CD964)
-
 @Composable
 private fun CosTerminalOutput(text: String, modifier: Modifier = Modifier) {
     val scroll = rememberScrollState()
@@ -522,11 +599,12 @@ private fun CosTerminalOutput(text: String, modifier: Modifier = Modifier) {
     LaunchedEffect(text) { scroll.scrollTo(scroll.maxValue) }
     Surface(
         modifier = modifier,
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+        color = CosTerminalPalette.background,
     ) {
         Text(
             text = text.ifBlank { stringResource(R.string.cos_output_empty) },
             style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
+            color = if (text.isBlank()) CosTerminalPalette.muted else CosTerminalPalette.foreground,
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(scroll)
