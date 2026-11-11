@@ -105,17 +105,41 @@ val spirvIncludeDir: String? = run {
     (unix + windows).firstOrNull { File(it, "spirv/unified1/spirv.hpp").exists() }
 }
 
+// ── Signing env vars ────────────────────────────────────────────────────
+// CINDI_* names are primary; the LM Playground-era names still work so
+// existing machines keep building. Values are never logged.
+object SigningEnv {
+    const val KEYSTORE_PROPERTIES = "CINDI_KEYSTORE_PROPERTIES"
+    const val KEYSTORE = "CINDI_KEYSTORE"
+    const val KEYSTORE_PASSWORD = "CINDI_KEYSTORE_PASSWORD"
+    const val KEY_ALIAS = "CINDI_KEY_ALIAS"
+    const val KEY_PASSWORD = "CINDI_KEY_PASSWORD"
+
+    /** Primary name → legacy fallback name. */
+    val LEGACY = mapOf(
+        KEYSTORE_PASSWORD to "STORE_PASSWORD",
+        KEY_ALIAS to "LM_PLAYGROUND_KEY_ALIAS",
+        KEY_PASSWORD to "LM_PLAYGROUND_KEY_PASSWORD",
+    )
+
+    /** Non-blank value of [name], else of its legacy fallback, else null. */
+    fun get(name: String): String? =
+        System.getenv(name)?.takeIf { it.isNotBlank() }
+            ?: LEGACY[name]?.let { System.getenv(it) }?.takeIf { it.isNotBlank() }
+}
+
 // ── Release signing (release-signing migration) ─────────────────────────
 // Secrets live OUTSIDE the repo only. Two sources, checked in order:
 //   1. A keystore.properties file located outside the repo:
 //      - $CINDI_KEYSTORE_PROPERTIES if set, else ~/.chidori/keystore.properties
 //        with keys: storeFile, storePassword, keyAlias, keyPassword
 //   2. Environment variables: CINDI_KEYSTORE (path to the .jks/.keystore),
-//      CINDI_KEYSTORE_PASSWORD, CINDI_KEY_ALIAS, CINDI_KEY_PASSWORD.
-// If neither source is present the release build falls back to the debug
-// signing config so contributors can always assembleRelease; if a source IS
-// present but incomplete/invalid, the build fails loudly instead of silently
-// shipping an unattended key. See docs/RELEASE-SIGNING.md.
+//      CINDI_KEYSTORE_PASSWORD, CINDI_KEY_ALIAS, CINDI_KEY_PASSWORD
+//      (legacy fallbacks: see SigningEnv.LEGACY).
+// If neither source is present the release build is left UNSIGNED unless the
+// private legacy ~/.android/keystore.jks exists; it never falls back to the
+// committed (public) debug.keystore. If a source IS present but
+// incomplete/invalid, the build fails loudly. See docs/RELEASE-SIGNING.md.
 fun resolveReleaseSigning(): Map<String, String>? {
     fun canonical(p: String): String = try {
         File(p).canonicalPath
@@ -134,8 +158,7 @@ fun resolveReleaseSigning(): Map<String, String>? {
         }
     }
 
-    val propsPath = System.getenv("CINDI_KEYSTORE_PROPERTIES")
-        ?.takeIf { it.isNotBlank() }
+    val propsPath = SigningEnv.get(SigningEnv.KEYSTORE_PROPERTIES)
         ?.let { File(it) }
         ?: File(System.getProperty("user.home"), ".chidori/keystore.properties")
     if (propsPath.isFile) {
@@ -158,29 +181,31 @@ fun resolveReleaseSigning(): Map<String, String>? {
         return values
     }
 
-    val ksPath = System.getenv("CINDI_KEYSTORE")
-    if (!ksPath.isNullOrBlank()) {
-        val values = mapOf(
-            "storeFile" to ksPath,
-            "storePassword" to System.getenv("CINDI_KEYSTORE_PASSWORD"),
-            "keyAlias" to System.getenv("CINDI_KEY_ALIAS"),
-            "keyPassword" to System.getenv("CINDI_KEY_PASSWORD"),
+    val ksPath = SigningEnv.get(SigningEnv.KEYSTORE)
+    if (ksPath != null) {
+        val envNames = mapOf(
+            "storePassword" to SigningEnv.KEYSTORE_PASSWORD,
+            "keyAlias" to SigningEnv.KEY_ALIAS,
+            "keyPassword" to SigningEnv.KEY_PASSWORD,
         )
-        val missing = values.filterValues { it.isNullOrBlank() }.keys
+        val values = mapOf("storeFile" to ksPath) + envNames.mapValues { (_, env) -> SigningEnv.get(env) }
+        val missing = envNames.filterKeys { values[it].isNullOrBlank() }.values
         if (missing.isNotEmpty()) {
             throw GradleException(
-                "CINDI_KEYSTORE is set but these env vars are missing: $missing " +
-                    "(CINDI_KEYSTORE_PASSWORD, CINDI_KEY_ALIAS, CINDI_KEY_PASSWORD). " +
+                "${SigningEnv.KEYSTORE} is set but these env vars are missing: $missing. " +
                     "See docs/RELEASE-SIGNING.md."
             )
         }
-        rejectInsideRepo(values["storeFile"]!!)
-        return values
+        rejectInsideRepo(ksPath)
+        return values.mapValues { it.value!! }
     }
     return null
 }
 
 val releaseSigning = resolveReleaseSigning()
+
+// Private LM Playground-era key; when present it backs the debug config.
+val legacyUserKeystore = File(System.getProperty("user.home"), ".android/keystore.jks")
 
 android {
     compileSdk = libs.versions.compileSdk.get().toInt()
@@ -288,14 +313,13 @@ android {
 
     signingConfigs {
         // We use a bundled debug keystore, to allow debug builds from CI to be upgradable
-        val userKeystore = File(System.getProperty("user.home"), ".android/keystore.jks")
         val localKeystore = rootProject.file("debug.keystore")
-        val hasKeyInfo = userKeystore.exists()
+        val hasKeyInfo = legacyUserKeystore.exists()
         named("debug") {
-            storeFile = if (hasKeyInfo) userKeystore else localKeystore
-            storePassword = if (hasKeyInfo) System.getenv("STORE_PASSWORD") else "android"
-            keyAlias = if (hasKeyInfo) System.getenv("LM_PLAYGROUND_KEY_ALIAS") else "androiddebugkey"
-            keyPassword = if (hasKeyInfo) System.getenv("LM_PLAYGROUND_KEY_PASSWORD") else "android"
+            storeFile = if (hasKeyInfo) legacyUserKeystore else localKeystore
+            storePassword = if (hasKeyInfo) SigningEnv.get(SigningEnv.KEYSTORE_PASSWORD) else "android"
+            keyAlias = if (hasKeyInfo) SigningEnv.get(SigningEnv.KEY_ALIAS) else "androiddebugkey"
+            keyPassword = if (hasKeyInfo) SigningEnv.get(SigningEnv.KEY_PASSWORD) else "android"
         }
 
         create("release") {
@@ -326,13 +350,13 @@ android {
         getByName("release") {
             isMinifyEnabled = true
             // Real release key when configured (keystore.properties outside the
-            // repo or CINDI_* env vars); otherwise fall back to the debug
-            // signing config so contributor builds never break. See
-            // docs/RELEASE-SIGNING.md.
-            signingConfig = if (releaseSigning != null) {
-                signingConfigs.getByName("release")
-            } else {
-                signingConfigs.getByName("debug")
+            // repo or CINDI_* env vars); else the private legacy keystore.jks if
+            // present; else UNSIGNED. Never the committed public debug.keystore.
+            // See docs/RELEASE-SIGNING.md.
+            signingConfig = when {
+                releaseSigning != null -> signingConfigs.getByName("release")
+                legacyUserKeystore.exists() -> signingConfigs.getByName("debug")
+                else -> null
             }
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"),
                     "proguard-rules.pro")

@@ -23,7 +23,9 @@ migration, `app/build.gradle.kts` pointed the `release` build type at the
 `debug` signing config, which resolved to:
 
 1. `~/.android/keystore.jks` + env vars `STORE_PASSWORD`,
-   `LM_PLAYGROUND_KEY_ALIAS`, `LM_PLAYGROUND_KEY_PASSWORD` when that file
+   `LM_PLAYGROUND_KEY_ALIAS`, `LM_PLAYGROUND_KEY_PASSWORD` (now
+   `CINDI_KEYSTORE_PASSWORD` / `CINDI_KEY_ALIAS` / `CINDI_KEY_PASSWORD`, see
+   §2) when that file
    exists (a legacy LM Playground path — this machine does **not** have that
    file, and there is no release CI workflow in `.github/workflows`), else
 2. the committed `debug.keystore`.
@@ -46,15 +48,34 @@ secrets come **only** from outside the repository, checked in this order:
 2. **Env vars** — `CINDI_KEYSTORE` (path to the keystore file),
    `CINDI_KEYSTORE_PASSWORD`, `CINDI_KEY_ALIAS`, `CINDI_KEY_PASSWORD`.
 
-If **neither** source is configured, the release build falls back to the
-debug signing config (old behavior) so contributors can always run
-`assembleRelease`. If a source **is** configured but incomplete, or points
-inside the repo, the build fails loudly. The config explicitly enables
+If **neither** source is configured, the release build is **unsigned**
+(`app-*-release-unsigned.apk`) — unless the private legacy
+`~/.android/keystore.jks` exists, in which case the debug config backed by
+that key signs it. A release build **never** falls back to the committed,
+public `debug.keystore`. Contributors can still run `assembleRelease`; they
+just get an unsigned APK. If a source **is** configured but incomplete, or
+points inside the repo, the build fails loudly. The config explicitly enables
 v1/v2/v3 signing; v3 is what carries the rotation lineage below.
 
-The legacy `LM_PLAYGROUND_KEY_*` debug-config path is untouched: machines
-that still have `~/.android/keystore.jks` + those env vars keep working, but
-that key is now treated as the *old* key (see rotation).
+### Env var names (CINDI_* primary, legacy fallback)
+
+All signing env vars are read through one helper (`SigningEnv` in
+`app/build.gradle.kts`): the `CINDI_*` name wins; if it is unset or blank the
+legacy name is used, so machines set up for LM Playground keep working.
+
+| Primary | Legacy fallback | Meaning |
+|---|---|---|
+| `CINDI_KEYSTORE_PROPERTIES` | — | Path to a `keystore.properties` outside the repo |
+| `CINDI_KEYSTORE` | — | Path to the release keystore file |
+| `CINDI_KEYSTORE_PASSWORD` | `STORE_PASSWORD` | Keystore password |
+| `CINDI_KEY_ALIAS` | `LM_PLAYGROUND_KEY_ALIAS` | Key alias |
+| `CINDI_KEY_PASSWORD` | `LM_PLAYGROUND_KEY_PASSWORD` | Key password |
+
+The same names feed the legacy `~/.android/keystore.jks` debug-config path,
+which is now treated as the *old* key (see rotation). Caveat: on a machine
+that has **both** `~/.android/keystore.jks` and the new `CINDI_KEY_*` vars,
+the debug config also reads the `CINDI_*` values; move or delete the legacy
+`keystore.jks` once you have migrated.
 
 ## 3. Migration procedure (owner, interactive)
 
