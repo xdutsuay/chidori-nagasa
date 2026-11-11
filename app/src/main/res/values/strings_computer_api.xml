@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="computer_api_usb_title">Computer API over USB (read-only)</string>
+    <string name="computer_api_usb_desc">Lets a program on your computer read the Computer desktop state and take screenshots. It listens on the phone only (127.0.0.1), not on Wi-Fi, and cannot run commands, click or type. Connect with adb forward.</string>
+    <string name="computer_api_usb_start">Start API</string>
+    <string name="computer_api_usb_stop">Stop API</string>
+    <string name="computer_api_usb_shared">On your computer run: adb forward tcp:%1$d tcp:%1$d\nThen call http://127.0.0.1:%1$d/v1/computer/state\nwith the header: Authorization: Bearer %2$s\nThe API stops at %3$s.</string>
+</resources>

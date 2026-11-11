@@ -29,6 +29,8 @@ import androidx.compose.ui.unit.dp
 import com.druk.lmplayground.R
 import com.druk.lmplayground.computer.ComputerPrefs
 import com.druk.lmplayground.computer.CosConstants
+import com.druk.lmplayground.computer.api.ApiShareState
+import com.druk.lmplayground.computer.api.ComputerApis
 import com.druk.lmplayground.computer.desktop.DesktopBridges
 import com.druk.lmplayground.computer.desktop.DesktopCapability
 import com.druk.lmplayground.computer.desktop.ViewerState
@@ -59,10 +61,15 @@ fun DeveloperOptionsSection() {
         Switch(checked = enabled, onCheckedChange = { on ->
             enabled = on
             ComputerPrefs.setDeveloperMode(prefs, on)
-            if (!on) scope.launch { bridge?.stopViewer() }
+            if (!on) scope.launch {
+                bridge?.stopViewer()
+                ComputerApis.share.stop()
+            }
         })
     }
-    if (!enabled || bridge == null || DesktopCapability.VIEWER !in bridge.capabilities()) return
+    if (!enabled) return
+    ComputerApiUsbSection()
+    if (bridge == null || DesktopCapability.VIEWER !in bridge.capabilities()) return
 
     val viewer by bridge.viewer.collectAsState()
     Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
@@ -97,6 +104,49 @@ fun DeveloperOptionsSection() {
                 Spacer(Modifier.height(8.dp))
                 Button(onClick = { scope.launch { bridge.startViewer() } }) {
                     Text(stringResource(R.string.viewer_usb_start))
+                }
+            }
+        }
+        Spacer(Modifier.height(16.dp))
+    }
+}
+
+@Composable
+private fun ComputerApiUsbSection() {
+    val share = ComputerApis.share
+    val state by share.state.collectAsState()
+    val scope = rememberCoroutineScope()
+    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+        Text(stringResource(R.string.computer_api_usb_title), style = MaterialTheme.typography.titleSmall)
+        Spacer(Modifier.height(4.dp))
+        when (val s = state) {
+            is ApiShareState.Shared -> {
+                val e = s.endpoint
+                val until = DateFormat.getTimeInstance(DateFormat.SHORT).format(Date(e.expiresAtMs))
+                SelectionContainer {
+                    Text(
+                        stringResource(R.string.computer_api_usb_shared, e.port, e.token, until),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+                Spacer(Modifier.height(8.dp))
+                OutlinedButton(onClick = { scope.launch { share.stop() } }) {
+                    Text(stringResource(R.string.computer_api_usb_stop))
+                }
+            }
+            else -> {
+                if (s is ApiShareState.Error) {
+                    Text(s.message, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                    Spacer(Modifier.height(4.dp))
+                }
+                Text(
+                    stringResource(R.string.computer_api_usb_desc),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.height(8.dp))
+                Button(onClick = { scope.launch { share.start() } }) {
+                    Text(stringResource(R.string.computer_api_usb_start))
                 }
             }
         }
