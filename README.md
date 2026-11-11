@@ -9,6 +9,8 @@
 </p>
 
 <p align="center">
+<a href="https://kaustubhtripathi.com/public/apps/cindi/">Website</a>
+·
 <a href="https://github.com/xdutsuay/chidori-nagasa/releases">Download APK</a>
 ·
 <a href="https://kaustubhtripathi.com/public/lab/lclreason/#download">Desktop downloads</a>
