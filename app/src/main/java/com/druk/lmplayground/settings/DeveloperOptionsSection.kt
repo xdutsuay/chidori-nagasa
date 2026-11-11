@@ -121,6 +121,7 @@ private fun ComputerApiUsbSection() {
     val state by share.state.collectAsState()
     val scope = rememberCoroutineScope()
     var allowControl by remember { mutableStateOf(false) }
+    val withNotificationPermission = rememberWithApprovalNotificationPermission()
     Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
         Text(stringResource(R.string.computer_api_usb_title), style = MaterialTheme.typography.titleSmall)
         Spacer(Modifier.height(4.dp))
@@ -166,7 +167,9 @@ private fun ComputerApiUsbSection() {
                     )
                 }
                 Spacer(Modifier.height(8.dp))
-                Button(onClick = { scope.launch { share.start(allowControl = allowControl) } }) {
+                Button(onClick = {
+                    withNotificationPermission(allowControl) { scope.launch { share.start(allowControl = allowControl) } }
+                }) {
                     Text(stringResource(R.string.computer_api_usb_start))
                 }
             }

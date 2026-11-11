@@ -47,6 +47,7 @@ internal fun ComputerApiWifiSection() {
     val scope = rememberCoroutineScope()
     var allowControl by remember { mutableStateOf(false) }
     val time = remember { DateFormat.getTimeInstance(DateFormat.SHORT) }
+    val withNotificationPermission = rememberWithApprovalNotificationPermission()
 
     Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
         Text(stringResource(R.string.computer_api_wifi_title), style = MaterialTheme.typography.titleSmall)
@@ -135,7 +136,9 @@ internal fun ComputerApiWifiSection() {
                     Text(stringResource(R.string.computer_api_usb_allow_control), style = MaterialTheme.typography.bodyMedium)
                 }
                 Spacer(Modifier.height(8.dp))
-                Button(onClick = { scope.launch { share.start(allowControl = allowControl) } }) {
+                Button(onClick = {
+                    withNotificationPermission(allowControl) { scope.launch { share.start(allowControl = allowControl) } }
+                }) {
                     Text(stringResource(R.string.computer_api_wifi_start))
                 }
             }

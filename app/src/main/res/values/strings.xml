@@ -635,6 +635,11 @@
     <string name="cos_confirm_title">Allow %1$s on the Computer?</string>
     <string name="cos_confirm_allow">Allow</string>
     <string name="cos_confirm_deny">Deny</string>
+    <string name="computer_api_approval_channel_name">Computer API requests</string>
+    <string name="computer_api_approval_channel_description">Asks you to allow or deny a command sent to the Computer through the Computer API.</string>
+    <string name="computer_api_approval_title">Allow %1$s on the Computer?</string>
+    <string name="computer_api_approval_public_title">Computer API request</string>
+    <string name="computer_api_approval_public_text">Unlock to see and answer the request.</string>
     <string name="developer_options_title">Developer options</string>
     <string name="developer_options_desc">Tools for development. Off by default.</string>
     <string name="viewer_usb_title">Share Computer desktop over USB</string>

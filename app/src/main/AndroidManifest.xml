@@ -122,6 +122,12 @@
             </intent-filter>
         </receiver>
 
+        <!-- Allow / Deny actions on the Computer API approval notification. Reached only
+             through the app's own explicit PendingIntents, so no intent-filter. -->
+        <receiver
+            android:name="com.druk.lmplayground.computer.api.ApiApprovalReceiver"
+            android:exported="false" />
+
         <!-- Image sharing for vision input: exposes copied chat images to the
              system photo picker / share targets via a content:// URI. -->
         <provider
