@@ -273,7 +273,7 @@ class NodeOpenAiServer(
         if (match != 4) {
             return ParsedHttp(errorStatus = 400, errorBody = "headers too large")
         }
-        val headerText = headerBytes.toString(Charsets.US_ASCII)
+        val headerText = String(headerBytes.toByteArray(), Charsets.US_ASCII)
         val lines = headerText.split("\r\n")
         val requestLine = lines.firstOrNull().orEmpty()
         val parts = requestLine.split(" ")
