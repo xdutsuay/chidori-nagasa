@@ -3,12 +3,21 @@ package com.druk.lmplayground.computer.api
 import com.druk.lmplayground.computer.desktop.DesktopBridge
 import com.druk.lmplayground.computer.desktop.DesktopState
 import com.druk.lmplayground.computer.desktop.ImageFormat
+import com.druk.lmplayground.tools.CosConfirmPolicy
+import com.druk.lmplayground.tools.CosToolDefaults
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runInterruptible
 import org.json.JSONObject
 import java.net.URLDecoder
 import java.security.MessageDigest
 
 /** One HTTP request as the router sees it. [target] is the raw request target (path plus optional `?query`). */
-data class ApiRequest(val method: String, val target: String, val authorization: String?)
+data class ApiRequest(
+    val method: String,
+    val target: String,
+    val authorization: String?,
+    val body: String = "",
+)
 
 class ApiResponse(val status: Int, val contentType: String, val body: ByteArray) {
     fun text(): String = String(body, Charsets.UTF_8)
@@ -32,21 +41,67 @@ class ApiResponse(val status: Int, val contentType: String, val body: ByteArray)
  *   200 with the bridge's screenshot bytes and [PNG] or [JPEG]; if the bridge throws → 503
  *   `{"error":"screenshot failed"}`.
  * - All JSON responses use [JSON] content type.
+ *
+ * Slice 2, control ([EXEC_PATH], [GUI_PATH]; POST only, other methods → 405; GET-only paths
+ * answer POST with 405):
+ * - [control] null (the session was started without control) → 403 `{"error":"control not enabled"}`.
+ * - Body must be a JSON object, else 400 `{"error":"body must be a JSON object"}`.
+ * - [EXEC_PATH]: `command` must be a non-blank string, else 400. Then [ComputerControl.approve]
+ *   with action `cos_exec` and the command as summary; false → 403 `{"error":"denied on phone"}`
+ *   and nothing runs. Allowed → [ComputerControl.exec] with exactly `{"command": <command>}`
+ *   (other body fields are dropped) and 200 with its JSON result as-is.
+ * - [GUI_PATH]: `action` must be a non-blank string, else 400. No bridge or desktop not running
+ *   → 409 `{"error":"desktop not running"}` without asking. Then [ComputerControl.approve] with
+ *   action `cos_gui` and a non-blank summary; false → 403 as above. Allowed →
+ *   [ComputerControl.gui] with the body unchanged and 200 with its JSON result as-is.
+ * - Read-only `read_only` in the state JSON is `false` when [control] is non-null.
  */
 class ComputerApiRoutes(
     private val token: String,
+    private val control: ComputerControl? = null,
     private val bridge: () -> DesktopBridge?,
 ) {
     suspend fun handle(req: ApiRequest): ApiResponse {
         if (!authorized(req.authorization)) return error(401, "unauthorized")
         val path = req.target.substringBefore('?')
-        if (path != STATE_PATH && path != SCREENSHOT_PATH) return error(404, "not found")
-        if (req.method != "GET") return error(405, "method not allowed")
-        return if (path == STATE_PATH) state() else screenshot(query(req.target))
+        return when (path) {
+            STATE_PATH, SCREENSHOT_PATH -> {
+                if (req.method != "GET") return error(405, "method not allowed")
+                if (path == STATE_PATH) state() else screenshot(query(req.target))
+            }
+            EXEC_PATH, GUI_PATH -> {
+                if (req.method != "POST") return error(405, "method not allowed")
+                val c = control ?: return error(403, "control not enabled")
+                val body = runCatching { JSONObject(req.body) }.getOrNull()
+                    ?: return error(400, "body must be a JSON object")
+                if (path == EXEC_PATH) exec(c, body) else gui(c, body, req.body)
+            }
+            else -> error(404, "not found")
+        }
     }
 
+    private suspend fun exec(c: ComputerControl, body: JSONObject): ApiResponse {
+        val command = (body.opt("command") as? String)?.takeIf { it.isNotBlank() }
+            ?: return error(400, "command must be a non-blank string")
+        if (!blocking { c.approve(CosToolDefaults.COS_EXEC, command) }) return error(403, "denied on phone")
+        val result = blocking { c.exec(JSONObject().put("command", command).toString()) }
+        return ApiResponse(200, JSON, result.toByteArray(Charsets.UTF_8))
+    }
+
+    private suspend fun gui(c: ComputerControl, body: JSONObject, raw: String): ApiResponse {
+        val action = (body.opt("action") as? String)?.takeIf { it.isNotBlank() }
+            ?: return error(400, "action must be a non-blank string")
+        if (bridge()?.state?.value !is DesktopState.Running) return error(409, "desktop not running")
+        val summary = CosConfirmPolicy.summary(CosToolDefaults.COS_GUI, raw).ifBlank { action }
+        if (!blocking { c.approve(CosToolDefaults.COS_GUI, summary) }) return error(403, "denied on phone")
+        val result = blocking { c.gui(raw) }
+        return ApiResponse(200, JSON, result.toByteArray(Charsets.UTF_8))
+    }
+
+    private suspend fun <T> blocking(block: () -> T): T = runInterruptible(Dispatchers.IO) { block() }
+
     private fun state(): ApiResponse {
-        val json = JSONObject().put("read_only", true)
+        val json = JSONObject().put("read_only", control == null)
         when (val s = bridge()?.state?.value) {
             null -> json.put("desktop", "unavailable")
             DesktopState.NotInstalled -> json.put("desktop", "not_installed")
@@ -108,6 +163,8 @@ class ComputerApiRoutes(
     companion object {
         const val STATE_PATH = "/v1/computer/state"
         const val SCREENSHOT_PATH = "/v1/computer/screenshot"
+        const val EXEC_PATH = "/v1/computer/exec"
+        const val GUI_PATH = "/v1/computer/gui"
         const val MIN_SCALE = 0.1f
         const val MAX_SCALE = 1f
         const val DEFAULT_SCALE = 1f

@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Switch
@@ -31,6 +32,7 @@ import com.druk.lmplayground.computer.ComputerPrefs
 import com.druk.lmplayground.computer.CosConstants
 import com.druk.lmplayground.computer.api.ApiShareState
 import com.druk.lmplayground.computer.api.ComputerApis
+import com.druk.lmplayground.conversation.CosConfirmCard
 import com.druk.lmplayground.computer.desktop.DesktopBridges
 import com.druk.lmplayground.computer.desktop.DesktopCapability
 import com.druk.lmplayground.computer.desktop.ViewerState
@@ -63,7 +65,7 @@ fun DeveloperOptionsSection() {
             ComputerPrefs.setDeveloperMode(prefs, on)
             if (!on) scope.launch {
                 bridge?.stopViewer()
-                ComputerApis.share.stop()
+                ComputerApis.share(context).stop()
             }
         })
     }
@@ -113,9 +115,10 @@ fun DeveloperOptionsSection() {
 
 @Composable
 private fun ComputerApiUsbSection() {
-    val share = ComputerApis.share
+    val share = ComputerApis.share(LocalContext.current)
     val state by share.state.collectAsState()
     val scope = rememberCoroutineScope()
+    var allowControl by remember { mutableStateOf(false) }
     Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
         Text(stringResource(R.string.computer_api_usb_title), style = MaterialTheme.typography.titleSmall)
         Spacer(Modifier.height(4.dp))
@@ -128,6 +131,15 @@ private fun ComputerApiUsbSection() {
                         stringResource(R.string.computer_api_usb_shared, e.port, e.token, until),
                         style = MaterialTheme.typography.bodyMedium,
                     )
+                }
+                if (e.control) {
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        stringResource(R.string.computer_api_usb_control_on),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    CosConfirmCard()
                 }
                 Spacer(Modifier.height(8.dp))
                 OutlinedButton(onClick = { scope.launch { share.stop() } }) {
@@ -144,8 +156,15 @@ private fun ComputerApiUsbSection() {
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(checked = allowControl, onCheckedChange = { allowControl = it })
+                    Text(
+                        stringResource(R.string.computer_api_usb_allow_control),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
                 Spacer(Modifier.height(8.dp))
-                Button(onClick = { scope.launch { share.start() } }) {
+                Button(onClick = { scope.launch { share.start(allowControl = allowControl) } }) {
                     Text(stringResource(R.string.computer_api_usb_start))
                 }
             }

@@ -1,5 +1,6 @@
 package com.druk.lmplayground.computer.api
 
+import android.content.Context
 import com.druk.lmplayground.computer.desktop.DesktopBridges
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -9,5 +10,14 @@ import kotlinx.coroutines.SupervisorJob
 object ComputerApis {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
-    val share: ComputerApiShare by lazy { ComputerApiShare(scope, { DesktopBridges.bridge }) }
+    @Volatile private var instance: ComputerApiShare? = null
+
+    fun share(context: Context): ComputerApiShare =
+        instance ?: synchronized(this) {
+            instance ?: ComputerApiShare(
+                scope = scope,
+                bridge = { DesktopBridges.bridge },
+                control = ToolComputerControl(context.applicationContext),
+            ).also { instance = it }
+        }
 }

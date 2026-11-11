@@ -8,6 +8,8 @@ import org.junit.Assert.assertTrue
 import org.junit.Assert.assertThrows
 import org.junit.Before
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
 import java.io.IOException
 import java.net.InetSocketAddress
 import java.net.Socket
@@ -19,11 +21,14 @@ import java.net.SocketTimeoutException
  * never collide with a dev server). One raw-socket client per request; every server
  * started by a test is stopped in [After] clean-up.
  */
+@RunWith(RobolectricTestRunner::class)
 class ComputerApiServerTest {
 
     private val token = "secret-token"
     private val bridge = FakeDesktopBridge()
+    private val control = FakeComputerControl()
     private val routes = ComputerApiRoutes(token) { bridge }
+    private val controlRoutes = ComputerApiRoutes(token, control) { bridge }
     private val servers = ArrayList<ComputerApiServer>()
 
     @Before
@@ -36,7 +41,11 @@ class ComputerApiServerTest {
         for (s in servers) s.stop()
     }
 
-    private fun server(host: String = ComputerApiServer.LOOPBACK, port: Int = 0): ComputerApiServer =
+    private fun server(
+        routes: ComputerApiRoutes = this.routes,
+        host: String = ComputerApiServer.LOOPBACK,
+        port: Int = 0,
+    ): ComputerApiServer =
         ComputerApiServer(routes, host, port).also { servers += it }
 
     /** One HTTP/1.1 request over a raw socket; reads to EOF (the server must close). */
@@ -66,6 +75,47 @@ class ComputerApiServerTest {
             port,
             "GET $target HTTP/1.1\r\n$headers\r\n",
         )
+    }
+
+    /**
+     * POSTs [body] with a `Content-Length` header (default: the exact body size).
+     * [sendBytes] limits how many body bytes are actually written (for the short-body and
+     * oversized cases); [shutdownBeforeRead] closes the write side before reading (EOF case).
+     */
+    private fun post(
+        port: Int,
+        target: String,
+        body: String = "",
+        contentLength: String? = body.length.toString(),
+        sendBytes: Int = body.length,
+        shutdownBeforeRead: Boolean = false,
+        authorization: String? = "Bearer $token",
+        timeoutMs: Int = 5_000,
+    ): RawResponse {
+        val head = StringBuilder("POST $target HTTP/1.1\r\nHost: 127.0.0.1\r\n")
+        if (contentLength != null) head.append("Content-Length: ").append(contentLength).append("\r\n")
+        if (authorization != null) head.append("Authorization: ").append(authorization).append("\r\n")
+        head.append("\r\n")
+        Socket().use { s ->
+            s.connect(InetSocketAddress(ComputerApiServer.LOOPBACK, port), timeoutMs)
+            s.soTimeout = timeoutMs
+            val out = s.getOutputStream()
+            out.write(head.toString().toByteArray(Charsets.US_ASCII))
+            if (body.isNotEmpty() && sendBytes > 0) {
+                val bytes = body.toByteArray(Charsets.US_ASCII)
+                out.write(bytes, 0, minOf(sendBytes, bytes.size))
+            }
+            out.flush()
+            if (shutdownBeforeRead) s.shutdownOutput()
+            val resp = try {
+                s.getInputStream().readBytes()
+            } catch (e: SocketTimeoutException) {
+                throw AssertionError(
+                    "server did not answer within ${timeoutMs}ms (never read the full body it was told to?)", e,
+                )
+            }
+            return RawResponse.parse(resp)
+        }
     }
 
     private class RawResponse(
@@ -200,5 +250,81 @@ class ComputerApiServerTest {
         val body = String(r.body, Charsets.UTF_8)
         assertTrue("expected running state JSON, was: $body", body.contains("\"running\""))
         assertTrue(body.contains("1280"))
+    }
+
+    // ---- slice 2: bodies ----
+
+    @Test
+    fun `POST with a body reaches the routes and returns the control's JSON`() {
+        control.execResultJson = """{"exit":0,"stdout":"ok"}"""
+        val port = server(routes = controlRoutes).start()
+        val r = post(port, ComputerApiRoutes.EXEC_PATH, """{"command":"echo hi"}""")
+        assertEquals(200, r.status)
+        assertEquals("""{"exit":0,"stdout":"ok"}""", String(r.body, Charsets.UTF_8))
+        assertEquals("echo hi", org.json.JSONObject(control.execCalls.single()).getString("command"))
+        assertEquals("server must deliver the whole body", 1, control.execCalls.size)
+    }
+
+    @Test
+    fun `POST without a Content-Length header is an empty body to the routes`() {
+        val port = server(routes = controlRoutes).start()
+        val r = post(port, ComputerApiRoutes.EXEC_PATH, body = "", contentLength = null)
+        assertEquals(400, r.status)
+        assertEquals(ComputerApiRoutes.JSON, r.header("Content-Type"))
+        assertEquals(
+            "body must be a JSON object",
+            org.json.JSONObject(String(r.body, Charsets.UTF_8)).getString("error"),
+        )
+        assertTrue(control.approvals.isEmpty())
+    }
+
+    @Test
+    fun `Content-Length above MAX_BODY_BYTES is 413 and the control is never called`() {
+        val port = server(routes = controlRoutes).start()
+        val r = post(
+            port,
+            ComputerApiRoutes.EXEC_PATH,
+            body = "x".repeat(4096),
+            contentLength = (ComputerApiServer.MAX_BODY_BYTES + 1).toString(),
+            sendBytes = 4096,
+            timeoutMs = 3_000,
+        )
+        assertEquals(413, r.status)
+        assertTrue(
+            "oversize rejections are text/plain, was ${r.header("Content-Type")}",
+            r.header("Content-Type")!!.startsWith("text/plain"),
+        )
+        assertTrue("oversize body must not reach the control", control.execCalls.isEmpty())
+        assertTrue(control.approvals.isEmpty())
+    }
+
+    @Test
+    fun `a negative Content-Length is 400`() {
+        val port = server(routes = controlRoutes).start()
+        assertEquals(400, post(port, ComputerApiRoutes.EXEC_PATH, body = "", contentLength = "-5").status)
+        assertTrue(control.execCalls.isEmpty())
+    }
+
+    @Test
+    fun `a non-numeric Content-Length is 400`() {
+        val port = server(routes = controlRoutes).start()
+        assertEquals(400, post(port, ComputerApiRoutes.EXEC_PATH, body = "", contentLength = "abc").status)
+        assertTrue(control.execCalls.isEmpty())
+    }
+
+    @Test
+    fun `a short body followed by EOF is 400`() {
+        val port = server(routes = controlRoutes).start()
+        val r = post(
+            port,
+            ComputerApiRoutes.EXEC_PATH,
+            body = """{"command":"ls"}""",
+            contentLength = "100",
+            sendBytes = 10,
+            shutdownBeforeRead = true,
+        )
+        assertEquals(400, r.status)
+        assertTrue(control.execCalls.isEmpty())
+        assertTrue(control.approvals.isEmpty())
     }
 }

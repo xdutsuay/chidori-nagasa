@@ -24,6 +24,8 @@ class ComputerApiRoutesTest {
 
     private val token = "secret-token"
     private val bridge = FakeDesktopBridge(display = ":1")
+    private val control = FakeComputerControl()
+    private val controlRoutes = ComputerApiRoutes(token, control) { bridge }
     private lateinit var routes: ComputerApiRoutes
 
     @Before
@@ -48,6 +50,18 @@ class ComputerApiRoutesTest {
     private fun jsonError(r: ApiResponse, expected: String) {
         assertEquals(ComputerApiRoutes.JSON, r.contentType)
         assertEquals(expected, JSONObject(r.text()).getString("error"))
+    }
+
+    /** POST with a body against [routes] (the control-enabled instance by default). */
+    private fun post(
+        target: String,
+        body: String,
+        authorization: String? = "Bearer $token",
+        routesOverride: ComputerApiRoutes? = null,
+    ): ApiResponse = kotlinx.coroutines.runBlocking {
+        (routesOverride ?: controlRoutes).handle(
+            ApiRequest(method = "POST", target = target, authorization = authorization, body = body),
+        )
     }
 
     /** True when any string value, at any depth of [node], contains [needle]. */
@@ -292,5 +306,213 @@ class ComputerApiRoutesTest {
         jsonError(r, "screenshot failed")
         val body = r.text()
         assertFalse("exception message leaked: $body", body.contains("SECRET-ROOT-CAUSE"))
+    }
+
+    // ---- slice 2: read_only flag ----
+
+    @Test
+    fun `state read_only is false when a control is configured`() {
+        val r = kotlinx.coroutines.runBlocking {
+            controlRoutes.handle(ApiRequest("GET", ComputerApiRoutes.STATE_PATH, "Bearer $token"))
+        }
+        assertEquals(200, r.status)
+        assertEquals(false, JSONObject(r.text()).getBoolean("read_only"))
+    }
+
+    // ---- slice 2: control not enabled ----
+
+    @Test
+    fun `exec without a control is 403 control not enabled`() {
+        val r = post(ComputerApiRoutes.EXEC_PATH, """{"command":"ls"}""", routesOverride = routes)
+        assertEquals(403, r.status)
+        jsonError(r, "control not enabled")
+    }
+
+    @Test
+    fun `gui without a control is 403 control not enabled`() {
+        val r = post(ComputerApiRoutes.GUI_PATH, """{"action":"tap"}""", routesOverride = routes)
+        assertEquals(403, r.status)
+        jsonError(r, "control not enabled")
+    }
+
+    // ---- slice 2: body validation ----
+
+    @Test
+    fun `exec with a non-object body is 400 and never asks`() {
+        val r = post(ComputerApiRoutes.EXEC_PATH, "not json at all")
+        assertEquals(400, r.status)
+        jsonError(r, "body must be a JSON object")
+        assertTrue(control.approvals.isEmpty())
+        assertTrue(control.execCalls.isEmpty())
+    }
+
+    @Test
+    fun `exec with a JSON array body is 400`() {
+        val r = post(ComputerApiRoutes.EXEC_PATH, """[1,2,3]""")
+        assertEquals(400, r.status)
+        jsonError(r, "body must be a JSON object")
+        assertTrue(control.approvals.isEmpty())
+    }
+
+    @Test
+    fun `exec with a missing command is 400`() {
+        val r = post(ComputerApiRoutes.EXEC_PATH, """{"other":1}""")
+        assertEquals(400, r.status)
+        assertTrue(control.approvals.isEmpty())
+        assertTrue(control.execCalls.isEmpty())
+    }
+
+    @Test
+    fun `exec with a blank command is 400`() {
+        val r = post(ComputerApiRoutes.EXEC_PATH, """{"command":"   "}""")
+        assertEquals(400, r.status)
+        assertTrue(control.approvals.isEmpty())
+        assertTrue(control.execCalls.isEmpty())
+    }
+
+    @Test
+    fun `gui with a missing action is 400 and never asks`() {
+        val r = post(ComputerApiRoutes.GUI_PATH, """{"x":1}""")
+        assertEquals(400, r.status)
+        assertTrue(control.approvals.isEmpty())
+        assertTrue(control.guiCalls.isEmpty())
+    }
+
+    @Test
+    fun `gui with a blank action is 400`() {
+        val r = post(ComputerApiRoutes.GUI_PATH, """{"action":""}""")
+        assertEquals(400, r.status)
+        assertTrue(control.approvals.isEmpty())
+        assertTrue(control.guiCalls.isEmpty())
+    }
+
+    // ---- slice 2: exec ----
+
+    @Test
+    fun `exec asks with action cos_exec and the command as summary`() {
+        val r = post(ComputerApiRoutes.EXEC_PATH, """{"command":"ls -la"}""")
+        assertEquals(200, r.status)
+        assertEquals(listOf(FakeComputerControl.ApprovalCall("cos_exec", "ls -la")), control.approvals)
+    }
+
+    @Test
+    fun `exec passes exactly the command and drops other fields`() {
+        val r = post(ComputerApiRoutes.EXEC_PATH, """{"command":"ls -la","extra":"dropped","n":7}""")
+        assertEquals(200, r.status)
+        val forwarded = JSONObject(control.execCalls.single())
+        assertEquals("ls -la", forwarded.getString("command"))
+        assertEquals("exec must receive exactly one field", 1, forwarded.length())
+        assertFalse(forwarded.has("extra"))
+        assertFalse(forwarded.has("n"))
+    }
+
+    @Test
+    fun `exec returns the control's JSON result as-is`() {
+        control.execResultJson = """{"exit":3,"stdout":"hi"}"""
+        val r = post(ComputerApiRoutes.EXEC_PATH, """{"command":"ls"}""")
+        assertEquals(200, r.status)
+        assertEquals("""{"exit":3,"stdout":"hi"}""", r.text())
+    }
+
+    @Test
+    fun `exec denied on the phone is 403 and nothing runs`() {
+        control.approved = false
+        val r = post(ComputerApiRoutes.EXEC_PATH, """{"command":"rm -rf /"}""")
+        assertEquals(403, r.status)
+        jsonError(r, "denied on phone")
+        assertEquals("deny must be recorded", 1, control.approvals.size)
+        assertTrue("denied exec must not run", control.execCalls.isEmpty())
+    }
+
+    // ---- slice 2: gui ----
+
+    @Test
+    fun `gui asks with action cos_gui and a non-blank summary`() {
+        val r = post(ComputerApiRoutes.GUI_PATH, """{"action":"tap","x":10}""")
+        assertEquals(200, r.status)
+        val call = control.approvals.single()
+        assertEquals("cos_gui", call.action)
+        assertTrue("summary must be non-blank", call.summary.isNotBlank())
+    }
+
+    @Test
+    fun `gui forwards the body unchanged`() {
+        val body = """{"action":"swipe","x":10,"y":20}"""
+        val r = post(ComputerApiRoutes.GUI_PATH, body)
+        assertEquals(200, r.status)
+        assertEquals("gui must receive the body unchanged", body, control.guiCalls.single())
+    }
+
+    @Test
+    fun `gui returns the control's JSON result as-is`() {
+        control.guiResultJson = """{"done":true}"""
+        val r = post(ComputerApiRoutes.GUI_PATH, """{"action":"tap"}""")
+        assertEquals(200, r.status)
+        assertEquals("""{"done":true}""", r.text())
+    }
+
+    @Test
+    fun `gui denied on the phone is 403 and gui never runs`() {
+        control.approved = false
+        val r = post(ComputerApiRoutes.GUI_PATH, """{"action":"tap"}""")
+        assertEquals(403, r.status)
+        jsonError(r, "denied on phone")
+        assertEquals(1, control.approvals.size)
+        assertTrue(control.guiCalls.isEmpty())
+    }
+
+    @Test
+    fun `gui when the desktop is not running is 409 without asking`() {
+        bridge.stopDesktop()
+        val r = post(ComputerApiRoutes.GUI_PATH, """{"action":"tap"}""")
+        assertEquals(409, r.status)
+        jsonError(r, "desktop not running")
+        assertTrue("409 must not ask the phone", control.approvals.isEmpty())
+        assertTrue(control.guiCalls.isEmpty())
+    }
+
+    // ---- slice 2: methods and auth ordering ----
+
+    @Test
+    fun `GET on the exec path is 405`() {
+        val r = kotlinx.coroutines.runBlocking {
+            controlRoutes.handle(ApiRequest("GET", ComputerApiRoutes.EXEC_PATH, "Bearer $token"))
+        }
+        assertEquals(405, r.status)
+    }
+
+    @Test
+    fun `GET on the gui path is 405`() {
+        val r = kotlinx.coroutines.runBlocking {
+            controlRoutes.handle(ApiRequest("GET", ComputerApiRoutes.GUI_PATH, "Bearer $token"))
+        }
+        assertEquals(405, r.status)
+    }
+
+    @Test
+    fun `POST on the state path is 405 even with a control`() {
+        assertEquals(405, post(ComputerApiRoutes.STATE_PATH, "{}").status)
+    }
+
+    @Test
+    fun `POST on the screenshot path is 405 even with a control`() {
+        assertEquals(405, post(ComputerApiRoutes.SCREENSHOT_PATH, "{}").status)
+    }
+
+    @Test
+    fun `401 comes before everything on control paths`() {
+        assertEquals(401, post(ComputerApiRoutes.EXEC_PATH, """{"command":"ls"}""", authorization = null).status)
+        assertEquals(
+            401,
+            post(ComputerApiRoutes.GUI_PATH, """{"action":"tap"}""", authorization = "Bearer wrong").status,
+        )
+        assertTrue("401 must not reach the control", control.approvals.isEmpty())
+        assertTrue(control.execCalls.isEmpty())
+        assertTrue(control.guiCalls.isEmpty())
+    }
+
+    @Test
+    fun `unknown POST paths still 404 with a valid token`() {
+        assertEquals(404, post("/v1/computer/does-not-exist", "{}").status)
     }
 }

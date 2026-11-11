@@ -8,6 +8,7 @@ import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -33,6 +34,24 @@ class ComputerApiShareTest {
             token = tokens::next,
             nowMs = { testScheduler.currentTime },
         )
+
+    /** Real HTTP POST against the shared server; returns status and body text. */
+    private fun post(port: Int, token: String, target: String, body: String): Pair<Int, String> {
+        Socket().use { s ->
+            s.connect(InetSocketAddress(ComputerApiServer.LOOPBACK, port), 2_000)
+            s.soTimeout = 5_000
+            val head = "POST $target HTTP/1.1\r\nHost: 127.0.0.1\r\n" +
+                "Content-Length: ${body.toByteArray(Charsets.UTF_8).size}\r\n" +
+                "Authorization: Bearer $token\r\n\r\n"
+            s.getOutputStream().write(head.toByteArray(Charsets.US_ASCII))
+            s.getOutputStream().write(body.toByteArray(Charsets.UTF_8))
+            s.getOutputStream().flush()
+            val text = String(s.getInputStream().readBytes(), Charsets.ISO_8859_1)
+            val headEnd = text.indexOf("\r\n\r\n")
+            val status = text.substringBefore("\r\n").substringAfter(' ').substringBefore(' ').toInt()
+            return status to (if (headEnd >= 0) text.substring(headEnd + 4) else "")
+        }
+    }
 
     /**
      * After a stop/expiry the old endpoint must be unusable: either the connection is
@@ -185,5 +204,84 @@ class ComputerApiShareTest {
             seen += t
         }
         assertEquals("tokens must be unique across calls", 200, seen.size)
+    }
+
+    // ---- slice 2: control sharing ----
+
+    @Test
+    fun `allowControl=true sets endpoint control and exec is reachable over real HTTP`() = runTest {
+        val ctl = FakeComputerControl(execResultJson = """{"exit":0}""")
+        val s = ComputerApiShare(
+            backgroundScope, { bridge }, port = 0,
+            token = { "tok-1" }, nowMs = { testScheduler.currentTime }, control = ctl,
+        )
+        try {
+            val ep = s.start(ShareLease(maxMs = 60_000), allowControl = true).getOrThrow()
+            assertEquals(ComputerApiServer.LOOPBACK, ep.host)
+            assertTrue(ep.port > 0)
+            assertTrue("endpoint must advertise control", ep.control)
+            assertEquals(ApiShareState.Shared(ep), s.state.value)
+
+            val (status, body) = post(ep.port, ep.token, ComputerApiRoutes.EXEC_PATH, """{"command":"echo hi"}""")
+            assertEquals(200, status)
+            assertEquals("""{"exit":0}""", body)
+            assertEquals(
+                listOf(FakeComputerControl.ApprovalCall("cos_exec", "echo hi")),
+                ctl.approvals,
+            )
+        } finally {
+            s.stop()
+        }
+    }
+
+    @Test
+    fun `allowControl=false leaves exec at 403 and the control is never called`() = runTest {
+        val ctl = FakeComputerControl()
+        val s = ComputerApiShare(
+            backgroundScope, { bridge }, port = 0,
+            token = { "tok-1" }, nowMs = { testScheduler.currentTime }, control = ctl,
+        )
+        try {
+            val ep = s.start(ShareLease(maxMs = 60_000), allowControl = false).getOrThrow()
+            assertFalse("endpoint must not advertise control", ep.control)
+
+            val (status, _) = post(ep.port, ep.token, ComputerApiRoutes.EXEC_PATH, """{"command":"ls"}""")
+            assertEquals(403, status)
+            assertTrue(ctl.approvals.isEmpty())
+            assertTrue(ctl.execCalls.isEmpty())
+        } finally {
+            s.stop()
+        }
+    }
+
+    @Test
+    fun `allowControl=true with a null control fails with Error and starts nothing`() = runTest {
+        val s = ComputerApiShare(
+            backgroundScope, { bridge }, port = 0,
+            token = { "tok-1" }, nowMs = { testScheduler.currentTime }, control = null,
+        )
+        val r = s.start(ShareLease(maxMs = 60_000), allowControl = true)
+        assertTrue("expected failure", r.isFailure)
+        assertTrue("expected Error state, was ${s.state.value}", s.state.value is ApiShareState.Error)
+    }
+
+    @Test
+    fun `start while shared ignores allowControl and keeps the endpoint unchanged`() = runTest {
+        val ctl = FakeComputerControl()
+        val s = ComputerApiShare(
+            backgroundScope, { bridge }, port = 0,
+            token = { "tok-1" }, nowMs = { testScheduler.currentTime }, control = ctl,
+        )
+        try {
+            val first = s.start(ShareLease(maxMs = 60_000), allowControl = false).getOrThrow()
+            val second = s.start(ShareLease(maxMs = 60_000), allowControl = true).getOrThrow()
+            assertEquals("shared start must return the same endpoint whatever allowControl", first, second)
+            assertFalse(first.control)
+
+            val (status, _) = post(first.port, first.token, ComputerApiRoutes.EXEC_PATH, """{"command":"ls"}""")
+            assertEquals("the running session must stay read-only", 403, status)
+        } finally {
+            s.stop()
+        }
     }
 }
