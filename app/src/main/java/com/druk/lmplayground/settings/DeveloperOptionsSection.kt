@@ -66,11 +66,13 @@ fun DeveloperOptionsSection() {
             if (!on) scope.launch {
                 bridge?.stopViewer()
                 ComputerApis.share(context).stop()
+                ComputerApis.wifi(context).stop()
             }
         })
     }
     if (!enabled) return
     ComputerApiUsbSection()
+    ComputerApiWifiSection()
     if (bridge == null || DesktopCapability.VIEWER !in bridge.capabilities()) return
 
     val viewer by bridge.viewer.collectAsState()

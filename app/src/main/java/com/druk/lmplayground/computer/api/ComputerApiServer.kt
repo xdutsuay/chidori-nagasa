@@ -1,6 +1,5 @@
 package com.druk.lmplayground.computer.api
 
-import android.util.Log
 import kotlinx.coroutines.runBlocking
 import java.io.ByteArrayOutputStream
 import java.net.InetAddress
@@ -9,6 +8,8 @@ import java.net.ServerSocket
 import java.net.Socket
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import javax.net.ssl.SSLContext
+import javax.net.ssl.SSLServerSocket
 
 /**
  * Loopback-only HTTP/1.1 server for [ComputerApiRoutes] (slice 1, reached with `adb forward`).
@@ -26,11 +27,23 @@ import java.util.concurrent.Executors
  *   and `Connection: close`; one request per connection.
  * - [stop] closes the socket; idempotent; [isRunning] is false afterwards and new connections
  *   are refused.
+ *
+ * Slice 3, TLS:
+ * - With [sslContext] the socket is TLS (TLSv1.2 or TLSv1.3 only). A client that does not complete
+ *   the handshake (e.g. plain HTTP) gets no HTTP response and the server keeps serving others.
+ * - Host rule: loopback hosts work with or without [sslContext]. Any other host needs
+ *   [sslContext] and must be an IPv4 literal in 10.0.0.0/8, 172.16.0.0/12 or 192.168.0.0/16;
+ *   otherwise (including wildcards, public addresses, hostnames) → [IllegalArgumentException]
+ *   before binding.
+ * - [ApiRequest.remote] is the client's IP address. After writing each response the server calls
+ *   [onResponse] with its status.
  */
 class ComputerApiServer(
     private val routes: ComputerApiRoutes,
     private val host: String = LOOPBACK,
     private val port: Int = DEFAULT_PORT,
+    private val sslContext: SSLContext? = null,
+    private val onResponse: (Int) -> Unit = {},
 ) {
     @Volatile private var socket: ServerSocket? = null
     private var pool: ExecutorService? = null
@@ -39,9 +52,16 @@ class ComputerApiServer(
 
     @Synchronized
     fun start(): Int {
-        require(host == LOOPBACK || host == LOOPBACK_V6) { "Computer API is loopback-only; refusing $host" }
+        val loopback = host == LOOPBACK || host == LOOPBACK_V6
+        require(loopback || (sslContext != null && isPrivateIpv4(host))) {
+            "Computer API serves loopback, or a private IPv4 address over TLS; refusing $host"
+        }
         check(socket == null) { "already started" }
-        val ss = ServerSocket()
+        val ss = sslContext?.let { ctx ->
+            (ctx.serverSocketFactory.createServerSocket() as SSLServerSocket).apply {
+                enabledProtocols = supportedProtocols.filter { it in TLS_PROTOCOLS }.toTypedArray()
+            }
+        } ?: ServerSocket()
         ss.reuseAddress = true
         try {
             ss.bind(InetSocketAddress(InetAddress.getByName(host), port))
@@ -83,9 +103,10 @@ class ComputerApiServer(
                     is Read.Fail -> ApiResponse(r.status, TEXT, r.message.toByteArray(Charsets.UTF_8))
                 }
                 write(s, resp)
+                onResponse(resp.status)
             }
-        } catch (t: Throwable) {
-            Log.w(TAG, "request failed", t)
+        } catch (_: Exception) {
+            // Failed handshakes (e.g. plain HTTP on the TLS port), timeouts and resets end this connection only.
         }
     }
 
@@ -120,7 +141,8 @@ class ComputerApiServer(
             if (n < 0) return bad
             off += n
         }
-        return Read.Ok(ApiRequest(parts[0], parts[1], header("authorization"), String(body, Charsets.UTF_8)))
+        val remote = s.inetAddress?.hostAddress.orEmpty()
+        return Read.Ok(ApiRequest(parts[0], parts[1], header("authorization"), String(body, Charsets.UTF_8), remote))
     }
 
     private fun write(s: Socket, r: ApiResponse) {
@@ -157,7 +179,15 @@ class ComputerApiServer(
         const val MAX_BODY_BYTES = 64 * 1024
         private const val WORKERS = 4
         private const val TEXT = "text/plain"
-        private const val TAG = "ComputerApiServer"
+        private val TLS_PROTOCOLS = setOf("TLSv1.3", "TLSv1.2")
+        private val IPV4 = Regex("^(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})$")
+
+        /** RFC 1918 ranges only: 10/8, 172.16/12, 192.168/16. */
+        fun isPrivateIpv4(host: String): Boolean {
+            val o = IPV4.matchEntire(host)?.groupValues?.drop(1)?.map { it.toInt() } ?: return false
+            if (o.any { it > 255 }) return false
+            return o[0] == 10 || (o[0] == 172 && o[1] in 16..31) || (o[0] == 192 && o[1] == 168)
+        }
         private val CRLF4 = byteArrayOf(13, 10, 13, 10)
     }
 }

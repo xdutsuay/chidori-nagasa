@@ -7,4 +7,17 @@
     <string name="computer_api_usb_start">Start API</string>
     <string name="computer_api_usb_stop">Stop API</string>
     <string name="computer_api_usb_shared">On your computer run: adb forward tcp:%1$d tcp:%1$d\nThen call http://127.0.0.1:%1$d/v1/computer/state\nwith the header: Authorization: Bearer %2$s\nThe API stops at %3$s.</string>
+    <string name="computer_api_wifi_title">Computer API over Wi-Fi (HTTPS)</string>
+    <string name="computer_api_wifi_desc">Lets a paired device on the same Wi-Fi use the Computer API over HTTPS. Only devices that pair with the code below get access. Stops after 5 minutes without use or 30 minutes in total.</string>
+    <string name="computer_api_wifi_start">Start on Wi-Fi</string>
+    <string name="computer_api_wifi_stop">Stop on Wi-Fi</string>
+    <string name="computer_api_wifi_address">Address: https://%1$s:%2$d\nCertificate pin: %3$s\nStops at %4$s.</string>
+    <string name="computer_api_wifi_code">Pairing code: %1$s (valid until %2$s, one use)</string>
+    <string name="computer_api_wifi_no_code">No pairing code. Make a new one to pair another device.</string>
+    <string name="computer_api_wifi_new_code">New code</string>
+    <string name="computer_api_wifi_pair_hint">Scan the QR code, or POST {\"code\": \"…\", \"name\": \"…\"} to /v1/pair and use the returned token as a Bearer token.</string>
+    <string name="computer_api_wifi_clients">Shared with</string>
+    <string name="computer_api_wifi_client">%1$s (%2$s)</string>
+    <string name="computer_api_wifi_revoke">Revoke</string>
+    <string name="computer_api_wifi_qr_description">Pairing QR code</string>
 </resources>

@@ -17,6 +17,7 @@ data class ApiRequest(
     val target: String,
     val authorization: String?,
     val body: String = "",
+    val remote: String = "",
 )
 
 class ApiResponse(val status: Int, val contentType: String, val body: ByteArray) {
@@ -55,15 +56,27 @@ class ApiResponse(val status: Int, val contentType: String, val body: ByteArray)
  *   action `cos_gui` and a non-blank summary; false → 403 as above. Allowed →
  *   [ComputerControl.gui] with the body unchanged and 200 with its JSON result as-is.
  * - Read-only `read_only` in the state JSON is `false` when [control] is non-null.
+ *
+ * Slice 3, pairing (only when [pairing] is non-null):
+ * - A Bearer token is accepted if it equals a non-empty [token] or [PairingRegistry.authenticate]
+ *   knows it. With [pairing] null, auth is unchanged.
+ * - [PAIR_PATH] needs no Authorization. POST only (else 405). Body must be a JSON object with a
+ *   string `code` (else 400); optional string `name`. [PairingRegistry.redeem] with
+ *   [ApiRequest.remote] as the address: Ok → 200 `{"token":..., "client_id":...}`; Rejected →
+ *   403 `{"error":"invalid or expired code"}`. With [pairing] null, [PAIR_PATH] is an ordinary
+ *   unknown path (401 without a valid token, else 404).
  */
 class ComputerApiRoutes(
     private val token: String,
     private val control: ComputerControl? = null,
+    private val pairing: PairingRegistry? = null,
     private val bridge: () -> DesktopBridge?,
 ) {
     suspend fun handle(req: ApiRequest): ApiResponse {
-        if (!authorized(req.authorization)) return error(401, "unauthorized")
         val path = req.target.substringBefore('?')
+        val p = pairing
+        if (p != null && path == PAIR_PATH) return pair(p, req)
+        if (!authorized(req.authorization)) return error(401, "unauthorized")
         return when (path) {
             STATE_PATH, SCREENSHOT_PATH -> {
                 if (req.method != "GET") return error(405, "method not allowed")
@@ -77,6 +90,22 @@ class ComputerApiRoutes(
                 if (path == EXEC_PATH) exec(c, body) else gui(c, body, req.body)
             }
             else -> error(404, "not found")
+        }
+    }
+
+    private fun pair(p: PairingRegistry, req: ApiRequest): ApiResponse {
+        if (req.method != "POST") return error(405, "method not allowed")
+        val body = runCatching { JSONObject(req.body) }.getOrNull()
+            ?: return error(400, "body must be a JSON object")
+        val code = body.opt("code") as? String ?: return error(400, "code must be a string")
+        val name = body.opt("name") as? String ?: ""
+        return when (val r = p.redeem(code, name, req.remote)) {
+            is Redeem.Ok -> ApiResponse(
+                200,
+                JSON,
+                JSONObject().put("token", r.token).put("client_id", r.client.id).toString().toByteArray(Charsets.UTF_8),
+            )
+            Redeem.Rejected -> error(403, "invalid or expired code")
         }
     }
 
@@ -139,11 +168,13 @@ class ComputerApiRoutes(
     }
 
     private fun authorized(header: String?): Boolean {
-        if (token.isEmpty() || header == null) return false
+        if (header == null) return false
         val prefix = "Bearer "
         if (!header.regionMatches(0, prefix, 0, prefix.length, ignoreCase = true)) return false
-        val got = header.substring(prefix.length).trim().toByteArray(Charsets.UTF_8)
-        return MessageDigest.isEqual(got, token.toByteArray(Charsets.UTF_8))
+        val presented = header.substring(prefix.length).trim()
+        val staticOk = token.isNotEmpty() &&
+            MessageDigest.isEqual(presented.toByteArray(Charsets.UTF_8), token.toByteArray(Charsets.UTF_8))
+        return staticOk || pairing?.authenticate(presented) != null
     }
 
     private fun query(target: String): Map<String, String> {
@@ -165,6 +196,7 @@ class ComputerApiRoutes(
         const val SCREENSHOT_PATH = "/v1/computer/screenshot"
         const val EXEC_PATH = "/v1/computer/exec"
         const val GUI_PATH = "/v1/computer/gui"
+        const val PAIR_PATH = "/v1/pair"
         const val MIN_SCALE = 0.1f
         const val MAX_SCALE = 1f
         const val DEFAULT_SCALE = 1f

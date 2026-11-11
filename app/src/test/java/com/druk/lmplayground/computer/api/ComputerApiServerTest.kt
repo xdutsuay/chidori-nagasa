@@ -45,8 +45,10 @@ class ComputerApiServerTest {
         routes: ComputerApiRoutes = this.routes,
         host: String = ComputerApiServer.LOOPBACK,
         port: Int = 0,
+        sslContext: javax.net.ssl.SSLContext? = null,
+        onResponse: (Int) -> Unit = {},
     ): ComputerApiServer =
-        ComputerApiServer(routes, host, port).also { servers += it }
+        ComputerApiServer(routes, host, port, sslContext, onResponse).also { servers += it }
 
     /** One HTTP/1.1 request over a raw socket; reads to EOF (the server must close). */
     private fun request(port: Int, raw: String, timeoutMs: Int = 5_000): RawResponse {
@@ -326,5 +328,43 @@ class ComputerApiServerTest {
         assertEquals(400, r.status)
         assertTrue(control.execCalls.isEmpty())
         assertTrue(control.approvals.isEmpty())
+    }
+
+    // ---- slice 3: response observer and host rules ----
+
+    @Test
+    fun `onResponse is called with each response status in order`() {
+        val statuses = java.util.concurrent.CopyOnWriteArrayList<Int>()
+        val port = server(onResponse = { statuses += it }).start()
+        assertEquals(200, get(port, ComputerApiRoutes.STATE_PATH).status)
+        assertEquals(401, get(port, ComputerApiRoutes.STATE_PATH, authorization = null).status)
+        // onResponse fires on the worker thread after the response is written; give it a moment
+        Thread.sleep(200)
+        assertEquals(listOf(200, 401), statuses)
+    }
+
+    @Test
+    fun `a LAN host without TLS is still rejected`() {
+        val s = server(host = "192.168.1.5")
+        assertThrows(IllegalArgumentException::class.java) { s.start() }
+        assertFalse(s.isRunning)
+    }
+
+    @Test
+    fun `a public host with TLS is rejected`() {
+        val s = server(host = "8.8.8.8", sslContext = TlsIdentity.generate().serverSslContext())
+        assertThrows(IllegalArgumentException::class.java) { s.start() }
+    }
+
+    @Test
+    fun `the wildcard host with TLS is rejected`() {
+        val s = server(host = "0.0.0.0", sslContext = TlsIdentity.generate().serverSslContext())
+        assertThrows(IllegalArgumentException::class.java) { s.start() }
+    }
+
+    @Test
+    fun `the localhost hostname with TLS is rejected`() {
+        val s = server(host = "localhost", sslContext = TlsIdentity.generate().serverSslContext())
+        assertThrows(IllegalArgumentException::class.java) { s.start() }
     }
 }

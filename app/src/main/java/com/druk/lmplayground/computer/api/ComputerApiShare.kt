@@ -70,7 +70,7 @@ class ComputerApiShare(
             return Result.failure(IllegalStateException(msg))
         }
         val t = token()
-        val routes = ComputerApiRoutes(t, if (allowControl) control else null, bridge)
+        val routes = ComputerApiRoutes(t, if (allowControl) control else null, bridge = bridge)
         val s = ComputerApiServer(routes, ComputerApiServer.LOOPBACK, port)
         val bound = try {
             s.start()

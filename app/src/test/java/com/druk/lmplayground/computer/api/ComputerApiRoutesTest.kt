@@ -26,6 +26,13 @@ class ComputerApiRoutesTest {
     private val bridge = FakeDesktopBridge(display = ":1")
     private val control = FakeComputerControl()
     private val controlRoutes = ComputerApiRoutes(token, control) { bridge }
+    private val pairing = PairingRegistry(
+        nowMs = { 1_000L },
+        codeSource = { "123456" },
+        tokenSource = { "paired-tok" },
+        idSource = { "client-1" },
+    )
+    private val pairingRoutes = ComputerApiRoutes(token, control, pairing) { bridge }
     private lateinit var routes: ComputerApiRoutes
 
     @Before
@@ -63,6 +70,14 @@ class ComputerApiRoutesTest {
             ApiRequest(method = "POST", target = target, authorization = authorization, body = body),
         )
     }
+
+    /** POST /v1/pair with [remote] as the client's address (pairing needs no Authorization). */
+    private fun pair(body: String, remote: String = "192.168.1.5"): ApiResponse =
+        kotlinx.coroutines.runBlocking {
+            pairingRoutes.handle(
+                ApiRequest(method = "POST", target = ComputerApiRoutes.PAIR_PATH, authorization = null, body = body, remote = remote),
+            )
+        }
 
     /** True when any string value, at any depth of [node], contains [needle]. */
     private fun anyStringValueContains(node: Any?, needle: String): Boolean = when (node) {
@@ -514,5 +529,109 @@ class ComputerApiRoutesTest {
     @Test
     fun `unknown POST paths still 404 with a valid token`() {
         assertEquals(404, post("/v1/computer/does-not-exist", "{}").status)
+    }
+
+    // ---- slice 3: pairing ----
+
+    @Test
+    fun `pair works without Authorization and returns token and client_id`() {
+        pairing.issueCode()
+        val r = pair("""{"code":"123456","name":" Pixel "}""")
+        assertEquals(200, r.status)
+        val json = JSONObject(r.text())
+        assertEquals("paired-tok", json.getString("token"))
+        assertEquals("client-1", json.getString("client_id"))
+        // redeem must have received ApiRequest.remote as the client address
+        val client = pairing.clients.value.single()
+        assertEquals("192.168.1.5", client.address)
+        assertEquals("Pixel", client.name)
+    }
+
+    @Test
+    fun `pair with a wrong code is 403 and registers nothing`() {
+        val r = pair("""{"code":"999999"}""")
+        assertEquals(403, r.status)
+        jsonError(r, "invalid or expired code")
+        assertTrue(pairing.clients.value.isEmpty())
+    }
+
+    @Test
+    fun `GET pair without Authorization is 405`() {
+        val r = kotlinx.coroutines.runBlocking {
+            pairingRoutes.handle(ApiRequest("GET", ComputerApiRoutes.PAIR_PATH, authorization = null))
+        }
+        assertEquals(405, r.status)
+    }
+
+    @Test
+    fun `pair with a non-object body is 400 and never registers`() {
+        assertEquals(400, pair("not json at all").status)
+        assertEquals(400, pair("""[1,2]""").status)
+        assertTrue(pairing.clients.value.isEmpty())
+    }
+
+    @Test
+    fun `pair with a missing or non-string code is 400`() {
+        assertEquals(400, pair("""{}""").status)
+        assertEquals(400, pair("""{"code":123456}""").status)
+        assertTrue(pairing.clients.value.isEmpty())
+    }
+
+    @Test
+    fun `a paired token authorizes the state endpoint`() {
+        pairing.issueCode()
+        pair("""{"code":"123456"}""")
+        val r = handle(ComputerApiRoutes.STATE_PATH, authorization = "Bearer paired-tok", routesOverride = pairingRoutes)
+        assertEquals(200, r.status)
+    }
+
+    @Test
+    fun `an unknown token is still 401 with pairing enabled`() {
+        val r = handle(ComputerApiRoutes.STATE_PATH, authorization = "Bearer unknown-token", routesOverride = pairingRoutes)
+        assertEquals(401, r.status)
+    }
+
+    @Test
+    fun `the static token still authorizes when pairing is enabled`() {
+        val r = handle(ComputerApiRoutes.STATE_PATH, routesOverride = pairingRoutes)
+        assertEquals(200, r.status)
+    }
+
+    @Test
+    fun `an empty static token with pairing accepts only paired tokens`() {
+        val reg = PairingRegistry(
+            nowMs = { 1_000L },
+            codeSource = { "123456" },
+            tokenSource = { "paired-tok" },
+            idSource = { "client-1" },
+        )
+        val emptyRoutes = ComputerApiRoutes("", pairing = reg) { bridge }
+        reg.issueCode()
+        assertEquals(
+            "no static token, so no Bearer can authenticate",
+            401,
+            kotlinx.coroutines.runBlocking {
+                emptyRoutes.handle(ApiRequest("GET", ComputerApiRoutes.STATE_PATH, "Bearer anything"))
+            }.status,
+        )
+        val pr = kotlinx.coroutines.runBlocking {
+            emptyRoutes.handle(
+                ApiRequest("POST", ComputerApiRoutes.PAIR_PATH, null, """{"code":"123456"}""", "192.168.1.5"),
+            )
+        }
+        assertEquals(200, pr.status)
+        val tok = JSONObject(pr.text()).getString("token")
+        assertEquals(
+            200,
+            kotlinx.coroutines.runBlocking {
+                emptyRoutes.handle(ApiRequest("GET", ComputerApiRoutes.STATE_PATH, "Bearer $tok"))
+            }.status,
+        )
+    }
+
+    @Test
+    fun `with pairing null the pair path is an ordinary unknown path`() {
+        assertEquals(401, post(ComputerApiRoutes.PAIR_PATH, """{"code":"1"}""", authorization = null).status)
+        assertEquals(404, post(ComputerApiRoutes.PAIR_PATH, """{"code":"1"}""").status)
     }
 }

@@ -497,6 +497,9 @@ tasks.matching { it.name == "recordPaparazziDebug" }.configureEach {
 // auto-trigger the organize task.
 tasks.withType<Test>().configureEach {
     reports.html.required.set(false)
+    // Robolectric installs Conscrypt (the TLS provider on devices) JVM-wide; on desktop JDKs its
+    // engine needs reflective access to java.net or every TLS handshake fails.
+    jvmArgs("--add-opens=java.base/java.net=ALL-UNNAMED")
     // CI runs unit tests with -PskipScreenshots: Paparazzi golden snapshots
     // are not git-tracked, so verify mode would fail there.
     if (project.hasProperty("skipScreenshots")) {
@@ -539,6 +542,8 @@ dependencies {
 
     implementation(libs.androidx.work.runtime.ktx)
     implementation(libs.okhttp3)
+    implementation(libs.okhttp.tls)
+    implementation(libs.zxing.core)
     implementation(libs.jsoup)
     implementation("androidx.javascriptengine:javascriptengine:1.0.0-beta01")
 
